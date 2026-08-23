@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "short_name": "DropLinq",
+  "name": "DropLinq",
+  "description": "Pokémon TCG drop and restock alerts",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#090909",
+  "theme_color": "#D20D1E",
+  "icons": [
+    {
+      "src": "/droplinq-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
