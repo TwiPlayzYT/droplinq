@@ -278,11 +278,11 @@ export function WebSearchPalette({ visible, onClose }: Props) {
 const styles = StyleSheet.create({
   backdrop: {
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.62)',
+    backgroundColor: 'rgba(0,0,0,0.55)',
     flex: 1,
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     paddingHorizontal: 16,
-    paddingTop: '12%' as unknown as number,
+    paddingVertical: 24,
     ...(Platform.OS === 'web'
       ? ({
           backdropFilter: 'blur(8px)',
@@ -294,8 +294,8 @@ const styles = StyleSheet.create({
     borderColor: '#2C2C2C',
     borderRadius: 16,
     borderWidth: 1,
-    maxHeight: '76%' as unknown as number,
-    maxWidth: 640,
+    maxHeight: '70%' as unknown as number,
+    maxWidth: 560,
     overflow: 'hidden',
     width: '100%',
   },
