@@ -30,6 +30,7 @@ export function DropAlertModal() {
 
         <View style={styles.actions}>
           <Pressable
+      unstable_pressDelay={0}
             onPress={() => {
               const product = activeAlert.product;
               acknowledgeAlert();
@@ -39,7 +40,8 @@ export function DropAlertModal() {
             <Text style={styles.primaryText}>OPEN PRODUCT</Text>
             <Ionicons color={palette.black} name="open-outline" size={20} />
           </Pressable>
-          <Pressable onPress={acknowledgeAlert} style={styles.ackButton}>
+          <Pressable
+      unstable_pressDelay={0} onPress={acknowledgeAlert} style={styles.ackButton}>
             <View style={styles.ackLight} />
             <Text style={styles.ackText}>ACKNOWLEDGE</Text>
           </Pressable>
@@ -82,13 +84,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 96,
   },
-  kicker: { color: palette.white, fontSize: 13, fontWeight: '900', letterSpacing: 4 },
+  kicker: {
+    color: palette.white,
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 4,
+    marginBottom: 10,
+  },
   title: {
     color: palette.white,
-    fontSize: 55,
+    fontSize: 48,
     fontWeight: '900',
-    letterSpacing: -3,
-    lineHeight: 50,
+    letterSpacing: 0.5,
+    lineHeight: 54,
     textAlign: 'center',
     textShadowColor: palette.redDark,
     textShadowOffset: { width: 0, height: 5 },
@@ -107,8 +115,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   type: { color: palette.redLight, fontSize: 10, fontWeight: '900', letterSpacing: 2 },
-  product: { color: palette.white, fontSize: 20, fontWeight: '900', lineHeight: 25, marginTop: 8 },
-  category: { color: palette.whiteShadow, fontSize: 12, fontWeight: '700', marginTop: 8 },
+  product: { color: palette.white, fontSize: 20, fontWeight: '900', lineHeight: 26, marginTop: 10 },
+  category: { color: palette.whiteShadow, fontSize: 12, fontWeight: '700', lineHeight: 17, marginTop: 10 },
   actions: { gap: 12, width: '100%' },
   primaryButton: {
     alignItems: 'center',

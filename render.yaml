@@ -1,0 +1,31 @@
+# DropLinq static web app (Expo export → dist/)
+# Free tier: Render Static Site — no always-on Node bill for the UI.
+#
+# Dashboard: New → Static Site → connect this repo
+# Build command: npm ci && npm run export:web
+# Publish directory: dist
+#
+# Native iOS/Android builds are unchanged (EAS / Expo Go).
+
+services:
+  - type: web
+    name: droplinq-web
+    runtime: static
+    buildCommand: npm ci && npm run export:web
+    staticPublishPath: dist
+    pullRequestPreviewsEnabled: false
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+    routes:
+      # Expo Router static export emits real HTML per route; keep assets direct.
+      - type: rewrite
+        source: /sw.js
+        destination: /sw.js
+      - type: rewrite
+        source: /manifest.webmanifest
+        destination: /manifest.webmanifest

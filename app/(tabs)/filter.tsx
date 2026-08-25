@@ -70,6 +70,7 @@ export default function FilterScreen() {
             const selected = filters.coverageMode === mode;
             return (
               <Pressable
+      unstable_pressDelay={0}
                 key={mode}
                 accessibilityRole="radio"
                 accessibilityState={{ selected }}
@@ -105,6 +106,7 @@ export default function FilterScreen() {
             return (
               <View key={group.id} style={styles.groupBlock}>
                 <Pressable
+      unstable_pressDelay={0}
                   onPress={() => toggleGroup(group.key)}
                   style={styles.groupHeader}>
                   <View>
@@ -219,8 +221,8 @@ const styles = StyleSheet.create({
     color: palette.blackSoft,
     fontSize: 12,
     fontWeight: '600',
-    lineHeight: 16,
-    marginTop: 4,
+    lineHeight: 18,
+    marginTop: 6,
   },
   radio: {
     borderColor: palette.whiteShadow,
@@ -257,10 +259,11 @@ const styles = StyleSheet.create({
     color: palette.whiteShadow,
     fontSize: 11,
     fontWeight: '700',
-    marginTop: 2,
+    lineHeight: 16,
+    marginTop: 4,
   },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  rule: { backgroundColor: palette.whiteDim, height: 1, marginVertical: 8 },
+  rule: { backgroundColor: palette.whiteDim, height: 1, marginVertical: 12 },
   previewLabel: {
     color: palette.red,
     fontSize: 10,

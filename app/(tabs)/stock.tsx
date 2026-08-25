@@ -1,17 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import {
   ActivityIndicator,
   Animated,
   Easing,
+  LayoutAnimation,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
+  UIManager,
   View,
 } from 'react-native';
+import Reanimated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
 
 import {
   BrandHeader,
@@ -20,6 +24,19 @@ import {
   Panel,
   Screen,
 } from '@/components/dropdex-ui';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+function animateLayout() {
+  LayoutAnimation.configureNext({
+    duration: 260,
+    create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+    update: { type: LayoutAnimation.Types.easeInEaseOut },
+    delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+  });
+}
 import { palette } from '@/constants/dropdex';
 import { coverageModeCopy } from '@/data/pokemon-center-filters';
 import { getRegion } from '@/data/regions';
@@ -29,6 +46,7 @@ import {
   matchesFilters,
   signalsFromLegacyProduct,
 } from '@/lib/filter-matcher';
+import { useWebLayout } from '@/hooks/use-web-layout';
 import { useDropDex } from '@/store/dropdex-context';
 import { CatalogStockEvent, StockEventKind } from '@/types/catalog';
 import { Product, ProductAvailability, RegionId } from '@/types/dropdex';
@@ -131,7 +149,7 @@ function ProductThumbnail({ product, size = 72 }: { product: Product; size?: num
         recyclingKey={product.id}
         source={{ uri: product.imageUrl }}
         style={[{ height: size, width: size }, !loaded && styles.thumbHidden]}
-        transition={160}
+        transition={0}
       />
     </>
   );
@@ -159,6 +177,7 @@ const LiveProductCard = memo(function LiveProductCard({
 
   return (
     <Pressable
+      unstable_pressDelay={0}
       onPress={() => onDetails(product)}
       style={({ pressed }) => [styles.cardShadow, pressed && styles.pressed]}>
       <View style={styles.card}>
@@ -185,6 +204,7 @@ const LiveProductCard = memo(function LiveProductCard({
           </View>
         </View>
         <Pressable
+          unstable_pressDelay={0}
           accessibilityRole="button"
           onPress={() => onOpen(product)}
           style={({ pressed }) => [styles.openBtn, pressed && styles.pressed]}>
@@ -215,6 +235,7 @@ const CatalogProductCard = memo(function CatalogProductCard({
 
   return (
     <Pressable
+      unstable_pressDelay={0}
       onPress={() => onOpen(product)}
       style={({ pressed }) => [styles.cardShadow, pressed && styles.pressed]}>
       <View style={styles.card}>
@@ -265,6 +286,7 @@ function ActivityRow({
 
   return (
     <Pressable
+      unstable_pressDelay={0}
       onPress={onPress}
       style={({ pressed }) => [styles.cardShadow, pressed && styles.pressed]}>
       <View style={styles.card}>
@@ -336,6 +358,49 @@ function SkeletonBlock() {
   );
 }
 
+function CollapsibleSection({
+  count,
+  expanded,
+  onToggle,
+  title,
+  children,
+}: {
+  count?: number | string;
+  expanded: boolean;
+  onToggle: () => void;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={styles.collapseBlock}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        unstable_pressDelay={0}
+        onPress={() => {
+          animateLayout();
+          onToggle();
+        }}
+        style={({ pressed }) => [styles.sectionHead, styles.sectionHeadPressable, pressed && styles.pressed]}>
+        <View style={styles.sectionHeadLeft}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          <Ionicons
+            color={palette.whiteDim}
+            name={expanded ? 'chevron-up' : 'chevron-down'}
+            size={18}
+          />
+        </View>
+        {count != null ? <Text style={styles.sectionCount}>{count}</Text> : null}
+      </Pressable>
+      {expanded ? (
+        <Reanimated.View entering={FadeInDown.duration(220)} exiting={FadeOutUp.duration(160)}>
+          {children}
+        </Reanimated.View>
+      ) : null}
+    </View>
+  );
+}
+
 export default function StockScreen() {
   const {
     catalogLoading,
@@ -350,9 +415,15 @@ export default function StockScreen() {
     stockEvents,
   } = useDropDex();
   const router = useRouter();
+  const { isDesktopWeb, contentColumns } = useWebLayout();
   const [query, setQuery] = useState('');
   const [viewFilter, setViewFilter] = useState<CatalogViewFilter>('all');
   const [refreshing, setRefreshing] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [liveOpen, setLiveOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const searchInputRef = useRef<TextInput>(null);
   const regionConfig = getRegion(region);
   const coverage = coverageModeCopy[filters.coverageMode];
   const pulse = useRef(new Animated.Value(0.35)).current;
@@ -361,6 +432,22 @@ export default function StockScreen() {
     filters.coverageMode === 'CUSTOM' &&
     filters.customCategoryIds.length === 0 &&
     !filters.includeOtherTcgProducts;
+
+  useEffect(() => {
+    if (query.trim()) {
+      setSearchOpen(true);
+      setCatalogOpen(true);
+    }
+  }, [query]);
+
+  // Desktop web opens key sections so the full-width site feels populated (native stays collapsed).
+  useEffect(() => {
+    if (!isDesktopWeb) return;
+    setSearchOpen(true);
+    setLiveOpen(true);
+    setActivityOpen(true);
+    setCatalogOpen(true);
+  }, [isDesktopWeb]);
 
   useEffect(() => {
     if (!monitoring) {
@@ -544,6 +631,7 @@ export default function StockScreen() {
       <BrandHeader eyebrow={regionConfig.label} />
 
       <Pressable
+        unstable_pressDelay={0}
         accessibilityHint="Opens Filter tab"
         onPress={() => router.push('/(tabs)/filter')}
         style={({ pressed }) => [styles.coverageShadow, pressed && styles.pressed]}>
@@ -569,148 +657,303 @@ export default function StockScreen() {
 
       {catalogFailed && coverageProducts.length === 0 ? (
         <Pressable
+          unstable_pressDelay={0}
           onPress={() => void refreshCatalog()}
           style={({ pressed }) => [styles.slimError, pressed && styles.pressed]}>
           <Text style={styles.slimErrorText}>Couldn&apos;t refresh catalog · Tap to retry</Text>
         </Pressable>
       ) : null}
 
-      <View style={styles.sectionHead}>
-        <Text style={styles.sectionTitle}>🔴 LIVE NOW</Text>
-        <Text style={styles.sectionCount}>{liveNow.length}</Text>
-      </View>
+      {isDesktopWeb ? (
+        <View style={styles.webHero}>
+          <View style={styles.webHeroCopy}>
+            <Text style={styles.webHeroKicker}>LIVE MONITORING</Text>
+            <Text style={styles.webHeroTitle}>Stock command center</Text>
+            <Text style={styles.webHeroBody}>{statusLine}</Text>
+          </View>
+          <View style={styles.webHeroAside}>
+            <Text style={styles.webHeroStat}>{liveNow.length}</Text>
+            <Text style={styles.webHeroStatLabel}>IN STOCK NOW</Text>
+          </View>
+        </View>
+      ) : null}
 
-      {customEmpty ? (
-        <Panel>
-          <CompactEmpty
-            caption="Choose Custom categories in Filter to start tracking products."
-            light
-            title="Nothing to show"
-          />
-          <MetalButton
-            icon="options-outline"
-            label="Open Filter"
-            onPress={() => router.push('/(tabs)/filter')}
-          />
-        </Panel>
-      ) : showSkeletons ? (
-        <>
-          <SkeletonBlock />
-          <SkeletonBlock />
-        </>
-      ) : liveNow.length === 0 ? (
-        <Panel>
-          <CompactEmpty
-            caption="DropLinq is monitoring your selected Pokémon Center products."
-            light
-            title="Nothing in stock"
-          />
-        </Panel>
-      ) : (
-        liveNow.map((product) => (
-          <LiveProductCard
-            key={product.id}
-            onDetails={openDetails}
-            onOpen={openProductBrowser}
-            product={product}
-            regionLabel={regionConfig.label}
-            storefront={regionConfig.storefront}
-          />
-        ))
-      )}
-
-      <View style={styles.sectionHead}>
-        <Text style={styles.sectionTitle}>⚡ RECENT ACTIVITY</Text>
-        {activity.length > 0 ? (
-          <Text style={styles.sectionCount}>{activity.length}</Text>
-        ) : null}
-      </View>
-
-      {activity.length === 0 ? (
-        <Panel>
-          <CompactEmpty
-            caption="High-heat restock candidates and stock changes will show up here."
-            light
-            title="No recent changes"
-          />
-        </Panel>
-      ) : (
-        activity.map((event) => {
-          const linked =
-            productsById.get(event.productId) ??
-            (liveProducts.find((item) => item.id === event.productId) as StockProduct | undefined);
-          return (
-            <ActivityRow
-              key={event.id}
-              event={event}
-              onPress={() => {
-                if (linked) openDetails(linked);
-                else router.push(`/product/${event.productId}`);
-              }}
-              product={linked}
-            />
-          );
-        })
-      )}
-
-      <View style={styles.sectionHead}>
-        <Text style={styles.sectionTitle}>📦 CATALOG</Text>
-        <Text style={styles.sectionCount}>{catalogProducts.length}</Text>
-      </View>
-
-      <Panel>
-        <View style={styles.searchWell}>
+      {!searchOpen ? (
+        <Pressable
+          accessibilityHint="Opens product search"
+          accessibilityRole="button"
+          unstable_pressDelay={0}
+          onPress={() => {
+            animateLayout();
+            setSearchOpen(true);
+            requestAnimationFrame(() => searchInputRef.current?.focus());
+          }}
+          style={({ pressed }) => [styles.searchCollapsed, pressed && styles.pressed]}>
           <Ionicons color={palette.blackSoft} name="search" size={18} />
-          <TextInput
-            autoCapitalize="none"
-            autoCorrect={false}
-            clearButtonMode="while-editing"
-            onChangeText={setQuery}
-            placeholder="Search monitored products…"
-            placeholderTextColor={palette.whiteShadow}
-            returnKeyType="search"
-            style={styles.searchInput}
-            value={query}
-          />
-        </View>
-        <View style={styles.chips}>
-          {(
-            [
-              ['all', 'All'],
-              ['in-stock', 'In stock'],
-              ['sold-out', 'Sold out'],
-              ['new', 'New'],
-              ['preorder', 'Preorder'],
-            ] as const
-          ).map(([id, label]) => (
-            <ChoiceChip
-              key={id}
-              label={label}
-              onPress={() => setViewFilter(id)}
-              selected={viewFilter === id}
-            />
-          ))}
-        </View>
-      </Panel>
-
-      {catalogProducts.length === 0 ? (
-        <Panel>
-          <CompactEmpty
-            caption="No products match your Filter coverage."
-            light
-            title="No catalog matches"
-          />
-        </Panel>
+          <Text style={styles.searchCollapsedText}>Search products</Text>
+        </Pressable>
       ) : (
-        catalogProducts.map((product) => (
-          <CatalogProductCard key={product.id} onOpen={openDetails} product={product} />
-        ))
+        <Reanimated.View entering={FadeInDown.duration(200)} style={styles.searchExpanded}>
+          <View style={styles.searchWell}>
+            <Ionicons color={palette.blackSoft} name="search" size={18} />
+            <TextInput
+              ref={searchInputRef}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoFocus
+              clearButtonMode="while-editing"
+              onChangeText={setQuery}
+              placeholder="Search monitored products…"
+              placeholderTextColor={palette.whiteShadow}
+              returnKeyType="search"
+              style={styles.searchInput}
+              value={query}
+            />
+            <Pressable
+              accessibilityLabel="Close search"
+              hitSlop={10}
+              unstable_pressDelay={0}
+              onPress={() => {
+                animateLayout();
+                setQuery('');
+                setViewFilter('all');
+                setSearchOpen(false);
+              }}>
+              <Ionicons color={palette.blackSoft} name="close-circle" size={20} />
+            </Pressable>
+          </View>
+          <View style={styles.chips}>
+            {(
+              [
+                ['all', 'All'],
+                ['in-stock', 'In stock'],
+                ['sold-out', 'Sold out'],
+                ['new', 'New'],
+                ['preorder', 'Preorder'],
+              ] as const
+            ).map(([id, label]) => (
+              <ChoiceChip
+                key={id}
+                label={label}
+                onPress={() => setViewFilter(id)}
+                selected={viewFilter === id}
+              />
+            ))}
+          </View>
+        </Reanimated.View>
       )}
+
+      <CollapsibleSection
+        count={liveNow.length}
+        expanded={liveOpen}
+        onToggle={() => setLiveOpen((value) => !value)}
+        title="🔴 LIVE NOW">
+        {customEmpty ? (
+          <Panel>
+            <CompactEmpty
+              caption="Choose Custom categories in Filter to start tracking products."
+              light
+              title="Nothing to show"
+            />
+            <MetalButton
+              icon="options-outline"
+              label="Open Filter"
+              onPress={() => router.push('/(tabs)/filter')}
+            />
+          </Panel>
+        ) : showSkeletons ? (
+          <>
+            <SkeletonBlock />
+            <SkeletonBlock />
+          </>
+        ) : liveNow.length === 0 ? (
+          <Panel>
+            <CompactEmpty
+              caption="DropLinq is monitoring your selected Pokémon Center products."
+              light
+              title="Nothing in stock"
+            />
+          </Panel>
+        ) : (
+          <View style={isDesktopWeb ? styles.productGrid : undefined}>
+            {liveNow.map((product) => (
+              <View
+                key={product.id}
+                style={
+                  isDesktopWeb
+                    ? [styles.productGridItem, contentColumns >= 3 ? styles.col3 : styles.col2]
+                    : undefined
+                }>
+                <LiveProductCard
+                  onDetails={openDetails}
+                  onOpen={openProductBrowser}
+                  product={product}
+                  regionLabel={regionConfig.label}
+                  storefront={regionConfig.storefront}
+                />
+              </View>
+            ))}
+          </View>
+        )}
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        count={activity.length}
+        expanded={activityOpen}
+        onToggle={() => setActivityOpen((value) => !value)}
+        title="⚡ RECENT ACTIVITY">
+        {activity.length === 0 ? (
+          <Panel>
+            <CompactEmpty
+              caption="High-heat restock candidates and stock changes will show up here."
+              light
+              title="No recent changes"
+            />
+          </Panel>
+        ) : (
+          <View style={isDesktopWeb ? styles.productGrid : undefined}>
+            {activity.map((event) => {
+              const linked =
+                productsById.get(event.productId) ??
+                (liveProducts.find((item) => item.id === event.productId) as
+                  | StockProduct
+                  | undefined);
+              return (
+                <View
+                  key={event.id}
+                  style={
+                    isDesktopWeb
+                      ? [styles.productGridItem, contentColumns >= 3 ? styles.col3 : styles.col2]
+                      : undefined
+                  }>
+                  <ActivityRow
+                    event={event}
+                    onPress={() => {
+                      if (linked) openDetails(linked);
+                      else router.push(`/product/${event.productId}`);
+                    }}
+                    product={linked}
+                  />
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        count={catalogProducts.length}
+        expanded={catalogOpen}
+        onToggle={() => setCatalogOpen((value) => !value)}
+        title="📦 CATALOG">
+        {catalogProducts.length === 0 ? (
+          <Panel>
+            <CompactEmpty
+              caption="No products match your Filter coverage."
+              light
+              title="No catalog matches"
+            />
+          </Panel>
+        ) : (
+          <View style={isDesktopWeb ? styles.productGrid : undefined}>
+            {catalogProducts.map((product) => (
+              <View
+                key={product.id}
+                style={
+                  isDesktopWeb
+                    ? [styles.productGridItem, contentColumns >= 3 ? styles.col3 : styles.col2]
+                    : undefined
+                }>
+                <CatalogProductCard onOpen={openDetails} product={product} />
+              </View>
+            ))}
+          </View>
+        )}
+      </CollapsibleSection>
     </Screen>
   );
+
 }
 
 const styles = StyleSheet.create({
+  webHero: {
+    alignItems: 'center',
+    backgroundColor: palette.blackRaised,
+    borderColor: palette.blackSoft,
+    borderRadius: 24,
+    borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 18,
+    overflow: 'hidden',
+    paddingHorizontal: 28,
+    paddingVertical: 28,
+  },
+  webHeroCopy: { flex: 1, paddingRight: 24 },
+  webHeroKicker: {
+    color: palette.red,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 2,
+    marginBottom: 8,
+  },
+  webHeroTitle: {
+    color: palette.white,
+    fontSize: 34,
+    fontWeight: '900',
+    letterSpacing: 0.2,
+    marginBottom: 10,
+  },
+  webHeroBody: {
+    color: palette.whiteDim,
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 22,
+    maxWidth: 520,
+  },
+  webHeroAside: {
+    alignItems: 'center',
+    backgroundColor: palette.black,
+    borderColor: palette.redDark,
+    borderRadius: 18,
+    borderWidth: 1,
+    minWidth: 140,
+    paddingHorizontal: 22,
+    paddingVertical: 18,
+  },
+  webHeroStat: {
+    color: palette.white,
+    fontSize: 40,
+    fontWeight: '900',
+  },
+  webHeroStatLabel: {
+    color: palette.whiteShadow,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+    marginTop: 4,
+  },
+  productGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 14,
+    justifyContent: 'flex-start',
+  },
+  productGridItem: {
+    marginBottom: 2,
+  },
+  col2: {
+    width: '48%',
+    flexBasis: '48%',
+    flexGrow: 1,
+    maxWidth: '48%',
+  },
+  col3: {
+    width: '31.5%',
+    flexBasis: '31.5%',
+    flexGrow: 1,
+    maxWidth: '32%',
+  },
   coverageShadow: {
     backgroundColor: palette.whiteShadow,
     borderRadius: 16,
@@ -738,7 +981,8 @@ const styles = StyleSheet.create({
     color: palette.blackSoft,
     fontSize: 12,
     fontWeight: '600',
-    marginTop: 3,
+    lineHeight: 17,
+    marginTop: 6,
   },
   heartbeatLamp: {
     backgroundColor: palette.whiteShadow,
@@ -767,12 +1011,30 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
+  collapseBlock: {
+    marginBottom: 4,
+    marginTop: 4,
+  },
   sectionHead: {
-    alignItems: 'baseline',
+    alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 10,
-    marginTop: 2,
+    marginTop: 6,
+  },
+  sectionHeadPressable: {
+    backgroundColor: palette.blackRaised,
+    borderColor: palette.blackSoft,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  sectionHeadLeft: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flex: 1,
+    gap: 8,
   },
   sectionTitle: {
     color: palette.white,
@@ -784,6 +1046,7 @@ const styles = StyleSheet.create({
     color: palette.whiteDim,
     fontSize: 14,
     fontWeight: '900',
+    marginLeft: 10,
   },
   compactEmpty: {
     alignItems: 'center',
@@ -799,8 +1062,8 @@ const styles = StyleSheet.create({
   compactEmptyCaption: {
     color: palette.whiteShadow,
     fontSize: 11,
-    lineHeight: 16,
-    marginTop: 4,
+    lineHeight: 17,
+    marginTop: 8,
     maxWidth: 280,
     textAlign: 'center',
   },
@@ -844,32 +1107,34 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 1.1,
+    marginBottom: 2,
   },
   cardTitle: {
     color: palette.black,
     fontSize: 15,
     fontWeight: '900',
-    lineHeight: 19,
-    marginTop: 4,
+    lineHeight: 20,
+    marginTop: 6,
   },
   cardTitleSm: {
     color: palette.black,
     fontSize: 14,
     fontWeight: '900',
-    lineHeight: 18,
-    marginTop: 3,
+    lineHeight: 19,
+    marginTop: 5,
   },
   metaLine: {
     color: palette.blackSoft,
     fontSize: 11,
     fontWeight: '600',
-    marginTop: 4,
+    lineHeight: 16,
+    marginTop: 6,
   },
   price: {
     color: palette.black,
     fontSize: 14,
     fontWeight: '900',
-    marginTop: 6,
+    marginTop: 8,
   },
   liveBadge: {
     alignItems: 'center',
@@ -948,7 +1213,33 @@ const styles = StyleSheet.create({
     color: palette.blackSoft,
     fontSize: 11,
     fontWeight: '600',
-    marginTop: 4,
+    lineHeight: 16,
+    marginTop: 6,
+  },
+  searchCollapsed: {
+    alignItems: 'center',
+    backgroundColor: palette.white,
+    borderColor: palette.whiteDim,
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
+    minHeight: 46,
+    paddingHorizontal: 14,
+  },
+  searchCollapsedText: {
+    color: palette.blackSoft,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  searchExpanded: {
+    backgroundColor: palette.blackRaised,
+    borderColor: palette.blackSoft,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 10,
+    padding: 12,
   },
   searchWell: {
     alignItems: 'center',

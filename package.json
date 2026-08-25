@@ -16,7 +16,8 @@
     "test:monitor": "node --test monitor/*.test.mjs",
     "build:android:preview": "eas build --profile preview --platform android",
     "eas:android": "eas build --profile preview --platform android",
-    "eas:ios": "eas build --profile preview --platform ios"
+    "eas:ios": "eas build --profile preview --platform ios",
+    "build:web": "npm run export:web"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

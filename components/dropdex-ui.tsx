@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  type PressableProps,
   RefreshControl,
   ScrollView,
   StyleProp,
@@ -16,6 +17,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { palette } from '@/constants/dropdex';
+import { useWebLayout } from '@/hooks/use-web-layout';
+
+
+/** Zero press-in delay so taps feel immediate across the app. */
+export function InstantPressable({ unstable_pressDelay = 0, ...props }: PressableProps) {
+  return <Pressable {...props} unstable_pressDelay={unstable_pressDelay} />;
+}
 
 export function Screen({
   children,
@@ -29,9 +37,17 @@ export function Screen({
   refreshing?: boolean;
   onRefresh?: () => void;
 }>) {
+  const { isDesktopWeb } = useWebLayout();
+  const safeEdges = isDesktopWeb ? ([] as const) : (['top'] as const);
+  const contentStyle = [
+    styles.screenContent,
+    isDesktopWeb && styles.screenContentDesktop,
+    style,
+  ];
+
   const content = scroll ? (
     <ScrollView
-      contentContainerStyle={[styles.screenContent, style]}
+      contentContainerStyle={contentStyle}
       keyboardShouldPersistTaps="handled"
       refreshControl={
         onRefresh ? (
@@ -47,11 +63,11 @@ export function Screen({
       {children}
     </ScrollView>
   ) : (
-    <View style={[styles.screenContent, styles.fill, style]}>{children}</View>
+    <View style={[contentStyle, styles.fill]}>{children}</View>
   );
 
   return (
-    <SafeAreaView edges={['top']} style={styles.safe}>
+    <SafeAreaView edges={[...safeEdges]} style={styles.safe}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.fill}>
@@ -62,6 +78,18 @@ export function Screen({
 }
 
 export function BrandHeader({ eyebrow }: { eyebrow: string }) {
+  const { isDesktopWeb } = useWebLayout();
+
+  // Desktop web uses the top nav brand — show a page title instead of duplicating DROPLINQ.
+  if (isDesktopWeb) {
+    return (
+      <View style={styles.webPageHeader}>
+        <Text style={styles.webPageEyebrow}>DROPLINQ</Text>
+        <Text style={styles.webPageTitle}>{eyebrow}</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.header}>
       <View>
@@ -125,7 +153,7 @@ export function MechanicalToggle({
   light?: boolean;
 }) {
   return (
-    <Pressable
+    <InstantPressable
       accessibilityRole="switch"
       accessibilityState={{ checked: value }}
       onPress={() => onChange(!value)}
@@ -141,7 +169,7 @@ export function MechanicalToggle({
           <View style={styles.switchHighlight} />
         </View>
       </View>
-    </Pressable>
+    </InstantPressable>
   );
 }
 
@@ -179,20 +207,20 @@ export function TagInput({
           style={styles.input}
           value={draft}
         />
-        <Pressable accessibilityLabel={`Add ${label}`} onPress={add} style={styles.inputButton}>
+        <InstantPressable accessibilityLabel={`Add ${label}`} onPress={add} style={styles.inputButton}>
           <Ionicons color={palette.white} name="add" size={22} />
-        </Pressable>
+        </InstantPressable>
       </View>
       {values.length > 0 ? (
         <View style={styles.tags}>
           {values.map((value) => (
-            <Pressable
+            <InstantPressable
               key={value}
               onPress={() => onChange(values.filter((item) => item !== value))}
               style={styles.tag}>
               <Text numberOfLines={1} style={styles.tagText}>{value}</Text>
               <Ionicons color={palette.white} name="close" size={14} />
-            </Pressable>
+            </InstantPressable>
           ))}
         </View>
       ) : null}
@@ -210,14 +238,14 @@ export function ChoiceChip({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <InstantPressable
       accessibilityRole="checkbox"
       accessibilityState={{ checked: selected }}
       onPress={onPress}
       style={[styles.choiceChip, selected && styles.choiceChipSelected]}>
       <View style={[styles.choiceLamp, selected && styles.choiceLampSelected]} />
       <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>{label}</Text>
-    </Pressable>
+    </InstantPressable>
   );
 }
 
@@ -233,7 +261,7 @@ export function MetalButton({
   disabled?: boolean;
 }) {
   return (
-    <Pressable
+    <InstantPressable
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [styles.metalButton, pressed && styles.pressed, disabled && { opacity: 0.5 }]}>
@@ -241,7 +269,7 @@ export function MetalButton({
         <Ionicons color={palette.black} name={icon} size={18} />
         <Text style={styles.metalButtonText}>{label.toUpperCase()}</Text>
       </View>
-    </Pressable>
+    </InstantPressable>
   );
 }
 
@@ -254,6 +282,31 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     paddingHorizontal: 18,
   },
+  screenContentDesktop: {
+    alignSelf: 'center',
+    maxWidth: 1440,
+    paddingBottom: 40,
+    paddingHorizontal: 32,
+    paddingTop: 8,
+    width: '100%',
+  },
+  webPageHeader: {
+    marginBottom: 16,
+    marginTop: 4,
+  },
+  webPageEyebrow: {
+    color: palette.whiteShadow,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.6,
+    marginBottom: 4,
+  },
+  webPageTitle: {
+    color: palette.white,
+    fontSize: 28,
+    fontWeight: '900',
+    letterSpacing: 0.2,
+  },
   header: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -261,8 +314,14 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     paddingTop: 8,
   },
-  eyebrow: { color: palette.whiteShadow, fontSize: 10, fontWeight: '800', letterSpacing: 2.4 },
-  brand: { color: palette.white, fontSize: 30, fontWeight: '900', letterSpacing: -1.5 },
+  eyebrow: {
+    color: palette.whiteShadow,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 2.4,
+    marginBottom: 6,
+  },
+  brand: { color: palette.white, fontSize: 30, fontWeight: '900', letterSpacing: 0.6 },
   headerBall: {
     backgroundColor: palette.white,
     borderColor: palette.whiteDim,
@@ -307,9 +366,9 @@ const styles = StyleSheet.create({
   lightPanel: { backgroundColor: palette.white },
   darkPanel: { backgroundColor: palette.blackRaised, borderColor: palette.blackSoft, borderWidth: 1 },
   redPanel: { backgroundColor: palette.red, borderColor: palette.redLight, borderWidth: 1 },
-  sectionHeading: { marginBottom: 12 },
-  sectionTitle: { color: palette.black, fontSize: 18, fontWeight: '900', letterSpacing: -0.3 },
-  sectionCaption: { color: palette.blackSoft, fontSize: 12, lineHeight: 17, marginTop: 3 },
+  sectionHeading: { marginBottom: 14 },
+  sectionTitle: { color: palette.black, fontSize: 18, fontWeight: '900', letterSpacing: 0.2 },
+  sectionCaption: { color: palette.blackSoft, fontSize: 12, lineHeight: 18, marginTop: 6 },
   lightText: { color: palette.white },
   dimLightText: { color: palette.whiteDim },
   toggleRow: {
@@ -319,9 +378,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     minHeight: 56,
   },
-  toggleCopy: { flex: 1 },
-  toggleLabel: { color: palette.black, fontSize: 15, fontWeight: '800' },
-  toggleCaption: { color: palette.blackSoft, fontSize: 11, lineHeight: 15, marginTop: 2 },
+  toggleCopy: { flex: 1, paddingRight: 4 },
+  toggleLabel: { color: palette.black, fontSize: 15, fontWeight: '800', lineHeight: 20 },
+  toggleCaption: { color: palette.blackSoft, fontSize: 11, lineHeight: 16, marginTop: 5 },
   switchWell: {
     backgroundColor: palette.black,
     borderColor: palette.blackSoft,

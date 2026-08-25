@@ -37,16 +37,19 @@ export default function LegalAcceptScreen() {
         <Text style={styles.brand}>DROPLINQ</Text>
         <Text style={styles.title}>Legal</Text>
 
-        <Pressable onPress={() => router.push('/legal/terms')} style={styles.linkRow}>
+        <Pressable
+      unstable_pressDelay={0} onPress={() => router.push('/legal/terms')} style={styles.linkRow}>
           <Text style={styles.linkLabel}>Terms of Service</Text>
           <Ionicons color={palette.whiteShadow} name="chevron-forward" size={18} />
         </Pressable>
-        <Pressable onPress={() => router.push('/legal/privacy')} style={styles.linkRow}>
+        <Pressable
+      unstable_pressDelay={0} onPress={() => router.push('/legal/privacy')} style={styles.linkRow}>
           <Text style={styles.linkLabel}>Privacy Policy</Text>
           <Ionicons color={palette.whiteShadow} name="chevron-forward" size={18} />
         </Pressable>
 
         <Pressable
+      unstable_pressDelay={0}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: agreed }}
           onPress={() => setAgreed((value) => !value)}
@@ -60,6 +63,7 @@ export default function LegalAcceptScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <Pressable
+      unstable_pressDelay={0}
           disabled={busy}
           onPress={() => void continueNext()}
           style={({ pressed }) => [styles.cta, pressed && styles.pressed, busy && styles.disabled]}>

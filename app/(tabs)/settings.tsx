@@ -128,25 +128,26 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  rule: { backgroundColor: palette.whiteDim, height: 1, marginVertical: 5 },
+  rule: { backgroundColor: palette.whiteDim, height: 1, marginVertical: 12 },
   plan: {
     color: palette.redDark,
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 1.2,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   coverageTitle: {
     color: palette.black,
     fontSize: 15,
     fontWeight: '900',
-    marginBottom: 6,
+    lineHeight: 21,
+    marginBottom: 8,
   },
   coverageCopy: {
     color: palette.blackSoft,
     fontSize: 13,
     fontWeight: '600',
-    lineHeight: 18,
-    marginBottom: 12,
+    lineHeight: 19,
+    marginBottom: 14,
   },
 });

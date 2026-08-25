@@ -61,33 +61,57 @@ export function AppBootScreen() {
 
 function FeedbackToast({
   feedback,
-  bottom,
+  top,
   onClear,
 }: {
   feedback: NonNullable<ReturnType<typeof useDropDex>['feedback']>;
-  bottom: number;
+  top: number;
   onClear: () => void;
 }) {
   const progress = useRef(new Animated.Value(1)).current;
+  const drop = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     progress.setValue(1);
-    const animation = Animated.timing(progress, {
+    drop.setValue(0);
+    const enter = Animated.spring(drop, {
+      damping: 16,
+      mass: 0.85,
+      stiffness: 180,
+      toValue: 1,
+      useNativeDriver: true,
+    });
+    const bar = Animated.timing(progress, {
       duration: FEEDBACK_DURATION_MS,
       easing: Easing.linear,
       toValue: 0,
       useNativeDriver: false,
     });
-    animation.start();
-    return () => animation.stop();
-  }, [feedback.id, progress]);
+    enter.start();
+    bar.start();
+    return () => {
+      enter.stop();
+      bar.stop();
+    };
+  }, [drop, feedback.id, progress]);
 
   return (
-    <View
+    <Animated.View
       accessibilityHint="Dismisses this message"
       style={[
         styles.toast,
-        { bottom },
+        {
+          top,
+          opacity: drop.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+          transform: [
+            {
+              translateY: drop.interpolate({
+                inputRange: [0, 1],
+                outputRange: [-88, 0],
+              }),
+            },
+          ],
+        },
         feedback.tone === 'error' && styles.toastError,
         feedback.tone === 'success' && styles.toastSuccess,
       ]}>
@@ -137,7 +161,7 @@ function FeedbackToast({
           </Pressable>
         )}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -151,12 +175,7 @@ export function GlobalUXFeedback() {
   const onAuthScreen = segments[0] === '(auth)';
 
   useEffect(() => {
-    if (!operation) {
-      setShowOperation(false);
-      return;
-    }
-    const timer = setTimeout(() => setShowOperation(true), 250);
-    return () => clearTimeout(timer);
+    setShowOperation(!!operation);
   }, [operation]);
 
   useEffect(() => {
@@ -166,7 +185,7 @@ export function GlobalUXFeedback() {
   }, [clearFeedback, feedback, onAuthScreen]);
 
   return (
-    <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+    <View pointerEvents="box-none" style={styles.overlay}>
       {showOperation && operation ? (
         <View
           accessibilityLabel={`${operation.title}. ${operation.message}`}
@@ -185,9 +204,9 @@ export function GlobalUXFeedback() {
 
       {feedback && !onAuthScreen ? (
         <FeedbackToast
-          bottom={Math.max(insets.bottom, 12) + 76}
           feedback={feedback}
           onClear={clearFeedback}
+          top={Math.max(insets.top, 8) + 8}
         />
       ) : null}
     </View>
@@ -195,6 +214,10 @@ export function GlobalUXFeedback() {
 }
 
 const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1000,
+  },
   boot: {
     alignItems: 'center',
     backgroundColor: palette.black,
@@ -231,7 +254,7 @@ const styles = StyleSheet.create({
     color: palette.white,
     fontSize: 34,
     fontWeight: '900',
-    letterSpacing: -1.5,
+    letterSpacing: 1.2,
     marginTop: 24,
   },
   bootTitle: {
@@ -239,14 +262,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.6,
-    marginTop: 14,
+    marginTop: 16,
     textAlign: 'center',
   },
   bootCaption: {
     color: palette.whiteShadow,
     fontSize: 11,
-    lineHeight: 16,
-    marginTop: 7,
+    lineHeight: 17,
+    marginTop: 10,
     textAlign: 'center',
   },
   operationScrim: {
@@ -275,14 +298,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '900',
     letterSpacing: 0.7,
-    marginTop: 15,
+    marginTop: 16,
     textAlign: 'center',
   },
   operationMessage: {
     color: palette.whiteShadow,
     fontSize: 11,
-    lineHeight: 16,
-    marginTop: 5,
+    lineHeight: 17,
+    marginTop: 8,
     textAlign: 'center',
   },
   operationPulse: {
@@ -308,32 +331,33 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 14,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.75,
-    shadowRadius: 10,
+    shadowRadius: 12,
+    zIndex: 1001,
   },
   toastError: { borderColor: palette.red },
   toastSuccess: { borderColor: palette.redDark },
   toastBody: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 11,
+    gap: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
   toastCopy: { flex: 1 },
-  toastTitle: { color: palette.white, fontSize: 13, fontWeight: '900' },
+  toastTitle: { color: palette.white, fontSize: 13, fontWeight: '900', lineHeight: 18 },
   toastMessage: {
     color: palette.whiteShadow,
     fontSize: 11,
-    lineHeight: 15,
-    marginTop: 3,
+    lineHeight: 16,
+    marginTop: 5,
   },
   toastTrack: {
     backgroundColor: 'rgba(255,255,255,0.18)',
     borderRadius: 2,
     height: 3,
-    marginTop: 10,
+    marginTop: 12,
     overflow: 'hidden',
     width: '100%',
   },

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { DataSourceBanner } from '@/components/data-source-banner';
@@ -11,6 +11,20 @@ import { catalogProductFromLocal } from '@/lib/catalog-product';
 import { catalogRepository } from '@/services/data';
 import { useDropDex } from '@/store/dropdex-context';
 import { CatalogProduct, CatalogStockEvent, stockStatusLabel } from '@/types/catalog';
+import { Product, RegionId } from '@/types/dropdex';
+
+function resolveLocalProduct(
+  id: string | undefined,
+  liveProducts: Product[],
+  watchlist: { product: Product }[],
+  region: RegionId,
+): CatalogProduct | null {
+  if (!id) return null;
+  const local =
+    liveProducts.find((item) => item.id === id) ??
+    watchlist.find((item) => item.product.id === id)?.product;
+  return local ? catalogProductFromLocal(local, region) : null;
+}
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,37 +38,48 @@ export default function ProductDetailScreen() {
     removeFromWatchlist,
     watchlist,
   } = useDropDex();
-  const [product, setProduct] = useState<CatalogProduct | null>(null);
+
+  const localProduct = useMemo(
+    () => resolveLocalProduct(id, liveProducts, watchlist, region),
+    [id, liveProducts, region, watchlist],
+  );
+
+  const [product, setProduct] = useState<CatalogProduct | null>(localProduct);
   const [events, setEvents] = useState<CatalogStockEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  const watched = product ? isWatched(product.id) || watchlist.some((item) => item.product.id === id) : false;
+  // Keep local catalog in sync if list updates while this screen is open.
+  useEffect(() => {
+    if (localProduct && (!product || product.id !== localProduct.id)) {
+      setProduct(localProduct);
+    }
+  }, [localProduct, product]);
+
+  const watched = product
+    ? isWatched(product.id) || watchlist.some((item) => item.product.id === id)
+    : false;
 
   const load = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
     setError(null);
 
-    let next = await catalogRepository.getProduct(id);
-    if (!next) {
-      const local = liveProducts.find((item) => item.id === id);
-      if (local) next = catalogProductFromLocal(local, region);
-    }
+    const local = resolveLocalProduct(id, liveProducts, watchlist, region);
+    if (local) setProduct(local);
 
-    setProduct(next);
+    const remote = await catalogRepository.getProduct(id).catch(() => null);
+    const next = remote ?? local;
     if (!next) {
+      setProduct(null);
       setError('Product not found.');
       setEvents([]);
-      setLoading(false);
       return;
     }
 
+    setProduct(next);
     const remoteEvents = await catalogRepository.listEvents(next.id).catch(() => []);
     setEvents(remoteEvents);
-    setLoading(false);
-  }, [id, liveProducts, region]);
+  }, [id, liveProducts, region, watchlist]);
 
   useEffect(() => {
     void load();
@@ -75,24 +100,12 @@ export default function ProductDetailScreen() {
     setBusy(false);
   };
 
-  if (loading && !product) {
-    return (
-      <Screen>
-        <BrandHeader eyebrow="Product" />
-        <Panel>
-          <Text style={styles.copy}>Loading product…</Text>
-          <MetalButton icon="arrow-back" label="Back" onPress={() => router.back()} />
-        </Panel>
-      </Screen>
-    );
-  }
-
   if (!product) {
     return (
       <Screen>
         <BrandHeader eyebrow="Product" />
         <Panel>
-          <Text style={styles.copy}>{error ?? 'Product not found.'}</Text>
+          <Text style={styles.copy}>{error ?? 'Loading product…'}</Text>
           <MetalButton icon="arrow-back" label="Back" onPress={() => router.back()} />
         </Panel>
       </Screen>
@@ -106,7 +119,13 @@ export default function ProductDetailScreen() {
       <Panel>
         <View style={styles.imageWell}>
           {product.imageUrl ? (
-            <Image contentFit="cover" source={{ uri: product.imageUrl }} style={styles.image} />
+            <Image
+              cachePolicy="memory-disk"
+              contentFit="cover"
+              source={{ uri: product.imageUrl }}
+              style={styles.image}
+              transition={0}
+            />
           ) : (
             <Ionicons color={palette.whiteShadow} name="image-outline" size={32} />
           )}
@@ -165,12 +184,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   image: { height: '100%', width: '100%' },
-  title: { color: palette.black, fontSize: 20, fontWeight: '900' },
-  meta: { color: palette.blackSoft, fontSize: 12, marginTop: 6 },
-  metaLight: { color: palette.whiteShadow, fontSize: 12, marginTop: 6 },
-  status: { color: palette.redDark, fontSize: 13, fontWeight: '900', letterSpacing: 1, marginTop: 10 },
-  upgrade: { color: palette.redDark, fontSize: 12, fontWeight: '800', marginVertical: 10 },
-  section: { color: palette.white, fontSize: 12, fontWeight: '900', letterSpacing: 1.4, marginBottom: 8 },
-  event: { color: palette.whiteShadow, fontSize: 11, marginBottom: 6 },
-  copy: { color: palette.blackSoft, marginBottom: 12 },
+  title: { color: palette.black, fontSize: 20, fontWeight: '900', lineHeight: 26 },
+  meta: { color: palette.blackSoft, fontSize: 12, lineHeight: 18, marginTop: 8 },
+  metaLight: { color: palette.whiteShadow, fontSize: 12, lineHeight: 18, marginTop: 8 },
+  status: { color: palette.redDark, fontSize: 13, fontWeight: '900', letterSpacing: 1, marginTop: 12 },
+  upgrade: { color: palette.redDark, fontSize: 12, fontWeight: '800', lineHeight: 17, marginVertical: 12 },
+  section: { color: palette.white, fontSize: 12, fontWeight: '900', letterSpacing: 1.4, marginBottom: 12 },
+  event: { color: palette.whiteShadow, fontSize: 11, lineHeight: 16, marginBottom: 8 },
+  copy: { color: palette.blackSoft, lineHeight: 18, marginBottom: 12 },
 });

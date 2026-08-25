@@ -34,7 +34,16 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "DropLinq",
+      "shortName": "DropLinq",
+      "description": "Independent product availability alerts",
+      "themeColor": "#D20D1E",
+      "backgroundColor": "#090909",
+      "lang": "en",
+      "display": "standalone",
+      "orientation": "portrait",
+      "startUrl": "/"
     },
     "plugins": [
       "expo-router",

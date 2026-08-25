@@ -1,14 +1,62 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
+import ReanimatedSwipeable, {
+  SwipeDirection,
+  type SwipeableMethods,
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Reanimated, {
+  Extrapolation,
+  interpolate,
+  SharedValue,
+  useAnimatedStyle,
+} from 'react-native-reanimated';
 
 import { BrandHeader, MetalButton, Panel, Screen } from '@/components/dropdex-ui';
 import { palette } from '@/constants/dropdex';
 import { getRegion } from '@/data/regions';
+import { useWebLayout } from '@/hooks/use-web-layout';
 import { useDropDex } from '@/store/dropdex-context';
-import { RecentVisit } from '@/types/dropdex';
+import { RecentVisit, WatchedItem } from '@/types/dropdex';
+
+const DELETE_WIDTH = 92;
+
+function DeleteAction({
+  progress,
+  translation,
+}: {
+  progress: SharedValue<number>;
+  translation: SharedValue<number>;
+}) {
+  const animatedStyle = useAnimatedStyle(() => {
+    const drag = Math.min(Math.abs(translation.value), DELETE_WIDTH);
+    const reveal = drag / DELETE_WIDTH;
+    const opacity = interpolate(reveal, [0, 0.25, 1], [0.25, 0.75, 1], Extrapolation.CLAMP);
+    const scale = interpolate(reveal, [0, 1], [0.88, 1], Extrapolation.CLAMP);
+    const nudge = interpolate(progress.value, [0, 1], [18, 0], Extrapolation.CLAMP);
+    return {
+      opacity,
+      transform: [{ translateX: nudge }, { scale }],
+    };
+  });
+
+  return (
+    <Reanimated.View style={[styles.deleteAction, animatedStyle]}>
+      <Ionicons color={palette.white} name="trash-outline" size={22} />
+      <Text style={styles.deleteText}>REMOVE</Text>
+    </Reanimated.View>
+  );
+}
+
+function renderDeleteActions(
+  progress: SharedValue<number>,
+  translation: SharedValue<number>,
+  _methods: SwipeableMethods,
+) {
+  return <DeleteAction progress={progress} translation={translation} />;
+}
 
 // Memoized: Home re-renders on every progress tick while monitoring, and
 // rebuilding every Swipeable bubble each tick makes taps feel laggy.
@@ -22,20 +70,21 @@ const RecentBubble = memo(function RecentBubble({
   visit: RecentVisit;
 }) {
   return (
-    <Swipeable
-      friction={2}
-      overshootRight={false}
+    <ReanimatedSwipeable
+      animationOptions={{ damping: 28, mass: 0.65, stiffness: 320 }}
+      containerStyle={styles.swipeContainer}
+      dragOffsetFromRightEdge={6}
+      enableTrackpadTwoFingerGesture
+      friction={1}
       onSwipeableOpen={(direction) => {
-        if (direction === 'right') onRemove(visit);
+        if (direction === SwipeDirection.LEFT) onRemove(visit);
       }}
-      renderRightActions={() => (
-        <View style={styles.deleteAction}>
-          <Ionicons color={palette.white} name="trash-outline" size={22} />
-          <Text style={styles.deleteText}>REMOVE</Text>
-        </View>
-      )}
-      rightThreshold={64}>
+      overshootFriction={8}
+      overshootRight={false}
+      renderRightActions={renderDeleteActions}
+      rightThreshold={36}>
       <Pressable
+        unstable_pressDelay={0}
         accessibilityHint="Opens this product again"
         onPress={() => onOpen(visit)}
         style={({ pressed }) => [styles.recentShadow, pressed && styles.recentPressed]}>
@@ -46,7 +95,7 @@ const RecentBubble = memo(function RecentBubble({
                 contentFit="cover"
                 source={{ uri: visit.product.imageUrl }}
                 style={styles.recentImage}
-                transition={160}
+                transition={0}
               />
             ) : (
               <Ionicons color={palette.whiteShadow} name="image-outline" size={18} />
@@ -60,11 +109,66 @@ const RecentBubble = memo(function RecentBubble({
           <Ionicons color={palette.whiteShadow} name="open-outline" size={16} />
         </View>
       </Pressable>
-    </Swipeable>
+    </ReanimatedSwipeable>
+  );
+});
+
+const WatchBubble = memo(function WatchBubble({
+  item,
+  onOpen,
+  onRemove,
+}: {
+  item: WatchedItem;
+  onOpen: (item: WatchedItem) => void;
+  onRemove: (item: WatchedItem) => void;
+}) {
+  return (
+    <ReanimatedSwipeable
+      animationOptions={{ damping: 28, mass: 0.65, stiffness: 320 }}
+      containerStyle={styles.swipeContainer}
+      dragOffsetFromRightEdge={6}
+      enableTrackpadTwoFingerGesture
+      friction={1}
+      onSwipeableOpen={(direction) => {
+        if (direction === SwipeDirection.LEFT) onRemove(item);
+      }}
+      overshootFriction={8}
+      overshootRight={false}
+      renderRightActions={renderDeleteActions}
+      rightThreshold={36}>
+      <Pressable
+        unstable_pressDelay={0}
+        accessibilityHint="Opens this watched product"
+        onPress={() => onOpen(item)}
+        style={({ pressed }) => [styles.recentShadow, pressed && styles.recentPressed]}>
+        <View style={styles.recentCard}>
+          <View style={styles.recentThumb}>
+            {item.product.imageUrl ? (
+              <Image
+                contentFit="cover"
+                source={{ uri: item.product.imageUrl }}
+                style={styles.recentImage}
+                transition={0}
+              />
+            ) : (
+              <Ionicons color={palette.whiteShadow} name="bookmark-outline" size={18} />
+            )}
+          </View>
+          <View style={styles.recentCopy}>
+            <Text numberOfLines={2} style={styles.recentTitle}>
+              {item.product.title}
+            </Text>
+          </View>
+          <Ionicons color={palette.whiteShadow} name="chevron-forward" size={16} />
+        </View>
+      </Pressable>
+    </ReanimatedSwipeable>
   );
 });
 
 export default function HomeScreen() {
+  const router = useRouter();
+  const { isDesktopWeb } = useWebLayout();
   const {
     hydrated,
     liveStatus,
@@ -72,10 +176,12 @@ export default function HomeScreen() {
     openProductBrowser,
     recentVisits,
     region,
+    removeFromWatchlist,
     removeRecentVisit,
     setMonitoring,
     stockEvents,
     triggerTestAlert,
+    watchlist,
   } = useDropDex();
   const regionConfig = getRegion(region);
   const handleOpenRecent = useCallback(
@@ -85,6 +191,14 @@ export default function HomeScreen() {
   const handleRemoveRecent = useCallback(
     (visit: RecentVisit) => removeRecentVisit(visit.id),
     [removeRecentVisit],
+  );
+  const handleOpenWatch = useCallback(
+    (item: WatchedItem) => router.push(`/product/${item.product.id}`),
+    [router],
+  );
+  const handleRemoveWatch = useCallback(
+    (item: WatchedItem) => removeFromWatchlist(item.product.id),
+    [removeFromWatchlist],
   );
   const progress = !hydrated ? 5 : monitoring ? (liveStatus.progress ?? 10) : 0;
   const animatedProgress = useRef(new Animated.Value(progress)).current;
@@ -143,105 +257,460 @@ export default function HomeScreen() {
 
   return (
     <Screen>
-      <BrandHeader eyebrow={regionConfig.label} />
+      {!isDesktopWeb ? <BrandHeader eyebrow={regionConfig.label} /> : null}
 
-      <View style={styles.body}>
-        <View style={styles.statusRow}>
-          <View style={[styles.statusLamp, monitoring && styles.statusLampOn]} />
-          <Text style={styles.statusText}>
-            {!hydrated ? 'LOADING' : monitoring ? 'ALERTS ON' : 'ALERTS OFF'}
-          </Text>
-        </View>
-
-        <Pressable
-          accessibilityHint="Turns DropLinq alerts on or off"
-          accessibilityLabel={`Alerts ${monitoring ? 'on' : 'off'}`}
-          accessibilityRole="button"
-          disabled={!hydrated}
-          onPress={() => setMonitoring(!monitoring)}
-          style={({ pressed }) => [styles.powerBase, pressed && styles.powerPressed]}>
-          <View style={[styles.powerRim, monitoring && styles.powerRimOn]}>
-            <View style={styles.powerFace}>
-              <View style={[styles.powerGlow, monitoring && styles.powerGlowOn]}>
-                <Ionicons
-                  color={monitoring ? palette.red : palette.whiteShadow}
-                  name="power"
-                  size={76}
-                />
+      {isDesktopWeb ? (
+        <View style={styles.desktopPage}>
+          <View style={styles.desktopHeader}>
+            <View>
+              <Text style={styles.desktopEyebrow}>{regionConfig.label.toUpperCase()}</Text>
+              <Text style={styles.desktopTitle}>Command Center</Text>
+            </View>
+            <View style={styles.subNav}>
+              <View style={[styles.subNavPill, styles.subNavPillActive]}>
+                <Text style={[styles.subNavText, styles.subNavTextActive]}>Overview</Text>
               </View>
-              <Text style={[styles.powerLabel, monitoring && styles.powerLabelOn]}>
-                {monitoring ? 'ON' : 'OFF'}
-              </Text>
+              <Pressable
+                unstable_pressDelay={0}
+                onPress={() => router.push('/(tabs)/stock')}
+                style={({ pressed }) => [styles.subNavPill, pressed && styles.subNavPressed]}>
+                <Text style={styles.subNavText}>Stock</Text>
+              </Pressable>
+              <Pressable
+                unstable_pressDelay={0}
+                onPress={() => router.push('/(tabs)/filter')}
+                style={({ pressed }) => [styles.subNavPill, pressed && styles.subNavPressed]}>
+                <Text style={styles.subNavText}>Coverage</Text>
+              </Pressable>
             </View>
           </View>
-        </Pressable>
 
-        <View
-          accessibilityLabel={`Loading progress ${displayPercent} percent`}
-          accessibilityRole="progressbar"
-          style={styles.progressRow}>
-          <View style={styles.progressTrack}>
-            <Animated.View
-              style={[
-                styles.progressLiquid,
-                {
-                  transform: [
-                    {
-                      scaleX: animatedProgress.interpolate({
-                        inputRange: [0, 100],
-                        outputRange: [0, 1],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            />
-            <View style={styles.progressShine} />
+          <View style={styles.desktopGrid}>
+            <View style={styles.mainCard}>
+              <View style={styles.mainStatusBlock}>
+                <View style={styles.statusRowDesktop}>
+                  <View style={[styles.statusLampLg, monitoring && styles.statusLampOn]} />
+                  <Text style={[styles.statusHeadline, monitoring && styles.statusHeadlineOn]}>
+                    {!hydrated ? 'LOADING' : monitoring ? 'ALERTS ON' : 'ALERTS OFF'}
+                  </Text>
+                </View>
+                <Text style={styles.statusRegion}>
+                  {monitoring
+                    ? `${regionConfig.label} · live coverage`
+                    : `${regionConfig.label} · tap power to arm`}
+                </Text>
+              </View>
+
+              <View style={styles.mainCardStage}>
+                <Pressable
+                  unstable_pressDelay={0}
+                  accessibilityHint="Turns DropLinq alerts on or off"
+                  accessibilityLabel={`Alerts ${monitoring ? 'on' : 'off'}`}
+                  accessibilityRole="button"
+                  disabled={!hydrated}
+                  onPress={() => setMonitoring(!monitoring)}
+                  style={({ pressed }) => [styles.powerBase, pressed && styles.powerPressed]}>
+                  <View style={[styles.powerRim, monitoring && styles.powerRimOn]}>
+                    <View style={styles.powerFace}>
+                      <View style={[styles.powerGlow, monitoring && styles.powerGlowOn]}>
+                        <Ionicons
+                          color={monitoring ? palette.red : palette.whiteShadow}
+                          name="power"
+                          size={76}
+                        />
+                      </View>
+                      <Text style={[styles.powerLabel, monitoring && styles.powerLabelOn]}>
+                        {monitoring ? 'ON' : 'OFF'}
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+              </View>
+
+              {monitoring && displayPercent < 100 ? (
+                <View
+                  accessibilityLabel={`Loading progress ${displayPercent} percent`}
+                  accessibilityRole="progressbar"
+                  style={styles.desktopProgressRow}>
+                  <View style={styles.progressTrack}>
+                    <Animated.View
+                      style={[
+                        styles.progressLiquid,
+                        {
+                          transform: [
+                            {
+                              scaleX: animatedProgress.interpolate({
+                                inputRange: [0, 100],
+                                outputRange: [0, 1],
+                              }),
+                            },
+                          ],
+                        },
+                      ]}
+                    />
+                    <View style={styles.progressShine} />
+                  </View>
+                  <Text style={styles.progressPercent}>{displayPercent}%</Text>
+                </View>
+              ) : (
+                <Text style={styles.powerHint}>
+                  {monitoring ? 'Monitoring Pokémon Center stock' : 'Alerts are off'}
+                </Text>
+              )}
+            </View>
+
+            <View style={styles.sideCol}>
+              <View style={styles.sideCard}>
+                <View style={styles.sideCardHeader}>
+                  <Text style={[styles.sideCardTitle, styles.sideCardTitleInline]}>Activity</Text>
+                  <Pressable
+                    unstable_pressDelay={0}
+                    onPress={triggerTestAlert}
+                    style={({ pressed }) => [styles.testChip, pressed && styles.subNavPressed]}>
+                    <Ionicons color={palette.black} name="flash" size={14} />
+                    <Text style={styles.testChipText}>TEST</Text>
+                  </Pressable>
+                </View>
+                {stockEvents.length === 0 ? (
+                  <Text style={styles.emptyRecentsText}>No events yet</Text>
+                ) : (
+                  stockEvents.slice(0, 6).map((event) => (
+                    <Text key={event.id} style={styles.eventLine}>
+                      {event.kind.replace('_', ' ').toUpperCase()} · {event.productName}
+                    </Text>
+                  ))
+                )}
+              </View>
+
+              <View style={styles.sideCard}>
+                <Text style={styles.sideCardTitle}>Watchlist</Text>
+                {watchlist.length === 0 ? (
+                  <View style={styles.emptyRecents}>
+                    <Ionicons color={palette.whiteShadow} name="bookmark-outline" size={18} />
+                    <Text style={styles.emptyRecentsText}>Nothing watched yet</Text>
+                  </View>
+                ) : (
+                  <View style={styles.recentsList}>
+                    {watchlist.map((item) => (
+                      <WatchBubble
+                        key={item.id}
+                        item={item}
+                        onOpen={handleOpenWatch}
+                        onRemove={handleRemoveWatch}
+                      />
+                    ))}
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.sideCard}>
+                <Text style={styles.sideCardTitle}>Recents</Text>
+                {recentVisits.length === 0 ? (
+                  <View style={styles.emptyRecents}>
+                    <Ionicons color={palette.whiteShadow} name="time-outline" size={18} />
+                    <Text style={styles.emptyRecentsText}>Nothing opened yet</Text>
+                  </View>
+                ) : (
+                  <View style={styles.recentsList}>
+                    {recentVisits.map((visit) => (
+                      <RecentBubble
+                        key={visit.id}
+                        onOpen={handleOpenRecent}
+                        onRemove={handleRemoveRecent}
+                        visit={visit}
+                      />
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
           </View>
-          <Text style={styles.progressPercent}>{displayPercent}%</Text>
         </View>
-      </View>
+      ) : (
+        <>
+          <View style={styles.body}>
+            <View style={styles.statusRow}>
+              <View style={[styles.statusLamp, monitoring && styles.statusLampOn]} />
+              <Text style={styles.statusText}>
+                {!hydrated ? 'LOADING' : monitoring ? 'ALERTS ON' : 'ALERTS OFF'}
+              </Text>
+            </View>
 
-      <Panel tone="dark" style={styles.bottomPanel}>
-        <Text style={styles.testLabel}>ALARM CHECK</Text>
-        <MetalButton icon="flash" label="Test" onPress={triggerTestAlert} />
-        <View style={styles.divider} />
-        <Text style={styles.recentsLabel}>ACTIVITY</Text>
-        {stockEvents.length === 0 ? (
-          <Text style={styles.emptyRecentsText}>No events yet</Text>
-        ) : (
-          stockEvents.slice(0, 5).map((event) => (
-            <Text key={event.id} style={styles.eventLine}>
-              {event.kind.replace('_', ' ').toUpperCase()} · {event.productName}
-            </Text>
-          ))
-        )}
-        <View style={styles.divider} />
-        <Text style={styles.recentsLabel}>RECENTS</Text>
+            <Pressable
+              unstable_pressDelay={0}
+              accessibilityHint="Turns DropLinq alerts on or off"
+              accessibilityLabel={`Alerts ${monitoring ? 'on' : 'off'}`}
+              accessibilityRole="button"
+              disabled={!hydrated}
+              onPress={() => setMonitoring(!monitoring)}
+              style={({ pressed }) => [styles.powerBase, pressed && styles.powerPressed]}>
+              <View style={[styles.powerRim, monitoring && styles.powerRimOn]}>
+                <View style={styles.powerFace}>
+                  <View style={[styles.powerGlow, monitoring && styles.powerGlowOn]}>
+                    <Ionicons
+                      color={monitoring ? palette.red : palette.whiteShadow}
+                      name="power"
+                      size={76}
+                    />
+                  </View>
+                  <Text style={[styles.powerLabel, monitoring && styles.powerLabelOn]}>
+                    {monitoring ? 'ON' : 'OFF'}
+                  </Text>
+                </View>
+              </View>
+            </Pressable>
 
-        {recentVisits.length === 0 ? (
-          <View style={styles.emptyRecents}>
-            <Ionicons color={palette.whiteShadow} name="time-outline" size={18} />
-            <Text style={styles.emptyRecentsText}>Nothing opened yet</Text>
+            <View
+              accessibilityLabel={`Loading progress ${displayPercent} percent`}
+              accessibilityRole="progressbar"
+              style={styles.progressRow}>
+              <View style={styles.progressTrack}>
+                <Animated.View
+                  style={[
+                    styles.progressLiquid,
+                    {
+                      transform: [
+                        {
+                          scaleX: animatedProgress.interpolate({
+                            inputRange: [0, 100],
+                            outputRange: [0, 1],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                />
+                <View style={styles.progressShine} />
+              </View>
+              <Text style={styles.progressPercent}>{displayPercent}%</Text>
+            </View>
           </View>
-        ) : (
-          <View style={styles.recentsList}>
-            {recentVisits.map((visit) => (
-              <RecentBubble
-                key={visit.id}
-                onOpen={handleOpenRecent}
-                onRemove={handleRemoveRecent}
-                visit={visit}
-              />
-            ))}
-          </View>
-        )}
-      </Panel>
+
+          <Panel tone="dark" style={styles.bottomPanel}>
+            <Text style={styles.testLabel}>ALARM CHECK</Text>
+            <MetalButton icon="flash" label="Test" onPress={triggerTestAlert} />
+            <View style={styles.divider} />
+            <Text style={styles.recentsLabel}>ACTIVITY</Text>
+            {stockEvents.length === 0 ? (
+              <Text style={styles.emptyRecentsText}>No events yet</Text>
+            ) : (
+              stockEvents.slice(0, 5).map((event) => (
+                <Text key={event.id} style={styles.eventLine}>
+                  {event.kind.replace('_', ' ').toUpperCase()} · {event.productName}
+                </Text>
+              ))
+            )}
+            <View style={styles.divider} />
+            <Text style={styles.recentsLabel}>WATCHLIST</Text>
+            {watchlist.length === 0 ? (
+              <View style={styles.emptyRecents}>
+                <Ionicons color={palette.whiteShadow} name="bookmark-outline" size={18} />
+                <Text style={styles.emptyRecentsText}>Nothing watched yet</Text>
+              </View>
+            ) : (
+              <View style={styles.recentsList}>
+                {watchlist.map((item) => (
+                  <WatchBubble
+                    key={item.id}
+                    item={item}
+                    onOpen={handleOpenWatch}
+                    onRemove={handleRemoveWatch}
+                  />
+                ))}
+              </View>
+            )}
+            <View style={styles.divider} />
+            <Text style={styles.recentsLabel}>RECENTS</Text>
+
+            {recentVisits.length === 0 ? (
+              <View style={styles.emptyRecents}>
+                <Ionicons color={palette.whiteShadow} name="time-outline" size={18} />
+                <Text style={styles.emptyRecentsText}>Nothing opened yet</Text>
+              </View>
+            ) : (
+              <View style={styles.recentsList}>
+                {recentVisits.map((visit) => (
+                  <RecentBubble
+                    key={visit.id}
+                    onOpen={handleOpenRecent}
+                    onRemove={handleRemoveRecent}
+                    visit={visit}
+                  />
+                ))}
+              </View>
+            )}
+          </Panel>
+        </>
+      )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  desktopPage: {
+    gap: 18,
+    width: '100%',
+  },
+  desktopHeader: {
+    alignItems: 'flex-end',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  desktopEyebrow: {
+    color: palette.whiteShadow,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.6,
+    marginBottom: 4,
+  },
+  desktopTitle: {
+    color: palette.white,
+    fontSize: 28,
+    fontWeight: '900',
+    letterSpacing: 0.2,
+  },
+  subNav: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  subNavPill: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  subNavPillActive: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  subNavPressed: { opacity: 0.75 },
+  subNavText: {
+    color: palette.whiteShadow,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  subNavTextActive: {
+    color: palette.red,
+  },
+  desktopGrid: {
+    alignItems: 'stretch',
+    flexDirection: 'row',
+    gap: 16,
+    width: '100%',
+  },
+  mainCard: {
+    alignItems: 'center',
+    backgroundColor: palette.blackRaised,
+    borderColor: palette.blackSoft,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexBasis: '68%',
+    flexGrow: 1,
+    flexShrink: 1,
+    justifyContent: 'center',
+    minHeight: 560,
+    minWidth: 0,
+    paddingHorizontal: 28,
+    paddingVertical: 36,
+  },
+  mainStatusBlock: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  statusRowDesktop: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statusLampLg: {
+    backgroundColor: palette.blackSoft,
+    borderRadius: 7,
+    height: 14,
+    width: 14,
+  },
+  statusHeadline: {
+    color: palette.whiteShadow,
+    fontSize: 28,
+    fontWeight: '900',
+    letterSpacing: 2.4,
+  },
+  statusHeadlineOn: {
+    color: palette.white,
+  },
+  statusRegion: {
+    color: palette.whiteShadow,
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  mainCardStage: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 28,
+  },
+  desktopProgressRow: {
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  powerHint: {
+    color: palette.whiteShadow,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  sideCol: {
+    flexBasis: '32%',
+    flexGrow: 0,
+    flexShrink: 0,
+    gap: 16,
+    maxWidth: 420,
+    minWidth: 300,
+  },
+  sideCard: {
+    backgroundColor: palette.blackRaised,
+    borderColor: palette.blackSoft,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+  },
+  sideCardHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  sideCardTitle: {
+    color: palette.white,
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 12,
+  },
+  sideCardTitleInline: {
+    marginBottom: 0,
+  },
+  testChip: {
+    alignItems: 'center',
+    backgroundColor: palette.white,
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  testChipText: {
+    color: palette.black,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
   body: { alignItems: 'center', paddingBottom: 8, paddingTop: 4 },
   statusRow: { alignItems: 'center', flexDirection: 'row', gap: 8, marginBottom: 22 },
   statusLamp: {
@@ -301,7 +770,6 @@ const styles = StyleSheet.create({
   powerGlowOn: { borderColor: palette.redDark, shadowColor: palette.red, shadowOpacity: 0.8, shadowRadius: 18 },
   powerLabel: { color: palette.whiteShadow, fontSize: 32, fontWeight: '900', letterSpacing: 1, marginTop: 12 },
   powerLabelOn: { color: palette.white },
-  powerCaption: { color: palette.whiteShadow, fontSize: 9, fontWeight: '800', letterSpacing: 1.7, marginTop: 2 },
   progressRow: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -345,41 +813,34 @@ const styles = StyleSheet.create({
     minWidth: 36,
     textAlign: 'right',
   },
-  backendNote: {
-    color: palette.whiteShadow,
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 14,
-    textAlign: 'center',
-    width: 280,
-  },
-  backendMeta: {
-    color: palette.whiteShadow,
-    fontSize: 10,
-    marginTop: 8,
-    textAlign: 'center',
-    width: 280,
-  },
   eventLine: {
     color: palette.whiteDim,
     fontSize: 11,
-    lineHeight: 16,
-    marginBottom: 6,
+    lineHeight: 17,
+    marginBottom: 8,
+    marginTop: 2,
   },
   bottomPanel: { marginBottom: 4 },
   testLabel: { color: palette.white, fontSize: 13, fontWeight: '900', letterSpacing: 1.2 },
-  testCaption: { color: palette.whiteShadow, fontSize: 11, lineHeight: 16, marginTop: 3 },
-  divider: { backgroundColor: palette.blackSoft, height: 1, marginVertical: 10 },
-  recentsLabel: { color: palette.white, fontSize: 13, fontWeight: '900', letterSpacing: 1.2 },
-  recentsCaption: { color: palette.whiteShadow, fontSize: 11, lineHeight: 16, marginBottom: 10, marginTop: 3 },
+  divider: { backgroundColor: palette.blackSoft, height: 1, marginVertical: 14 },
+  recentsLabel: {
+    color: palette.white,
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+    marginBottom: 10,
+  },
   emptyRecents: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 8,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
-  emptyRecentsText: { color: palette.whiteShadow, fontSize: 12, fontWeight: '700' },
-  recentsList: { gap: 10 },
+  emptyRecentsText: { color: palette.whiteShadow, fontSize: 12, fontWeight: '700', lineHeight: 17 },
+  recentsList: { gap: 12 },
+  swipeContainer: {
+    overflow: 'hidden',
+  },
   recentShadow: {
     backgroundColor: palette.blackSoft,
     borderRadius: 16,
@@ -408,23 +869,16 @@ const styles = StyleSheet.create({
   },
   recentImage: { height: '100%', width: '100%' },
   recentCopy: { flex: 1 },
-  recentTitle: { color: palette.white, fontSize: 13, fontWeight: '800', lineHeight: 17 },
-  recentMeta: {
-    color: palette.whiteShadow,
-    fontSize: 8,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    marginTop: 4,
-  },
+  recentTitle: { color: palette.white, fontSize: 13, fontWeight: '800', lineHeight: 18 },
   deleteAction: {
     alignItems: 'center',
     backgroundColor: palette.red,
     borderRadius: 15,
+    height: '100%',
     justifyContent: 'center',
     marginBottom: 3,
     marginLeft: 8,
-    minWidth: 84,
-    paddingHorizontal: 12,
+    width: DELETE_WIDTH,
   },
   deleteText: { color: palette.white, fontSize: 9, fontWeight: '900', letterSpacing: 1, marginTop: 4 },
 });

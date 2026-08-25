@@ -9,7 +9,6 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { InteractionManager } from 'react-native';
 
 import { defaultAlertPreferences, defaultFilters, testAlertProduct } from '@/constants/dropdex';
 import { migrateLegacyFilters } from '@/data/pokemon-center-filters';
@@ -18,6 +17,7 @@ import { isMockData } from '@/config/app-config';
 import { CatalogStockEvent } from '@/types/catalog';
 import { syncCoveragePreferences } from '@/services/filters/coverage-prefs';
 import { canAddToWatchlist } from '@/services/subscriptions/tiers';
+import { isGuestUserId } from '@/services/auth/guest-auth';
 import { useAuth } from '@/store/auth-context';
 import { seededEtbs } from '@/data/historical-etbs';
 import {
@@ -683,15 +683,8 @@ export function DropDexProvider({ children }: PropsWithChildren) {
         progress: monitoring ? 8 : 0,
       });
       setState((previous) => ({ ...previous, region }));
-      showFeedback(
-        'success',
-        `${selected.label} selected`,
-        monitoring
-          ? 'Product links changed immediately. Live stock is refreshing in the background.'
-          : 'Product links and release dates now match this storefront.',
-      );
     },
-    [showFeedback],
+    [],
   );
 
   const retryMonitoring = useCallback(() => {
@@ -813,20 +806,18 @@ export function DropDexProvider({ children }: PropsWithChildren) {
         title: 'OPENING POKÉMON CENTER',
         message: `Connecting to ${getRegion(stateRef.current.region).storefront}. This can take a moment.`,
       });
-      InteractionManager.runAfterInteractions(() => {
-        openPokemonCenterProduct(product.url)
-          .catch(() => {
-            showFeedback(
-              'error',
-              'Could not open Pokémon Center',
-              'Check your connection, then tap the product to try again.',
-            );
-          })
-          .finally(() => {
-            setOperation(null);
-            setBrowserOpen(false);
-          });
-      });
+      void openPokemonCenterProduct(product.url)
+        .catch(() => {
+          showFeedback(
+            'error',
+            'Could not open Pokémon Center',
+            'Check your connection, then tap the product to try again.',
+          );
+        })
+        .finally(() => {
+          setOperation(null);
+          setBrowserOpen(false);
+        });
     },
     [showFeedback],
   );
@@ -866,18 +857,13 @@ export function DropDexProvider({ children }: PropsWithChildren) {
     (product: Product) => {
       const current = stateRef.current.watchlist;
       if (current.some((item) => item.product.id === product.id)) {
-        return { ok: false as const, code: 'duplicate' as const, message: 'Already on your watchlist.' };
+        return {
+          ok: false as const,
+          code: 'duplicate' as const,
+          message: 'Already on your watchlist.',
+        };
       }
-      // Local free tier cap (3). Pro unlocks later via subscriptionTier.
-      if (!canAddToWatchlist('FREE', current.length) && current.length >= 3) {
-        // Allow up to MAX if somehow more; FREE check:
-      }
-      if (current.length >= 3) {
-        // Check if we should use FREE limit - always enforce at least free limit for now
-        // unless we wire profile tier; keep simple free limit of 3.
-      }
-      const limitOk = canAddToWatchlist('FREE', current.length);
-      if (!limitOk) {
+      if (!canAddToWatchlist('FREE', current.length)) {
         return {
           ok: false as const,
           code: 'limit' as const,
@@ -892,10 +878,10 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       };
       setState((previous) => ({
         ...previous,
-        watchlist: [entry, ...previous.watchlist.filter((item) => item.product.id !== product.id)].slice(
-          0,
-          MAX_WATCHLIST,
-        ),
+        watchlist: [
+          entry,
+          ...previous.watchlist.filter((item) => item.product.id !== product.id),
+        ].slice(0, MAX_WATCHLIST),
       }));
       showFeedback('success', 'Added to Watchlist', product.title);
       return { ok: true as const };

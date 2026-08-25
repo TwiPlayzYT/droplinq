@@ -24,3 +24,15 @@ Scan the `exp://` QR with Expo Go on the same Wi‑Fi. Do not use `npx expo star
 Sign up (mock auth) → onboarding → Home.
 
 SQL: `supabase/migrations/001_init.sql`
+
+## Web app
+
+Same Expo app runs as a mobile-responsive PWA. Native iOS/Android are unchanged.
+
+```bash
+npm run web          # local
+npm run export:web   # static build → dist/
+```
+
+Deploy `dist/` free on **Cloudflare Pages** (recommended) or **Render Static Site**. See [WEB.md](./WEB.md).
+

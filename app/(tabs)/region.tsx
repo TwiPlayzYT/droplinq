@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BrandHeader, Panel, Screen } from '@/components/dropdex-ui';
 import { palette } from '@/constants/dropdex';
 import { getRegion, RegionConfig, regions } from '@/data/regions';
+import { useWebLayout } from '@/hooks/use-web-layout';
 import { useDropDex } from '@/store/dropdex-context';
 
 function RegionRow({
@@ -17,6 +18,7 @@ function RegionRow({
 }) {
   return (
     <Pressable
+      unstable_pressDelay={0}
       accessibilityHint={`Switches all listings to ${config.storefront}`}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
@@ -45,6 +47,7 @@ function RegionRow({
 
 export default function RegionScreen() {
   const { region, setRegion } = useDropDex();
+  const { isDesktopWeb, contentColumns } = useWebLayout();
   const active = getRegion(region);
 
   return (
@@ -64,14 +67,21 @@ export default function RegionScreen() {
           <Text style={styles.headingText}>SELECT REGION</Text>
         </View>
 
-        <View style={styles.rows}>
+        <View style={[styles.rows, isDesktopWeb && styles.regionGrid]}>
           {regions.map((config) => (
-            <RegionRow
+            <View
               key={config.id}
-              config={config}
-              onSelect={() => setRegion(config.id)}
-              selected={config.id === region}
-            />
+              style={
+                isDesktopWeb
+                  ? [styles.regionGridItem, contentColumns >= 3 ? styles.regionCol3 : styles.regionCol2]
+                  : undefined
+              }>
+              <RegionRow
+                config={config}
+                onSelect={() => setRegion(config.id)}
+                selected={config.id === region}
+              />
+            </View>
           ))}
         </View>
       </Panel>
@@ -106,6 +116,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 8,
+    marginBottom: 12,
   },
   headingText: {
     color: palette.white,
@@ -121,6 +132,20 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   rows: { gap: 12 },
+  regionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  regionGridItem: {},
+  regionCol2: {
+    maxWidth: '48%',
+    width: '48%',
+  },
+  regionCol3: {
+    maxWidth: '32%',
+    width: '31.5%',
+  },
   rowShadow: {
     backgroundColor: palette.black,
     borderRadius: 18,
@@ -166,15 +191,15 @@ const styles = StyleSheet.create({
   },
   codeTextSelected: { color: palette.white },
   rowCopy: { flex: 1 },
-  rowLabel: { color: palette.whiteDim, fontSize: 15, fontWeight: '900' },
+  rowLabel: { color: palette.whiteDim, fontSize: 15, fontWeight: '900', lineHeight: 20 },
   rowLabelSelected: { color: palette.white },
-  rowDomain: { color: palette.whiteShadow, fontSize: 11, marginTop: 2 },
+  rowDomain: { color: palette.whiteShadow, fontSize: 11, lineHeight: 16, marginTop: 5 },
   rowWindow: {
     color: palette.whiteShadow,
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.8,
-    marginTop: 4,
+    marginTop: 6,
   },
   lampWell: {
     alignItems: 'center',

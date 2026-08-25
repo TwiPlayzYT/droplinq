@@ -1,0 +1,10 @@
+# Optional alternate free host (Netlify). Same static `dist` from Expo web export.
+[build]
+  command = "npm ci && npm run export:web"
+  publish = "dist"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
