@@ -630,6 +630,21 @@ export default function StockScreen() {
     <Screen wide onRefresh={onRefresh} refreshing={refreshing}>
       <BrandHeader eyebrow={regionConfig.label} />
 
+      {isDesktopWeb ? (
+        <View style={styles.webHero}>
+          <View style={styles.webHeroCopy}>
+            <Text style={styles.webHeroKicker}>LIVE MONITORING</Text>
+            <Text style={styles.webHeroTitle}>Stock command center</Text>
+            <Text style={styles.webHeroBody}>{statusLine}</Text>
+          </View>
+          <View style={styles.webHeroAside}>
+            <Text style={styles.webHeroStat}>{liveNow.length}</Text>
+            <Text style={styles.webHeroStatLabel}>IN STOCK NOW</Text>
+          </View>
+        </View>
+      ) : null}
+
+      <View style={isDesktopWeb ? styles.bubbleColumn : undefined}>
       <Pressable
         unstable_pressDelay={0}
         accessibilityHint="Opens Filter tab"
@@ -662,20 +677,6 @@ export default function StockScreen() {
           style={({ pressed }) => [styles.slimError, pressed && styles.pressed]}>
           <Text style={styles.slimErrorText}>Couldn&apos;t refresh catalog · Tap to retry</Text>
         </Pressable>
-      ) : null}
-
-      {isDesktopWeb ? (
-        <View style={styles.webHero}>
-          <View style={styles.webHeroCopy}>
-            <Text style={styles.webHeroKicker}>LIVE MONITORING</Text>
-            <Text style={styles.webHeroTitle}>Stock command center</Text>
-            <Text style={styles.webHeroBody}>{statusLine}</Text>
-          </View>
-          <View style={styles.webHeroAside}>
-            <Text style={styles.webHeroStat}>{liveNow.length}</Text>
-            <Text style={styles.webHeroStatLabel}>IN STOCK NOW</Text>
-          </View>
-        </View>
       ) : null}
 
       {!searchOpen ? (
@@ -870,12 +871,18 @@ export default function StockScreen() {
           </View>
         )}
       </CollapsibleSection>
+      </View>
     </Screen>
   );
 
 }
 
 const styles = StyleSheet.create({
+  bubbleColumn: {
+    alignSelf: 'center',
+    maxWidth: 680,
+    width: '100%',
+  },
   webHero: {
     alignItems: 'center',
     backgroundColor: palette.blackRaised,
