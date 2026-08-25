@@ -256,7 +256,7 @@ export default function HomeScreen() {
   }, [animatedProgress, progress]);
 
   return (
-    <Screen>
+    <Screen wide>
       {!isDesktopWeb ? <BrandHeader eyebrow={regionConfig.label} /> : null}
 
       {isDesktopWeb ? (
