@@ -37,14 +37,15 @@ export function Screen({
   style?: StyleProp<ViewStyle>;
   refreshing?: boolean;
   onRefresh?: () => void;
-  /** Full desktop canvas (Home). Bubble tabs stay narrower so cards don’t stretch. */
+  /** Full desktop canvas (Home / Stock). Other tabs stay narrower so cards don’t stretch. */
   wide?: boolean;
 }>) {
-  const { isDesktopWeb } = useWebLayout();
+  const { isDesktopWeb, isMobileWeb } = useWebLayout();
   const safeEdges = isDesktopWeb ? ([] as const) : (['top'] as const);
   const contentStyle = [
     styles.screenContent,
     isDesktopWeb && (wide ? styles.screenContentDesktopWide : styles.screenContentDesktop),
+    isMobileWeb && styles.screenContentMobileWeb,
     style,
   ];
 
@@ -284,6 +285,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: 28,
     paddingHorizontal: 18,
+  },
+  screenContentMobileWeb: {
+    paddingBottom: 88,
   },
   screenContentDesktop: {
     alignSelf: 'center',

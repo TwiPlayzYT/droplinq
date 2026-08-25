@@ -4,7 +4,6 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BrandHeader, Panel, Screen } from '@/components/dropdex-ui';
 import { palette } from '@/constants/dropdex';
 import { getRegion, RegionConfig, regions } from '@/data/regions';
-import { useWebLayout } from '@/hooks/use-web-layout';
 import { useDropDex } from '@/store/dropdex-context';
 
 function RegionRow({
@@ -31,11 +30,15 @@ function RegionRow({
           </Text>
         </View>
         <View style={styles.rowCopy}>
-          <Text style={[styles.rowLabel, selected && styles.rowLabelSelected]}>
+          <Text numberOfLines={2} style={[styles.rowLabel, selected && styles.rowLabelSelected]}>
             {config.label}
           </Text>
-          <Text style={styles.rowDomain}>{config.domain}</Text>
-          <Text style={styles.rowWindow}>{config.dropWindow.toUpperCase()}</Text>
+          <Text numberOfLines={1} style={styles.rowDomain}>
+            {config.domain}
+          </Text>
+          <Text numberOfLines={1} style={styles.rowWindow}>
+            {config.dropWindow.toUpperCase()}
+          </Text>
         </View>
         <View style={[styles.lampWell, selected && styles.lampWellOn]}>
           <View style={[styles.lamp, selected && styles.lampOn]} />
@@ -47,7 +50,6 @@ function RegionRow({
 
 export default function RegionScreen() {
   const { region, setRegion } = useDropDex();
-  const { isDesktopWeb, contentColumns } = useWebLayout();
   const active = getRegion(region);
 
   return (
@@ -56,9 +58,7 @@ export default function RegionScreen() {
 
       <View style={styles.statusRow}>
         <View style={styles.statusLamp} />
-        <Text style={styles.statusText}>
-          TRACKING {active.storefront.toUpperCase()}
-        </Text>
+        <Text style={styles.statusText}>TRACKING {active.storefront.toUpperCase()}</Text>
       </View>
 
       <Panel tone="dark">
@@ -67,21 +67,14 @@ export default function RegionScreen() {
           <Text style={styles.headingText}>SELECT REGION</Text>
         </View>
 
-        <View style={[styles.rows, isDesktopWeb && styles.regionGrid]}>
+        <View style={styles.rows}>
           {regions.map((config) => (
-            <View
+            <RegionRow
               key={config.id}
-              style={
-                isDesktopWeb
-                  ? [styles.regionGridItem, contentColumns >= 3 ? styles.regionCol3 : styles.regionCol2]
-                  : undefined
-              }>
-              <RegionRow
-                config={config}
-                onSelect={() => setRegion(config.id)}
-                selected={config.id === region}
-              />
-            </View>
+              config={config}
+              onSelect={() => setRegion(config.id)}
+              selected={config.id === region}
+            />
           ))}
         </View>
       </Panel>
@@ -124,28 +117,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1.6,
   },
-  headingCaption: {
-    color: palette.whiteShadow,
-    fontSize: 11,
-    lineHeight: 16,
-    marginBottom: 14,
-    marginTop: 6,
-  },
   rows: { gap: 12 },
-  regionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  regionGridItem: {},
-  regionCol2: {
-    maxWidth: '48%',
-    width: '48%',
-  },
-  regionCol3: {
-    maxWidth: '32%',
-    width: '31.5%',
-  },
   rowShadow: {
     backgroundColor: palette.black,
     borderRadius: 18,
@@ -178,6 +150,7 @@ const styles = StyleSheet.create({
     borderColor: palette.blackSoft,
     borderRadius: 12,
     borderWidth: 2,
+    flexShrink: 0,
     height: 44,
     justifyContent: 'center',
     width: 44,
@@ -190,10 +163,16 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   codeTextSelected: { color: palette.white },
-  rowCopy: { flex: 1 },
+  rowCopy: { flex: 1, minWidth: 0 },
   rowLabel: { color: palette.whiteDim, fontSize: 15, fontWeight: '900', lineHeight: 20 },
   rowLabelSelected: { color: palette.white },
-  rowDomain: { color: palette.whiteShadow, fontSize: 11, lineHeight: 16, marginTop: 5 },
+  rowDomain: {
+    color: palette.whiteShadow,
+    flexShrink: 1,
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 5,
+  },
   rowWindow: {
     color: palette.whiteShadow,
     fontSize: 9,
@@ -207,6 +186,7 @@ const styles = StyleSheet.create({
     borderColor: palette.blackSoft,
     borderRadius: 12,
     borderWidth: 2,
+    flexShrink: 0,
     height: 24,
     justifyContent: 'center',
     width: 24,

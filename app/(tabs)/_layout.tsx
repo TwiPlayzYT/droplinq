@@ -17,14 +17,28 @@ export default function TabLayout() {
         height: 0,
         overflow: 'hidden' as const,
       }
-    : {
-        backgroundColor: palette.blackRaised,
-        borderTopColor: palette.blackSoft,
-        borderTopWidth: 1,
-        height: isMobileWeb ? 64 : 82,
-        paddingBottom: isMobileWeb ? 10 : 20,
-        paddingTop: 8,
-      };
+    : Platform.OS === 'web'
+      ? {
+          backgroundColor: palette.blackRaised,
+          borderTopColor: palette.blackSoft,
+          borderTopWidth: 1,
+          bottom: 0,
+          height: isMobileWeb ? 64 : 82,
+          left: 0,
+          paddingBottom: isMobileWeb ? 10 : 20,
+          paddingTop: 8,
+          position: 'fixed' as const,
+          right: 0,
+          zIndex: 40,
+        }
+      : {
+          backgroundColor: palette.blackRaised,
+          borderTopColor: palette.blackSoft,
+          borderTopWidth: 1,
+          height: isMobileWeb ? 64 : 82,
+          paddingBottom: isMobileWeb ? 10 : 20,
+          paddingTop: 8,
+        };
 
   return (
     <View style={{ flex: 1, backgroundColor: palette.black }}>

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { WebSearchPalette } from '@/components/web-search-palette';
 import { palette } from '@/constants/dropdex';
@@ -40,17 +40,17 @@ function isTypingTarget(target: EventTarget | null) {
 }
 
 /**
- * Desktop web top navigation (Collectr-inspired).
- * Only rendered on wide web viewports — never on native.
+ * Web top navigation — desktop full bar; mobile compact link row so phones
+ * can switch tabs even if the bottom bar is obscured by Safari chrome.
  */
 export function WebTopNav() {
-  const { isDesktopWeb } = useWebLayout();
+  const { isDesktopWeb, isMobileWeb, isWeb } = useWebLayout();
   const pathname = usePathname();
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
-    if (!isDesktopWeb || Platform.OS !== 'web') return;
+    if (!isWeb || Platform.OS !== 'web') return;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (searchOpen) return;
@@ -66,7 +66,50 @@ export function WebTopNav() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isDesktopWeb, searchOpen]);
+  }, [isWeb, searchOpen]);
+
+  if (!isWeb) return null;
+
+  if (isMobileWeb) {
+    return (
+      <>
+        <View style={styles.mobileBar}>
+          <Pressable
+            accessibilityRole="link"
+            onPress={() => router.push('/(tabs)')}
+            style={styles.mobileBrand}>
+            <Text style={styles.mobileBrandText}>DROPLINQ</Text>
+          </Pressable>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.mobileLinks}>
+            {LINKS.map((link) => {
+              const active = pathActive(pathname, link.match);
+              return (
+                <Pressable
+                  key={link.key}
+                  accessibilityRole="link"
+                  onPress={() => router.push(link.href)}
+                  style={[styles.mobileLink, active && styles.mobileLinkActive]}>
+                  <Text style={[styles.mobileLinkText, active && styles.mobileLinkTextActive]}>
+                    {link.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          <Pressable
+            accessibilityLabel="Search"
+            onPress={() => setSearchOpen(true)}
+            style={styles.mobileSearch}>
+            <Ionicons color={palette.white} name="search" size={18} />
+          </Pressable>
+        </View>
+        <WebSearchPalette visible={searchOpen} onClose={() => setSearchOpen(false)} />
+      </>
+    );
+  }
 
   if (!isDesktopWeb) return null;
 
@@ -215,5 +258,58 @@ const styles = StyleSheet.create({
   },
   iconBtn: {
     padding: 4,
+  },
+  mobileBar: {
+    alignItems: 'center',
+    backgroundColor: palette.black,
+    borderBottomColor: palette.blackSoft,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    paddingBottom: 10,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    zIndex: 30,
+  },
+  mobileBrand: {
+    paddingRight: 4,
+  },
+  mobileBrandText: {
+    color: palette.white,
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  mobileLinks: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
+    paddingRight: 8,
+  },
+  mobileLink: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  mobileLinkActive: {
+    backgroundColor: 'rgba(210,13,30,0.18)',
+  },
+  mobileLinkText: {
+    color: palette.whiteShadow,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  mobileLinkTextActive: {
+    color: palette.red,
+  },
+  mobileSearch: {
+    alignItems: 'center',
+    backgroundColor: palette.blackRaised,
+    borderColor: palette.blackSoft,
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 34,
+    justifyContent: 'center',
+    width: 34,
   },
 });

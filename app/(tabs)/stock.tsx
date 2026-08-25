@@ -627,7 +627,7 @@ export default function StockScreen() {
   const showSkeletons = catalogLoading && coverageProducts.length === 0 && !customEmpty;
 
   return (
-    <Screen onRefresh={onRefresh} refreshing={refreshing}>
+    <Screen wide onRefresh={onRefresh} refreshing={refreshing}>
       <BrandHeader eyebrow={regionConfig.label} />
 
       <Pressable
