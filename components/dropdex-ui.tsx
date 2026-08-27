@@ -14,9 +14,10 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { palette } from '@/constants/dropdex';
+import { useMobileWebChrome } from '@/hooks/use-mobile-web-chrome';
 import { useWebLayout } from '@/hooks/use-web-layout';
 
 
@@ -41,13 +42,12 @@ export function Screen({
   wide?: boolean;
 }>) {
   const { isDesktopWeb, isMobileWeb } = useWebLayout();
-  const insets = useSafeAreaInsets();
+  const { scrollBottomPad } = useMobileWebChrome();
   const safeEdges = isDesktopWeb ? ([] as const) : isMobileWeb ? ([] as const) : (['top'] as const);
-  const mobileBottomPad = 56 + Math.max(insets.bottom, 8) + 16;
   const contentStyle = [
     styles.screenContent,
     isDesktopWeb && (wide ? styles.screenContentDesktopWide : styles.screenContentDesktop),
-    isMobileWeb && [styles.screenContentMobileWeb, { paddingBottom: mobileBottomPad }],
+    isMobileWeb && [styles.screenContentMobileWeb, { paddingBottom: scrollBottomPad }],
     style,
   ];
 
@@ -57,8 +57,12 @@ export function Screen({
       keyboardShouldPersistTaps="handled"
       {...(Platform.OS === 'web'
         ? ({
-            // Smoother wheel/trackpad scrolling on react-native-web.
-            style: { flex: 1, overflowY: 'auto' as unknown as undefined },
+            style: {
+              flex: 1,
+              height: '100%',
+              overflowY: 'auto' as unknown as undefined,
+              WebkitOverflowScrolling: 'touch',
+            },
           } as object)
         : null)}
       refreshControl={
@@ -295,7 +299,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
   },
   screenContentMobileWeb: {
-    paddingBottom: 88,
+    flexGrow: 0,
   },
   screenContentDesktop: {
     alignSelf: 'center',

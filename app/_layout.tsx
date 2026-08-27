@@ -3,7 +3,9 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
 import { type ReactNode, useEffect } from 'react';
+import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
 import { DevicePromptModal } from '@/components/device-prompt-modal';
@@ -15,7 +17,6 @@ import { brand } from '@/config/app-config';
 import { palette } from '@/constants/dropdex';
 import { AuthProvider, hasAcceptedCurrentLegal, useAuth } from '@/store/auth-context';
 import { DropDexProvider } from '@/store/dropdex-context';
-import { Platform } from 'react-native';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -121,7 +122,7 @@ export default function RootLayout() {
   };
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, ...(Platform.OS === 'web' ? { height: '100%' } : null) }}>
       <Head>
         <title>{brand.name}</title>
         <meta name="description" content="Independent product availability alerts" />
@@ -137,15 +138,17 @@ export default function RootLayout() {
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="apple-touch-icon" href="/droplinq-icon.svg" />
       </Head>
-      <AuthProvider>
-        <DropDexProvider>
-          <ThemeProvider value={navigationTheme}>
-            <WebAppShell>
-              <AppExperience />
-            </WebAppShell>
-          </ThemeProvider>
-        </DropDexProvider>
-      </AuthProvider>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <DropDexProvider>
+            <ThemeProvider value={navigationTheme}>
+              <WebAppShell>
+                <AppExperience />
+              </WebAppShell>
+            </ThemeProvider>
+          </DropDexProvider>
+        </AuthProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

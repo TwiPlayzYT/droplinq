@@ -2,20 +2,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { WebTopNav } from '@/components/web-top-nav';
 import { palette } from '@/constants/dropdex';
+import { useMobileWebChrome } from '@/hooks/use-mobile-web-chrome';
 import { useWebLayout } from '@/hooks/use-web-layout';
-
-const TAB_BAR_CORE = 52;
 
 export default function TabLayout() {
   const { isDesktopWeb, isMobileWeb } = useWebLayout();
-  const insets = useSafeAreaInsets();
-  const bottomInset = Math.max(insets.bottom, isMobileWeb ? 8 : 12);
-  const tabBarHeight = TAB_BAR_CORE + bottomInset;
+  const { bottomInset, tabBarHeight } = useMobileWebChrome();
 
   const tabBarStyle = isDesktopWeb
     ? {
@@ -29,25 +25,37 @@ export default function TabLayout() {
           borderTopColor: palette.blackSoft,
           borderTopWidth: 1,
           bottom: 0,
-          height: tabBarHeight,
           left: 0,
+          minHeight: tabBarHeight,
           paddingBottom: bottomInset,
-          paddingTop: 6,
+          paddingTop: 8,
           position: 'fixed' as const,
           right: 0,
           zIndex: 40,
+          ...(isMobileWeb
+            ? ({
+                paddingBottom: 'max(22px, env(safe-area-inset-bottom))' as unknown as number,
+              } as object)
+            : null),
         }
       : {
           backgroundColor: palette.blackRaised,
           borderTopColor: palette.blackSoft,
           borderTopWidth: 1,
-          height: tabBarHeight,
+          minHeight: tabBarHeight,
           paddingBottom: bottomInset,
-          paddingTop: 6,
+          paddingTop: 8,
         };
 
   return (
-    <View style={{ flex: 1, backgroundColor: palette.black }}>
+    <View
+      style={{
+        backgroundColor: palette.black,
+        flex: 1,
+        ...(Platform.OS === 'web'
+          ? ({ height: '100%', minHeight: '100dvh' } as object)
+          : null),
+      }}>
       <WebTopNav />
       <Tabs
         screenOptions={{
@@ -57,21 +65,25 @@ export default function TabLayout() {
           tabBarActiveTintColor: palette.red,
           tabBarInactiveTintColor: palette.whiteShadow,
           tabBarStyle,
+          tabBarItemStyle: {
+            paddingVertical: 2,
+          },
           tabBarLabelStyle: {
-            fontSize: 10,
+            fontSize: 9,
             fontWeight: '900',
-            letterSpacing: 0.8,
+            letterSpacing: 0.6,
+            marginBottom: 0,
             marginTop: 2,
           },
           headerShown: false,
           tabBarButton: HapticTab,
-        }}>
+        } as object}>
         <Tabs.Screen
           name="index"
           options={{
             title: 'Home',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons color={color} name={focused ? 'power' : 'power-outline'} size={22} />
+              <Ionicons color={color} name={focused ? 'power' : 'power-outline'} size={21} />
             ),
           }}
         />
@@ -80,7 +92,7 @@ export default function TabLayout() {
           options={{
             title: 'Stock',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons color={color} name={focused ? 'cube' : 'cube-outline'} size={22} />
+              <Ionicons color={color} name={focused ? 'cube' : 'cube-outline'} size={21} />
             ),
           }}
         />
@@ -92,7 +104,7 @@ export default function TabLayout() {
               <Ionicons
                 color={color}
                 name={focused ? 'options' : 'options-outline'}
-                size={22}
+                size={21}
               />
             ),
           }}
@@ -102,7 +114,7 @@ export default function TabLayout() {
           options={{
             title: 'Region',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons color={color} name={focused ? 'globe' : 'globe-outline'} size={22} />
+              <Ionicons color={color} name={focused ? 'globe' : 'globe-outline'} size={21} />
             ),
           }}
         />
@@ -114,7 +126,7 @@ export default function TabLayout() {
               <Ionicons
                 color={color}
                 name={focused ? 'settings' : 'settings-outline'}
-                size={22}
+                size={21}
               />
             ),
           }}

@@ -6,9 +6,15 @@ import { palette } from '@/constants/dropdex';
 const WEB_SMOOTH_CSS = `
 html, body, #root {
   height: 100%;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
   margin: 0;
   background: #000;
   overscroll-behavior: none;
+}
+#root {
+  display: flex;
+  flex-direction: column;
 }
 * {
   -webkit-tap-highlight-color: transparent;
@@ -62,8 +68,9 @@ export function WebAppShell({ children }: PropsWithChildren) {
 const rootWeb: ViewStyle = {
   backgroundColor: palette.black,
   flex: 1,
+  height: '100%' as unknown as number,
+  minHeight: '100dvh' as unknown as number,
   width: '100%',
-  minHeight: '100vh' as unknown as number,
 };
 
 const styles = StyleSheet.create({
