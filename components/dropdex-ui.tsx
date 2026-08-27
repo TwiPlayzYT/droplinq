@@ -14,7 +14,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { palette } from '@/constants/dropdex';
 import { useWebLayout } from '@/hooks/use-web-layout';
@@ -41,11 +41,13 @@ export function Screen({
   wide?: boolean;
 }>) {
   const { isDesktopWeb, isMobileWeb } = useWebLayout();
-  const safeEdges = isDesktopWeb ? ([] as const) : (['top'] as const);
+  const insets = useSafeAreaInsets();
+  const safeEdges = isDesktopWeb ? ([] as const) : isMobileWeb ? ([] as const) : (['top'] as const);
+  const mobileBottomPad = 56 + Math.max(insets.bottom, 8) + 16;
   const contentStyle = [
     styles.screenContent,
     isDesktopWeb && (wide ? styles.screenContentDesktopWide : styles.screenContentDesktop),
-    isMobileWeb && styles.screenContentMobileWeb,
+    isMobileWeb && [styles.screenContentMobileWeb, { paddingBottom: mobileBottomPad }],
     style,
   ];
 

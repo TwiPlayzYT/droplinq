@@ -2,14 +2,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { WebTopNav } from '@/components/web-top-nav';
 import { palette } from '@/constants/dropdex';
 import { useWebLayout } from '@/hooks/use-web-layout';
 
+const TAB_BAR_CORE = 52;
+
 export default function TabLayout() {
   const { isDesktopWeb, isMobileWeb } = useWebLayout();
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, isMobileWeb ? 8 : 12);
+  const tabBarHeight = TAB_BAR_CORE + bottomInset;
 
   const tabBarStyle = isDesktopWeb
     ? {
@@ -23,10 +29,10 @@ export default function TabLayout() {
           borderTopColor: palette.blackSoft,
           borderTopWidth: 1,
           bottom: 0,
-          height: isMobileWeb ? 64 : 82,
+          height: tabBarHeight,
           left: 0,
-          paddingBottom: isMobileWeb ? 10 : 20,
-          paddingTop: 8,
+          paddingBottom: bottomInset,
+          paddingTop: 6,
           position: 'fixed' as const,
           right: 0,
           zIndex: 40,
@@ -35,9 +41,9 @@ export default function TabLayout() {
           backgroundColor: palette.blackRaised,
           borderTopColor: palette.blackSoft,
           borderTopWidth: 1,
-          height: isMobileWeb ? 64 : 82,
-          paddingBottom: isMobileWeb ? 10 : 20,
-          paddingTop: 8,
+          height: tabBarHeight,
+          paddingBottom: bottomInset,
+          paddingTop: 6,
         };
 
   return (
@@ -55,6 +61,7 @@ export default function TabLayout() {
             fontSize: 10,
             fontWeight: '900',
             letterSpacing: 0.8,
+            marginTop: 2,
           },
           headerShown: false,
           tabBarButton: HapticTab,
@@ -64,7 +71,7 @@ export default function TabLayout() {
           options={{
             title: 'Home',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons color={color} name={focused ? 'power' : 'power-outline'} size={24} />
+              <Ionicons color={color} name={focused ? 'power' : 'power-outline'} size={22} />
             ),
           }}
         />
@@ -73,7 +80,7 @@ export default function TabLayout() {
           options={{
             title: 'Stock',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons color={color} name={focused ? 'cube' : 'cube-outline'} size={24} />
+              <Ionicons color={color} name={focused ? 'cube' : 'cube-outline'} size={22} />
             ),
           }}
         />
@@ -85,7 +92,7 @@ export default function TabLayout() {
               <Ionicons
                 color={color}
                 name={focused ? 'options' : 'options-outline'}
-                size={24}
+                size={22}
               />
             ),
           }}
@@ -95,7 +102,7 @@ export default function TabLayout() {
           options={{
             title: 'Region',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons color={color} name={focused ? 'globe' : 'globe-outline'} size={24} />
+              <Ionicons color={color} name={focused ? 'globe' : 'globe-outline'} size={22} />
             ),
           }}
         />
@@ -107,7 +114,7 @@ export default function TabLayout() {
               <Ionicons
                 color={color}
                 name={focused ? 'settings' : 'settings-outline'}
-                size={24}
+                size={22}
               />
             ),
           }}

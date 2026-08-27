@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { WebSearchPalette } from '@/components/web-search-palette';
 import { palette } from '@/constants/dropdex';
@@ -40,8 +40,8 @@ function isTypingTarget(target: EventTarget | null) {
 }
 
 /**
- * Web top navigation — desktop full bar; mobile compact link row so phones
- * can switch tabs even if the bottom bar is obscured by Safari chrome.
+ * Web top navigation — full bar on desktop; on mobile web only brand + search
+ * (tab switching uses the bottom bar).
  */
 export function WebTopNav() {
   const { isDesktopWeb, isMobileWeb, isWeb } = useWebLayout();
@@ -80,25 +80,6 @@ export function WebTopNav() {
             style={styles.mobileBrand}>
             <Text style={styles.mobileBrandText}>DROPLINQ</Text>
           </Pressable>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.mobileLinks}>
-            {LINKS.map((link) => {
-              const active = pathActive(pathname, link.match);
-              return (
-                <Pressable
-                  key={link.key}
-                  accessibilityRole="link"
-                  onPress={() => router.push(link.href)}
-                  style={[styles.mobileLink, active && styles.mobileLinkActive]}>
-                  <Text style={[styles.mobileLinkText, active && styles.mobileLinkTextActive]}>
-                    {link.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
           <Pressable
             accessibilityLabel="Search"
             onPress={() => setSearchOpen(true)}
@@ -265,42 +246,25 @@ const styles = StyleSheet.create({
     borderBottomColor: palette.blackSoft,
     borderBottomWidth: 1,
     flexDirection: 'row',
-    gap: 8,
+    justifyContent: 'space-between',
     paddingBottom: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingTop: 10,
     zIndex: 30,
+    ...(Platform.OS === 'web'
+      ? ({
+          paddingTop: 'max(10px, env(safe-area-inset-top))' as unknown as number,
+        } as object)
+      : null),
   },
   mobileBrand: {
     paddingRight: 4,
   },
   mobileBrandText: {
     color: palette.white,
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '900',
-    letterSpacing: 1,
-  },
-  mobileLinks: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 4,
-    paddingRight: 8,
-  },
-  mobileLink: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  mobileLinkActive: {
-    backgroundColor: 'rgba(210,13,30,0.18)',
-  },
-  mobileLinkText: {
-    color: palette.whiteShadow,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  mobileLinkTextActive: {
-    color: palette.red,
+    letterSpacing: 1.2,
   },
   mobileSearch: {
     alignItems: 'center',
