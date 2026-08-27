@@ -20,6 +20,9 @@ Notifications.setNotificationHandler({
   }),
 });
 
+/** Web unlocks AudioContext/speech from a gesture; native needs no unlock. */
+export async function unlockAlertAudio() {}
+
 export async function configureNotifications() {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('drop-alerts', {

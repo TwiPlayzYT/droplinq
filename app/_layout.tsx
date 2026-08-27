@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { DropAlertModal } from '@/components/drop-alert-modal';
+import { OpenProductChooser } from '@/components/open-product-chooser';
 import { AppBootScreen, GlobalUXFeedback } from '@/components/ux-feedback';
 import { WebAppShell } from '@/components/web-app-shell';
 import { brand } from '@/config/app-config';
@@ -96,6 +97,7 @@ function AppExperience() {
         />
       </Stack>
       <DropAlertModal />
+      <OpenProductChooser />
       <GlobalUXFeedback />
       <StatusBar style="light" />
     </AuthGate>

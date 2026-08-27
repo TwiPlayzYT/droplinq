@@ -13,6 +13,25 @@ import { useDropDex } from '@/store/dropdex-context';
 import { useRouter } from 'expo-router';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
+function AlertToggle({
+  hint,
+  label,
+  onChange,
+  value,
+}: {
+  hint: string;
+  label: string;
+  onChange: (value: boolean) => void;
+  value: boolean;
+}) {
+  return (
+    <View>
+      <MechanicalToggle label={label} onChange={onChange} value={value} />
+      <Text style={styles.hint}>{hint}</Text>
+    </View>
+  );
+}
+
 export default function SettingsScreen() {
   const {
     alerts,
@@ -71,37 +90,43 @@ export default function SettingsScreen() {
 
       <Panel>
         <SectionTitle title="Alerts" />
-        <MechanicalToggle
+        <AlertToggle
+          hint="Browser / lock-screen notifications — we’ll wire this next."
           label="Push"
           onChange={(value) => updateAlert('push', value)}
           value={alerts.push}
         />
         <View style={styles.rule} />
-        <MechanicalToggle
+        <AlertToggle
+          hint="Play an alert tone when a drop is detected."
           label="Sound"
           onChange={(value) => updateAlert('sound', value)}
           value={alerts.sound}
         />
         <View style={styles.rule} />
-        <MechanicalToggle
+        <AlertToggle
+          hint="Vibrate on phones that support it (no effect on most desktops)."
           label="Vibration"
           onChange={(value) => updateAlert('vibration', value)}
           value={alerts.vibration}
         />
         <View style={styles.rule} />
-        <MechanicalToggle
+        <AlertToggle
+          hint="Speak the product name aloud when a drop hits."
           label="Speech"
           onChange={(value) => updateAlert('speech', value)}
           value={alerts.speech}
         />
         <View style={styles.rule} />
-        <MechanicalToggle
+        <AlertToggle
+          hint="Show the full-screen red drop overlay. Off still plays sound/speech; Test uses a smaller centered popup."
           label="Full-screen"
           onChange={(value) => updateAlert('fullScreen', value)}
           value={alerts.fullScreen}
         />
         <View style={styles.rule} />
-        <MechanicalToggle
+        <AlertToggle
+          hint="Max alerts: always show overlay and force sound, speech, and vibration together."
           label="Drop Mode"
           onChange={(value) => updateAlert('dropMode', value)}
           value={alerts.dropMode ?? false}
@@ -129,6 +154,13 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   rule: { backgroundColor: palette.whiteDim, height: 1, marginVertical: 12 },
+  hint: {
+    color: palette.blackSoft,
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
+    marginTop: 6,
+  },
   plan: {
     color: palette.redDark,
     fontSize: 12,

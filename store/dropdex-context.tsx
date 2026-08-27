@@ -9,6 +9,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { Platform } from 'react-native';
 
 import { defaultAlertPreferences, defaultFilters, testAlertProduct } from '@/constants/dropdex';
 import { migrateLegacyFilters } from '@/data/pokemon-center-filters';
@@ -27,7 +28,7 @@ import {
   regions,
 } from '@/data/regions';
 import { matchesFilters } from '@/lib/filter-matcher';
-import { openPokemonCenterProduct } from '@/lib/open-product';
+import { openPokemonCenterProduct, type OpenProductMode } from '@/lib/open-product';
 import {
   detectLiveChanges,
   isSyntheticProductId,
@@ -44,6 +45,7 @@ import {
   getExpoPushToken,
   stopAlertSignals,
   subscribeToIncomingProductAlerts,
+  unlockAlertAudio,
 } from '@/services/notification-service';
 import {
   getExistingWebPushSubscription,
@@ -106,6 +108,9 @@ type DropDexContextValue = PersistedState & {
   triggerTestAlert: () => void;
   acknowledgeAlert: () => void;
   openProductBrowser: (product: Product) => void;
+  pendingOpenProduct: Product | null;
+  confirmOpenProduct: (mode: OpenProductMode) => void;
+  cancelOpenProduct: () => void;
   removeRecentVisit: (visitId: string) => void;
   addToWatchlist: (
     product: Product,
@@ -151,9 +156,12 @@ export function DropDexProvider({ children }: PropsWithChildren) {
   const [lastBackendUpdate, setLastBackendUpdate] = useState<string | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [activeAlert, setActiveAlert] = useState<DropAlert | null>(null);
+  const [pendingOpenProduct, setPendingOpenProduct] = useState<Product | null>(null);
   const [browserOpen, setBrowserOpen] = useState(false);
   const [feedback, setFeedback] = useState<UXFeedback | null>(null);
   const [operation, setOperation] = useState<UXOperation | null>(null);
+  const seenStockEventIdsRef = useRef<Set<string>>(new Set());
+  const stockEventsBaselineReadyRef = useRef(false);
   const [webPushState, setWebPushState] = useState<WebPushState>('checking');
   const [webPushChecked, setWebPushChecked] = useState(false);
   const [webPushPublicKey, setWebPushPublicKey] = useState<string>();
@@ -305,10 +313,22 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       }));
     }
 
-    if (current.alerts.fullScreen || forceOverlay) setActiveAlert(alert);
-    const deliverySettings = alreadyNotified
-      ? { ...current.alerts, push: false, sound: false, vibration: false }
-      : current.alerts;
+    const dropMode = Boolean(current.alerts.dropMode);
+    if (current.alerts.fullScreen || forceOverlay || dropMode) setActiveAlert(alert);
+
+    let deliverySettings = current.alerts;
+    if (alreadyNotified) {
+      deliverySettings = { ...current.alerts, push: false, sound: false, vibration: false };
+    } else if (dropMode) {
+      deliverySettings = {
+        ...current.alerts,
+        sound: true,
+        vibration: true,
+        speech: true,
+        fullScreen: true,
+        dropMode: true,
+      };
+    }
     deliverProductAlert(product, deliverySettings).catch(() => undefined);
   }, []);
 
@@ -320,14 +340,18 @@ export function DropDexProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     if (!activeAlert) return;
 
+    const dropMode = Boolean(stateRef.current.alerts.dropMode);
     const interval = setInterval(() => {
       const current = stateRef.current;
       deliverProductAlert(activeAlert.product, {
         ...current.alerts,
+        ...(current.alerts.dropMode
+          ? { sound: true, vibration: true, speech: true }
+          : null),
         push: false,
         fullScreen: false,
       }).catch(() => undefined);
-    }, 6000);
+    }, dropMode ? 2500 : 6000);
 
     return () => clearInterval(interval);
   }, [activeAlert]);
@@ -492,6 +516,37 @@ export function DropDexProvider({ children }: PropsWithChildren) {
           : 'Alerts paused. Backend monitoring of retailers is separate.',
         progress: stateRef.current.monitoring ? 100 : 0,
       });
+
+      // Local notifier: compare catalog snapshots and backend stock events while alerts are on.
+      const changeEvents = await detectLiveChanges(products);
+      if (stateRef.current.monitoring) {
+        changeEvents.forEach((product) => processProduct(product));
+      }
+
+      if (!stockEventsBaselineReadyRef.current) {
+        remoteEvents.forEach((event) => seenStockEventIdsRef.current.add(event.id));
+        stockEventsBaselineReadyRef.current = true;
+      } else {
+        const alertKinds = new Set(['restock', 'new_product', 'preorder']);
+        for (const event of remoteEvents) {
+          if (seenStockEventIdsRef.current.has(event.id)) continue;
+          seenStockEventIdsRef.current.add(event.id);
+          if (!stateRef.current.monitoring || !alertKinds.has(event.kind)) continue;
+          const matched = products.find((product) => product.id === event.productId);
+          if (!matched) continue;
+          processProduct({
+            ...matched,
+            availability: 'in-stock',
+            detectedAt: event.detectedAt,
+            releaseType:
+              event.kind === 'preorder'
+                ? 'preorder'
+                : event.kind === 'new_product'
+                  ? 'new'
+                  : 'restock',
+          });
+        }
+      }
     } catch {
       // Network / Supabase failure — still surface local seeds.
       const regionConfig = getRegion(stateRef.current.region);
@@ -519,7 +574,12 @@ export function DropDexProvider({ children }: PropsWithChildren) {
     } finally {
       setCatalogLoading(false);
     }
-  }, []);
+  }, [processProduct]);
+
+  useEffect(() => {
+    seenStockEventIdsRef.current = new Set();
+    stockEventsBaselineReadyRef.current = false;
+  }, [state.region]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -664,10 +724,10 @@ export function DropDexProvider({ children }: PropsWithChildren) {
     activeAlertRef.current = activeAlert;
   }, [activeAlert]);
 
-  const setMonitoring = useCallback(
-    (monitoring: boolean) => setState((previous) => ({ ...previous, monitoring })),
-    [],
-  );
+  const setMonitoring = useCallback((monitoring: boolean) => {
+    if (monitoring) void unlockAlertAudio();
+    setState((previous) => ({ ...previous, monitoring }));
+  }, []);
 
   const setRegion = useCallback(
     (region: RegionId) => {
@@ -718,10 +778,17 @@ export function DropDexProvider({ children }: PropsWithChildren) {
     [session?.user.id],
   );
 
-  const updateAlertPreferences = useCallback(
-    (alerts: AlertPreferences) => setState((previous) => ({ ...previous, alerts })),
-    [],
-  );
+  const updateAlertPreferences = useCallback((alerts: AlertPreferences) => {
+    const previous = stateRef.current.alerts;
+    if (
+      (alerts.sound && !previous.sound) ||
+      (alerts.speech && !previous.speech) ||
+      (alerts.dropMode && !previous.dropMode)
+    ) {
+      void unlockAlertAudio();
+    }
+    setState((current) => ({ ...current, alerts }));
+  }, []);
 
   const enableWebPush = useCallback(async () => {
     if (!webPushPublicKey) {
@@ -764,6 +831,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
   }, [showFeedback, webPushPublicKey]);
 
   const triggerTestAlert = useCallback(() => {
+    void unlockAlertAudio();
     processProduct(
       { ...testAlertProduct, detectedAt: new Date().toISOString() },
       true,
@@ -787,6 +855,31 @@ export function DropDexProvider({ children }: PropsWithChildren) {
     stopAlertSignals().catch(() => undefined);
   }, []);
 
+  const launchProductBrowser = useCallback(
+    (product: Product, mode: OpenProductMode) => {
+      setBrowserOpen(true);
+      setOperation({
+        title: 'OPENING POKÉMON CENTER',
+        message: `Connecting to ${getRegion(stateRef.current.region).storefront}. This can take a moment.`,
+      });
+      void openPokemonCenterProduct(product.url, mode)
+        .catch(() => {
+          showFeedback(
+            'error',
+            'Could not open Pokémon Center',
+            Platform.OS === 'web'
+              ? 'Allow popups for this site, then try again.'
+              : 'Check your connection, then tap the product to try again.',
+          );
+        })
+        .finally(() => {
+          setOperation(null);
+          setBrowserOpen(false);
+        });
+    },
+    [showFeedback],
+  );
+
   const openProductBrowser = useCallback(
     (product: Product) => {
       const visit: RecentVisit = {
@@ -801,26 +894,30 @@ export function DropDexProvider({ children }: PropsWithChildren) {
           ...previous.recentVisits.filter((item) => item.product.id !== product.id),
         ].slice(0, MAX_RECENTS),
       }));
-      setBrowserOpen(true);
-      setOperation({
-        title: 'OPENING POKÉMON CENTER',
-        message: `Connecting to ${getRegion(stateRef.current.region).storefront}. This can take a moment.`,
-      });
-      void openPokemonCenterProduct(product.url)
-        .catch(() => {
-          showFeedback(
-            'error',
-            'Could not open Pokémon Center',
-            'Check your connection, then tap the product to try again.',
-          );
-        })
-        .finally(() => {
-          setOperation(null);
-          setBrowserOpen(false);
-        });
+
+      if (Platform.OS === 'web') {
+        setPendingOpenProduct(product);
+        return;
+      }
+
+      launchProductBrowser(product, 'tab');
     },
-    [showFeedback],
+    [launchProductBrowser],
   );
+
+  const confirmOpenProduct = useCallback(
+    (mode: OpenProductMode) => {
+      const product = pendingOpenProduct;
+      setPendingOpenProduct(null);
+      if (!product) return;
+      launchProductBrowser(product, mode);
+    },
+    [launchProductBrowser, pendingOpenProduct],
+  );
+
+  const cancelOpenProduct = useCallback(() => {
+    setPendingOpenProduct(null);
+  }, []);
 
   const removeRecentVisit = useCallback(
     (visitId: string) => {
@@ -942,6 +1039,9 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       triggerTestAlert,
       acknowledgeAlert,
       openProductBrowser,
+      pendingOpenProduct,
+      confirmOpenProduct,
+      cancelOpenProduct,
       removeRecentVisit,
       addToWatchlist,
       removeFromWatchlist,
@@ -951,7 +1051,9 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       acknowledgeAlert,
       activeAlert,
       addToWatchlist,
+      cancelOpenProduct,
       clearFeedback,
+      confirmOpenProduct,
       enableWebPush,
       feedback,
       hydrated,
@@ -964,6 +1066,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       refreshCatalog,
       openProductBrowser,
       operation,
+      pendingOpenProduct,
       removeFromWatchlist,
       removeRecentVisit,
       retryMonitoring,
