@@ -18,7 +18,7 @@ type Phase = 'device' | 'offer' | 'guide';
 
 /**
  * Web-only: pops up as soon as the site opens until the visitor finishes
- * phone/desktop choice (and optional phone notification guide).
+ * desktop/mobile choice (and optional mobile notification guide).
  */
 export function DevicePromptModal() {
   const { enableWebPush, webPushState, refreshWebPushState } = useDropDex();
@@ -70,10 +70,10 @@ export function DevicePromptModal() {
     setVisible(false);
   };
 
-  const pickDevice = async (next: PreferredDevice) => {
-    setDevice(next);
-    await AsyncStorage.setItem(PREFERRED_DEVICE_KEY, next).catch(() => undefined);
-    if (next === 'phone') {
+  const confirmDevice = async () => {
+    if (!device) return;
+    await AsyncStorage.setItem(PREFERRED_DEVICE_KEY, device).catch(() => undefined);
+    if (device === 'phone') {
       setPhase('offer');
       return;
     }
@@ -102,33 +102,42 @@ export function DevicePromptModal() {
           {phase === 'device' ? (
             <>
               <Text style={styles.kicker}>QUICK SETUP</Text>
-              <Text style={styles.title}>Are you on desktop or phone?</Text>
+              <Text style={styles.title}>Are you on desktop or mobile?</Text>
               <Text style={styles.lead}>
-                Pick one so DropLinq can set up drop alerts the right way for this device.
+                Select one, then confirm so DropLinq can set up drop alerts the right way.
               </Text>
               <View style={styles.choices}>
                 <Pressable
-                  onPress={() => void pickDevice('phone')}
-                  style={({ pressed }) => [styles.choiceBtn, pressed && styles.pressed]}>
-                  <Text style={styles.choiceTitle}>Phone</Text>
+                  onPress={() => setDevice('phone')}
+                  style={[styles.choiceBtn, device === 'phone' && styles.choiceSelected]}>
+                  <Text style={styles.choiceTitle}>Mobile</Text>
                   <Text style={styles.choiceSub}>iPhone or Android</Text>
                 </Pressable>
                 <Pressable
-                  onPress={() => void pickDevice('desktop')}
-                  style={({ pressed }) => [styles.choiceBtn, pressed && styles.pressed]}>
+                  onPress={() => setDevice('desktop')}
+                  style={[styles.choiceBtn, device === 'desktop' && styles.choiceSelected]}>
                   <Text style={styles.choiceTitle}>Desktop</Text>
                   <Text style={styles.choiceSub}>Laptop or computer</Text>
                 </Pressable>
               </View>
+              {device ? (
+                <View style={styles.confirmWrap}>
+                  <MetalButton
+                    icon="checkmark"
+                    label="Confirm"
+                    onPress={() => void confirmDevice()}
+                  />
+                </View>
+              ) : null}
             </>
           ) : null}
 
           {phase === 'offer' ? (
             <>
-              <Text style={styles.kicker}>PHONE ALERTS</Text>
+              <Text style={styles.kicker}>MOBILE ALERTS</Text>
               <Text style={styles.title}>Want the notification guide?</Text>
               <Text style={styles.lead}>
-                Would you like to see how to get notified on your phone — even when DropLinq is
+                Would you like to see how to get notified on your mobile — even when DropLinq is
                 closed?
               </Text>
               <MetalButton
@@ -146,8 +155,8 @@ export function DevicePromptModal() {
 
           {phase === 'guide' ? (
             <>
-              <Text style={styles.kicker}>PHONE SETUP</Text>
-              <Text style={styles.title}>Get notified on your phone</Text>
+              <Text style={styles.kicker}>MOBILE SETUP</Text>
+              <Text style={styles.title}>Get notified on your mobile</Text>
               <NotificationSetupGuide
                 device="phone"
                 dense
@@ -228,6 +237,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
   },
+  choiceSelected: {
+    borderColor: palette.red,
+    backgroundColor: '#1c1010',
+  },
   choiceTitle: {
     color: palette.white,
     fontSize: 16,
@@ -238,6 +251,9 @@ const styles = StyleSheet.create({
     color: palette.whiteShadow,
     fontSize: 13,
     fontWeight: '600',
+  },
+  confirmWrap: {
+    marginTop: 16,
   },
   spacer: { height: 10 },
   note: {
@@ -256,5 +272,4 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     marginTop: 14,
   },
-  pressed: { opacity: 0.88 },
 });

@@ -53,6 +53,12 @@ export function Screen({
     <ScrollView
       contentContainerStyle={contentStyle}
       keyboardShouldPersistTaps="handled"
+      {...(Platform.OS === 'web'
+        ? ({
+            // Smoother wheel/trackpad scrolling on react-native-web.
+            style: { flex: 1, overflowY: 'auto' as unknown as undefined },
+          } as object)
+        : null)}
       refreshControl={
         onRefresh ? (
           <RefreshControl
@@ -510,5 +516,5 @@ const styles = StyleSheet.create({
     minHeight: 46,
   },
   metalButtonText: { color: palette.black, fontSize: 12, fontWeight: '900', letterSpacing: 1.1 },
-  pressed: { opacity: 0.85, paddingTop: 3 },
+  pressed: { opacity: 0.88 },
 });

@@ -139,7 +139,7 @@ export function NotificationSetupGuide({
     <View style={dense ? undefined : styles.wrap}>
       <Text style={[styles.headline, { color: titleColor }]}>
         {device === 'phone'
-          ? 'Get notified on your phone — even when DropLinq is closed'
+          ? 'Get notified on your mobile — even when DropLinq is closed'
           : 'Get notified on this computer — even when the tab isn’t focused'}
       </Text>
       <Text style={[styles.sub, { color: bodyColor }]}>

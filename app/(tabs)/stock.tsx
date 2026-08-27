@@ -30,6 +30,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 function animateLayout() {
+  if (Platform.OS === 'web') return;
   LayoutAnimation.configureNext({
     duration: 260,
     create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },

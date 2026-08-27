@@ -120,7 +120,7 @@ export default function SettingsScreen() {
           <Text style={styles.devicePrompt}>I’m mainly using DropLinq on</Text>
           <View style={styles.deviceRow}>
             <ChoiceChip
-              label="Phone"
+              label="Mobile"
               onPress={() => persistDevice('phone')}
               selected={device === 'phone'}
             />

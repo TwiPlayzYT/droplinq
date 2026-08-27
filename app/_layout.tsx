@@ -15,6 +15,7 @@ import { brand } from '@/config/app-config';
 import { palette } from '@/constants/dropdex';
 import { AuthProvider, hasAcceptedCurrentLegal, useAuth } from '@/store/auth-context';
 import { DropDexProvider } from '@/store/dropdex-context';
+import { Platform } from 'react-native';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -69,12 +70,14 @@ function AuthGate({ children }: { children: ReactNode }) {
 }
 
 function AppExperience() {
+  const stackAnimation = Platform.OS === 'web' ? 'none' : 'slide_from_right';
+
   return (
     <AuthGate>
       <Stack
         screenOptions={{
-          animation: 'slide_from_right',
-          animationDuration: 160,
+          animation: stackAnimation,
+          animationDuration: Platform.OS === 'web' ? 0 : 160,
           contentStyle: { backgroundColor: palette.black },
           headerShown: false,
         }}>
@@ -88,9 +91,9 @@ function AppExperience() {
         <Stack.Screen
           name="product/[id]"
           options={{
-            animation: 'slide_from_right',
-            animationDuration: 140,
-            gestureEnabled: true,
+            animation: stackAnimation,
+            animationDuration: Platform.OS === 'web' ? 0 : 140,
+            gestureEnabled: Platform.OS !== 'web',
             headerShown: false,
             presentation: 'card',
           }}

@@ -46,8 +46,8 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
           animation: 'none',
-          freezeOnBlur: false,
-          lazy: false,
+          freezeOnBlur: Platform.OS === 'web',
+          lazy: Platform.OS === 'web',
           tabBarActiveTintColor: palette.red,
           tabBarInactiveTintColor: palette.whiteShadow,
           tabBarStyle,
