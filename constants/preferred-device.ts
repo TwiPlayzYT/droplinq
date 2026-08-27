@@ -4,7 +4,7 @@ import type { PreferredDevice } from '@/components/notification-setup-guide';
 
 export const PREFERRED_DEVICE_KEY = '@droplinq/preferred-device';
 /** Bumped so everyone sees the immediate site-open popup once. */
-export const DEVICE_PROMPT_DONE_KEY = '@droplinq/device-prompt-done-v2';
+export const DEVICE_PROMPT_DONE_KEY = '@droplinq/device-prompt-done-v3';
 
 export type { PreferredDevice };
 
