@@ -40,8 +40,20 @@ function AuthGate({ children }: { children: ReactNode }) {
     }
     let cancelled = false;
     AsyncStorage.getItem(DEVICE_PROMPT_DONE_KEY)
-      .then((value) => {
-        if (!cancelled) setDevicePromptDone(value === '1' || isDevicePromptDoneMemory());
+      .then(async (value) => {
+        if (cancelled) return;
+        if (value === '1' || isDevicePromptDoneMemory()) {
+          setDevicePromptDone(true);
+          return;
+        }
+        // Existing accounts that already finished onboarding before this prompt existed.
+        if (profile?.onboardingCompleted) {
+          const { markDevicePromptDone } = await import('@/constants/preferred-device');
+          await markDevicePromptDone();
+          if (!cancelled) setDevicePromptDone(true);
+          return;
+        }
+        setDevicePromptDone(false);
       })
       .catch(() => {
         if (!cancelled) setDevicePromptDone(isDevicePromptDoneMemory());
@@ -49,7 +61,7 @@ function AuthGate({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [session?.user.id, segments]);
+  }, [profile?.onboardingCompleted, session?.user.id, segments]);
 
   useEffect(() => {
     if (!ready || !profileReady) return;
