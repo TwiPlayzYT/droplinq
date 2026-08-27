@@ -4,10 +4,22 @@ import { Platform, StyleSheet, View, type ViewStyle } from 'react-native';
 import { palette } from '@/constants/dropdex';
 
 const WEB_SMOOTH_CSS = `
+:root {
+  --dl-red: #D20D1E;
+  --dl-red-dark: #7D0610;
+  --dl-red-light: #FF2638;
+  --dl-bg: #090909;
+  --dl-raised: #1B1B1B;
+  --dl-soft: #303030;
+  --dl-text: #F7F5F2;
+  --dl-text-dim: #D8D5D0;
+  --dl-text-shadow: #A9A6A2;
+  color-scheme: dark;
+}
 html, body {
   height: 100%;
   margin: 0;
-  background: #000;
+  background: var(--dl-bg, #090909);
   overscroll-behavior: none;
   overflow: hidden;
 }
@@ -27,7 +39,7 @@ html, body, #root {
   max-height: 100dvh;
   max-height: 100svh;
   overflow: hidden;
-  background: #000;
+  background: var(--dl-bg, #090909);
 }
 * {
   -webkit-tap-highlight-color: transparent;

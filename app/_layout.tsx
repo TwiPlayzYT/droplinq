@@ -1,8 +1,8 @@
-import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -14,7 +14,9 @@ import { OpenProductChooser } from '@/components/open-product-chooser';
 import { AppBootScreen, GlobalUXFeedback } from '@/components/ux-feedback';
 import { WebAppShell } from '@/components/web-app-shell';
 import { brand } from '@/config/app-config';
+import { droplinqTokens } from '@/constants/appearance';
 import { palette } from '@/constants/dropdex';
+import { AppearanceProvider, useAppearance } from '@/store/appearance-context';
 import { AuthProvider, hasAcceptedCurrentLegal, useAuth } from '@/store/auth-context';
 import { DropDexProvider } from '@/store/dropdex-context';
 
@@ -72,55 +74,62 @@ function AuthGate({ children }: { children: ReactNode }) {
 
 function AppExperience() {
   const stackAnimation = Platform.OS === 'web' ? 'none' : 'slide_from_right';
+  const { appearanceId, tokens } = useAppearance();
+
+  const navigationTheme = useMemo(() => {
+    const base = appearanceId === 'light' ? DefaultTheme : DarkTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        background: tokens.black,
+        card: tokens.blackRaised,
+        primary: tokens.red,
+        text: tokens.white,
+        border: tokens.blackSoft,
+      },
+    };
+  }, [appearanceId, tokens]);
 
   return (
-    <AuthGate>
-      <Stack
-        screenOptions={{
-          animation: stackAnimation,
-          animationDuration: Platform.OS === 'web' ? 0 : 160,
-          contentStyle: { backgroundColor: palette.black },
-          headerShown: false,
-        }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(legal)" />
-        <Stack.Screen name="legal/terms" />
-        <Stack.Screen name="legal/privacy" />
-        <Stack.Screen name="(onboarding)" />
-        <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
-        <Stack.Screen name="auth/callback" options={{ animation: 'none' }} />
-        <Stack.Screen
-          name="product/[id]"
-          options={{
+    <NavigationThemeProvider value={navigationTheme}>
+      <AuthGate>
+        <Stack
+          screenOptions={{
             animation: stackAnimation,
-            animationDuration: Platform.OS === 'web' ? 0 : 140,
-            gestureEnabled: Platform.OS !== 'web',
+            animationDuration: Platform.OS === 'web' ? 0 : 160,
+            contentStyle: { backgroundColor: palette.black },
             headerShown: false,
-            presentation: 'card',
-          }}
-        />
-      </Stack>
-      <DevicePromptModal />
-      <DropAlertModal />
-      <OpenProductChooser />
-      <GlobalUXFeedback />
-      <StatusBar style="light" />
-    </AuthGate>
+          }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(legal)" />
+          <Stack.Screen name="legal/terms" />
+          <Stack.Screen name="legal/privacy" />
+          <Stack.Screen name="(onboarding)" />
+          <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+          <Stack.Screen name="auth/callback" options={{ animation: 'none' }} />
+          <Stack.Screen
+            name="product/[id]"
+            options={{
+              animation: stackAnimation,
+              animationDuration: Platform.OS === 'web' ? 0 : 140,
+              gestureEnabled: Platform.OS !== 'web',
+              headerShown: false,
+              presentation: 'card',
+            }}
+          />
+        </Stack>
+        <DevicePromptModal />
+        <DropAlertModal />
+        <OpenProductChooser />
+        <GlobalUXFeedback />
+        <StatusBar style={appearanceId === 'light' ? 'dark' : 'light'} />
+      </AuthGate>
+    </NavigationThemeProvider>
   );
 }
 
 export default function RootLayout() {
-  const navigationTheme = {
-    ...DarkTheme,
-    colors: {
-      ...DarkTheme.colors,
-      background: palette.black,
-      card: palette.black,
-      primary: palette.red,
-      text: palette.white,
-    },
-  };
-
   return (
     <GestureHandlerRootView
       style={{
@@ -136,7 +145,7 @@ export default function RootLayout() {
           name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
         />
-        <meta name="theme-color" content={palette.red} />
+        <meta name="theme-color" content={droplinqTokens.red} />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -145,15 +154,15 @@ export default function RootLayout() {
         <link rel="apple-touch-icon" href="/droplinq-icon.svg" />
       </Head>
       <SafeAreaProvider>
-        <AuthProvider>
-          <DropDexProvider>
-            <ThemeProvider value={navigationTheme}>
+        <AppearanceProvider>
+          <AuthProvider>
+            <DropDexProvider>
               <WebAppShell>
                 <AppExperience />
               </WebAppShell>
-            </ThemeProvider>
-          </DropDexProvider>
-        </AuthProvider>
+            </DropDexProvider>
+          </AuthProvider>
+        </AppearanceProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

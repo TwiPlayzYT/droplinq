@@ -3,6 +3,7 @@ import { usePathname, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { ProfileMenu } from '@/components/profile-menu';
 import { WebSearchPalette } from '@/components/web-search-palette';
 import { palette } from '@/constants/dropdex';
 import { useWebLayout } from '@/hooks/use-web-layout';
@@ -12,12 +13,6 @@ const LINKS = [
   { href: '/(tabs)/stock', match: ['/stock', '/(tabs)/stock'], label: 'Stock', key: 'stock' },
   { href: '/(tabs)/filter', match: ['/filter', '/(tabs)/filter'], label: 'Filter', key: 'filter' },
   { href: '/(tabs)/region', match: ['/region', '/(tabs)/region'], label: 'Region', key: 'region' },
-  {
-    href: '/(tabs)/settings',
-    match: ['/settings', '/(tabs)/settings'],
-    label: 'Settings',
-    key: 'settings',
-  },
 ] as const;
 
 function pathActive(pathname: string, match: readonly string[]) {
@@ -40,8 +35,8 @@ function isTypingTarget(target: EventTarget | null) {
 }
 
 /**
- * Web top navigation — full bar on desktop; on mobile web only brand + search
- * (tab switching uses the bottom bar).
+ * Web top navigation — full bar on desktop; on mobile web brand + search + profile.
+ * Settings lives in the profile menu (Collectr-style), not the primary link row.
  */
 export function WebTopNav() {
   const { isDesktopWeb, isMobileWeb, isWeb } = useWebLayout();
@@ -80,12 +75,15 @@ export function WebTopNav() {
             style={styles.mobileBrand}>
             <Text style={styles.mobileBrandText}>DROPLINQ</Text>
           </Pressable>
-          <Pressable
-            accessibilityLabel="Search"
-            onPress={() => setSearchOpen(true)}
-            style={styles.mobileSearch}>
-            <Ionicons color={palette.white} name="search" size={18} />
-          </Pressable>
+          <View style={styles.mobileActions}>
+            <Pressable
+              accessibilityLabel="Search"
+              onPress={() => setSearchOpen(true)}
+              style={styles.mobileSearch}>
+              <Ionicons color={palette.white} name="search" size={18} />
+            </Pressable>
+            <ProfileMenu compact />
+          </View>
         </View>
         <WebSearchPalette visible={searchOpen} onClose={() => setSearchOpen(false)} />
       </>
@@ -132,12 +130,7 @@ export function WebTopNav() {
                 <Text style={styles.kbdText}>/</Text>
               </View>
             </Pressable>
-            <Pressable
-              accessibilityLabel="Settings"
-              onPress={() => router.push('/(tabs)/settings')}
-              style={styles.iconBtn}>
-              <Ionicons color={palette.white} name="person-circle-outline" size={26} />
-            </Pressable>
+            <ProfileMenu />
           </View>
         </View>
       </View>
@@ -205,7 +198,7 @@ const styles = StyleSheet.create({
   actions: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
   searchChip: {
     alignItems: 'center',
@@ -237,9 +230,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
   },
-  iconBtn: {
-    padding: 4,
-  },
   mobileBar: {
     alignItems: 'center',
     backgroundColor: palette.black,
@@ -265,6 +255,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '900',
     letterSpacing: 1.2,
+  },
+  mobileActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
   },
   mobileSearch: {
     alignItems: 'center',

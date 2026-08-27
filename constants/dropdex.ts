@@ -1,16 +1,21 @@
 import { AlertPreferences, Product, ProductFormat } from '@/types/dropdex';
 import { defaultFilterPreferences } from '@/data/pokemon-center-filters';
+import { droplinqTokens, paletteToken } from '@/constants/appearance';
 
+/**
+ * App color tokens. On web these are CSS variables so Appearance
+ * (Dark / Light / DropLinq Special) can update the whole UI live.
+ */
 export const palette = {
-  red: '#D20D1E',
-  redDark: '#7D0610',
-  redLight: '#FF2638',
-  black: '#090909',
-  blackRaised: '#1B1B1B',
-  blackSoft: '#303030',
-  white: '#F7F5F2',
-  whiteDim: '#D8D5D0',
-  whiteShadow: '#A9A6A2',
+  red: paletteToken('--dl-red', droplinqTokens.red),
+  redDark: paletteToken('--dl-red-dark', droplinqTokens.redDark),
+  redLight: paletteToken('--dl-red-light', droplinqTokens.redLight),
+  black: paletteToken('--dl-bg', droplinqTokens.black),
+  blackRaised: paletteToken('--dl-raised', droplinqTokens.blackRaised),
+  blackSoft: paletteToken('--dl-soft', droplinqTokens.blackSoft),
+  white: paletteToken('--dl-text', droplinqTokens.white),
+  whiteDim: paletteToken('--dl-text-dim', droplinqTokens.whiteDim),
+  whiteShadow: paletteToken('--dl-text-shadow', droplinqTokens.whiteShadow),
 } as const;
 
 /** @deprecated Prefer Filter tab coverage modes */
