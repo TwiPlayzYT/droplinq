@@ -122,7 +122,13 @@ export default function RootLayout() {
   };
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, ...(Platform.OS === 'web' ? { height: '100%' } : null) }}>
+    <GestureHandlerRootView
+      style={{
+        flex: 1,
+        ...(Platform.OS === 'web'
+          ? ({ flex: 1, height: '100%', maxHeight: '100%', overflow: 'hidden' } as object)
+          : null),
+      }}>
       <Head>
         <title>{brand.name}</title>
         <meta name="description" content="Independent product availability alerts" />

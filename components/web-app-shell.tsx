@@ -4,25 +4,35 @@ import { Platform, StyleSheet, View, type ViewStyle } from 'react-native';
 import { palette } from '@/constants/dropdex';
 
 const WEB_SMOOTH_CSS = `
-html, body, #root {
+html, body {
   height: 100%;
-  min-height: 100dvh;
-  min-height: -webkit-fill-available;
   margin: 0;
   background: #000;
   overscroll-behavior: none;
+  overflow: hidden;
+}
+/* Pin the app to the visual viewport so iOS Safari never crops the bottom tab bar. */
+html, body, #root {
+  width: 100%;
+  max-width: 100%;
 }
 #root {
+  position: fixed;
+  inset: 0;
   display: flex;
   flex-direction: column;
+  height: 100%;
+  height: 100dvh;
+  height: 100svh;
+  max-height: 100dvh;
+  max-height: 100svh;
+  overflow: hidden;
+  background: #000;
 }
 * {
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-body {
-  overflow: hidden;
 }
 [data-focusable="true"], button, a, [role="button"] {
   transition: opacity 120ms ease, background-color 120ms ease, border-color 120ms ease;
@@ -47,7 +57,10 @@ export function WebAppShell({ children }: PropsWithChildren) {
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
     const existing = document.getElementById('droplinq-smooth-css');
-    if (existing) return;
+    if (existing) {
+      existing.textContent = WEB_SMOOTH_CSS;
+      return;
+    }
     const style = document.createElement('style');
     style.id = 'droplinq-smooth-css';
     style.textContent = WEB_SMOOTH_CSS;
@@ -69,7 +82,8 @@ const rootWeb: ViewStyle = {
   backgroundColor: palette.black,
   flex: 1,
   height: '100%' as unknown as number,
-  minHeight: '100dvh' as unknown as number,
+  maxHeight: '100%' as unknown as number,
+  overflow: 'hidden',
   width: '100%',
 };
 

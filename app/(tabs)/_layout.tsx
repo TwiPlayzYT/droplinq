@@ -19,32 +19,26 @@ export default function TabLayout() {
         height: 0,
         overflow: 'hidden' as const,
       }
-    : Platform.OS === 'web'
-      ? {
+    : Platform.OS === 'web' && isMobileWeb
+      ? ({
           backgroundColor: palette.blackRaised,
           borderTopColor: palette.blackSoft,
           borderTopWidth: 1,
-          bottom: 0,
-          left: 0,
-          minHeight: tabBarHeight,
-          paddingBottom: bottomInset,
-          paddingTop: 8,
-          position: 'fixed' as const,
-          right: 0,
-          zIndex: 40,
-          ...(isMobileWeb
-            ? ({
-                paddingBottom: 'max(22px, env(safe-area-inset-bottom))' as unknown as number,
-              } as object)
-            : null),
-        }
+          // Keep height + safe-area padding in sync via CSS so iOS never clips labels.
+          height:
+            'calc(56px + max(34px, env(safe-area-inset-bottom, 0px)))' as unknown as number,
+          paddingBottom: 'max(34px, env(safe-area-inset-bottom, 0px))' as unknown as number,
+          paddingTop: 6,
+          zIndex: 50,
+        } as object)
       : {
           backgroundColor: palette.blackRaised,
           borderTopColor: palette.blackSoft,
           borderTopWidth: 1,
-          minHeight: tabBarHeight,
+          // Explicit numeric height so React Navigation's getTabBarHeight picks it up.
+          height: tabBarHeight,
           paddingBottom: bottomInset,
-          paddingTop: 8,
+          paddingTop: 6,
         };
 
   return (
@@ -53,11 +47,18 @@ export default function TabLayout() {
         backgroundColor: palette.black,
         flex: 1,
         ...(Platform.OS === 'web'
-          ? ({ height: '100%', minHeight: '100dvh' } as object)
+          ? ({ height: '100%', maxHeight: '100%', overflow: 'hidden' } as object)
           : null),
       }}>
       <WebTopNav />
       <Tabs
+        safeAreaInsets={
+          isDesktopWeb
+            ? { top: 0, right: 0, bottom: 0, left: 0 }
+            : isMobileWeb
+              ? { bottom: bottomInset }
+              : undefined
+        }
         screenOptions={{
           animation: 'none',
           freezeOnBlur: Platform.OS === 'web',
@@ -66,14 +67,14 @@ export default function TabLayout() {
           tabBarInactiveTintColor: palette.whiteShadow,
           tabBarStyle,
           tabBarItemStyle: {
-            paddingVertical: 2,
+            paddingVertical: 0,
           },
           tabBarLabelStyle: {
             fontSize: 9,
             fontWeight: '900',
             letterSpacing: 0.6,
             marginBottom: 0,
-            marginTop: 2,
+            marginTop: 1,
           },
           headerShown: false,
           tabBarButton: HapticTab,
