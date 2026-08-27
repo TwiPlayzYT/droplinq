@@ -111,10 +111,10 @@ export function NotificationSetupGuide({
   showEnable = true,
 }: Props) {
   const steps = stepsForDevice(device);
-  const titleColor = light ? palette.white : palette.black;
-  const bodyColor = light ? palette.whiteDim : palette.blackSoft;
-  const stepBg = light ? palette.black : palette.white;
-  const stepBorder = light ? palette.blackSoft : palette.whiteDim;
+  const titleColor = light ? palette.onRaised : palette.cardInk;
+  const bodyColor = light ? palette.onRaisedDim : palette.cardMuted;
+  const stepBg = light ? palette.black : palette.card;
+  const stepBorder = light ? palette.blackSoft : palette.cardBorder;
 
   const statusCopy = (() => {
     switch (webPushState) {

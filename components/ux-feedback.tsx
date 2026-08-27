@@ -226,8 +226,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
   },
   bootBall: {
-    backgroundColor: palette.white,
-    borderColor: palette.whiteDim,
+    backgroundColor: palette.card,
+    borderColor: palette.cardBorder,
     borderRadius: 40,
     borderWidth: 4,
     height: 80,
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   bootBallTop: { backgroundColor: palette.red, height: 36 },
   bootBallLine: { backgroundColor: palette.black, height: 8 },
   bootBallButton: {
-    backgroundColor: palette.white,
+    backgroundColor: palette.card,
     borderColor: palette.black,
     borderRadius: 12,
     borderWidth: 5,
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   toastBar: {
-    backgroundColor: palette.white,
+    backgroundColor: palette.card,
     borderRadius: 2,
     height: '100%',
   },

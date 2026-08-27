@@ -116,7 +116,7 @@ export default function FilterScreen() {
                     </Text>
                   </View>
                   <Ionicons
-                    color={palette.black}
+                    color={palette.cardInk}
                     name={open ? 'chevron-up' : 'chevron-down'}
                     size={18}
                   />
@@ -195,8 +195,8 @@ const styles = StyleSheet.create({
   modeList: { gap: 10 },
   modeCard: {
     alignItems: 'center',
-    backgroundColor: palette.white,
-    borderColor: palette.whiteDim,
+    backgroundColor: palette.card,
+    borderColor: palette.cardBorder,
     borderRadius: 14,
     borderWidth: 2,
     flexDirection: 'row',
@@ -211,21 +211,21 @@ const styles = StyleSheet.create({
   modeEmoji: { fontSize: 22 },
   modeCopy: { flex: 1 },
   modeTitle: {
-    color: palette.black,
+    color: palette.cardInk,
     fontSize: 15,
     fontWeight: '900',
     letterSpacing: 0.2,
   },
   modeTitleSelected: { color: palette.redDark },
   modeDescription: {
-    color: palette.blackSoft,
+    color: palette.cardMuted,
     fontSize: 12,
     fontWeight: '600',
     lineHeight: 18,
     marginTop: 6,
   },
   radio: {
-    borderColor: palette.whiteShadow,
+    borderColor: palette.cardBorder,
     borderRadius: 999,
     borderWidth: 2,
     height: 18,
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.88 },
   hint: {
-    color: palette.blackSoft,
+    color: palette.cardMuted,
     fontSize: 12,
     fontWeight: '600',
     marginBottom: 12,
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   groupTitle: {
-    color: palette.black,
+    color: palette.cardInk,
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 0.4,
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  rule: { backgroundColor: palette.whiteDim, height: 1, marginVertical: 12 },
+  rule: { backgroundColor: palette.cardBorder, height: 1, marginVertical: 12 },
   previewLabel: {
     color: palette.red,
     fontSize: 10,

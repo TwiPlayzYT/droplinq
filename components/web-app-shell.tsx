@@ -13,7 +13,15 @@ const WEB_SMOOTH_CSS = `
   --dl-soft: #303030;
   --dl-text: #F7F5F2;
   --dl-text-dim: #D8D5D0;
-  --dl-text-shadow: #A9A6A2;
+  --dl-text-muted: #A9A6A2;
+  --dl-card: #F7F5F2;
+  --dl-card-ink: #090909;
+  --dl-card-muted: #303030;
+  --dl-card-border: #D8D5D0;
+  --dl-control: #F7F5F2;
+  --dl-control-ink: #090909;
+  --dl-on-raised: #F7F5F2;
+  --dl-on-raised-dim: #D8D5D0;
   color-scheme: dark;
 }
 html, body {

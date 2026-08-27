@@ -41,7 +41,7 @@ export function DropAlertModal() {
           }}
           style={styles.primaryButton}>
           <Text style={styles.primaryText}>OPEN PRODUCT</Text>
-          <Ionicons color={palette.black} name="open-outline" size={20} />
+          <Ionicons color={palette.controlInk} name="open-outline" size={20} />
         </Pressable>
         <Pressable
           unstable_pressDelay={0}
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   radarCore: {
     alignItems: 'center',
     backgroundColor: palette.black,
-    borderColor: palette.white,
+    borderColor: palette.card,
     borderRadius: 48,
     borderWidth: 7,
     height: 96,
@@ -172,8 +172,8 @@ const styles = StyleSheet.create({
   actions: { gap: 12, width: '100%' },
   primaryButton: {
     alignItems: 'center',
-    backgroundColor: palette.white,
-    borderColor: palette.whiteDim,
+    backgroundColor: palette.card,
+    borderColor: palette.cardBorder,
     borderRadius: 18,
     borderWidth: 2,
     flexDirection: 'row',
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.55,
     shadowRadius: 5,
   },
-  primaryText: { color: palette.black, fontSize: 14, fontWeight: '900', letterSpacing: 1.4 },
+  primaryText: { color: palette.cardInk, fontSize: 14, fontWeight: '900', letterSpacing: 1.4 },
   ackButton: {
     alignItems: 'center',
     backgroundColor: palette.black,

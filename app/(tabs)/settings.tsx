@@ -214,9 +214,9 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  rule: { backgroundColor: palette.whiteDim, height: 1, marginVertical: 12 },
+  rule: { backgroundColor: palette.cardBorder, height: 1, marginVertical: 12 },
   hint: {
-    color: palette.blackSoft,
+    color: palette.cardMuted,
     fontSize: 12,
     fontWeight: '600',
     lineHeight: 17,
@@ -230,21 +230,21 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   coverageTitle: {
-    color: palette.black,
+    color: palette.cardInk,
     fontSize: 15,
     fontWeight: '900',
     lineHeight: 21,
     marginBottom: 8,
   },
   coverageCopy: {
-    color: palette.blackSoft,
+    color: palette.cardMuted,
     fontSize: 13,
     fontWeight: '600',
     lineHeight: 19,
     marginBottom: 14,
   },
   devicePrompt: {
-    color: palette.whiteDim,
+    color: palette.onRaisedDim,
     fontSize: 13,
     fontWeight: '700',
     marginBottom: 10,

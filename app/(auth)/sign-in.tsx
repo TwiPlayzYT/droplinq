@@ -60,7 +60,7 @@ export default function SignInScreen() {
               pressed && authStyles.pressed,
               locked && authStyles.disabled,
             ]}>
-            <Ionicons color={palette.black} name="mail" size={18} />
+            <Ionicons color={palette.controlInk} name="mail" size={18} />
             <Text style={authStyles.emailCtaText}>Continue with email</Text>
           </Pressable>
           <Text style={authStyles.recommendHint}>
@@ -99,7 +99,7 @@ export default function SignInScreen() {
               pressed && authStyles.pressed,
               locked && authStyles.disabled,
             ]}>
-            <Ionicons color={palette.black} name="log-in" size={18} />
+            <Ionicons color={palette.controlInk} name="log-in" size={18} />
             <Text style={authStyles.submitText}>{busy ? 'Signing in…' : 'Sign in'}</Text>
           </Pressable>
           <Pressable

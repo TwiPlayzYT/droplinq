@@ -82,11 +82,11 @@ function AppExperience() {
       ...base,
       colors: {
         ...base.colors,
-        background: tokens.black,
-        card: tokens.blackRaised,
+        background: tokens.bg,
+        card: tokens.raised,
         primary: tokens.red,
-        text: tokens.white,
-        border: tokens.blackSoft,
+        text: tokens.text,
+        border: tokens.soft,
       },
     };
   }, [appearanceId, tokens]);

@@ -367,7 +367,7 @@ export default function HomeScreen() {
                     unstable_pressDelay={0}
                     onPress={triggerTestAlert}
                     style={({ pressed }) => [styles.testChip, pressed && styles.subNavPressed]}>
-                    <Ionicons color={palette.black} name="flash" size={14} />
+                    <Ionicons color={palette.cardInk} name="flash" size={14} />
                     <Text style={styles.testChipText}>TEST</Text>
                   </Pressable>
                 </View>
@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
   },
   testChip: {
     alignItems: 'center',
-    backgroundColor: palette.white,
+    backgroundColor: palette.card,
     borderRadius: 999,
     flexDirection: 'row',
     gap: 6,
@@ -706,7 +706,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   testChipText: {
-    color: palette.black,
+    color: palette.cardInk,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 0.8,
@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
   powerPressed: { opacity: 0.88, paddingTop: 5 },
   powerRim: {
     backgroundColor: palette.blackSoft,
-    borderColor: palette.whiteShadow,
+    borderColor: palette.cardBorder,
     borderRadius: 126,
     borderWidth: 2,
     height: 244,
@@ -797,7 +797,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   progressShine: {
-    backgroundColor: palette.white,
+    backgroundColor: palette.card,
     height: 2,
     left: 3,
     opacity: 0.28,

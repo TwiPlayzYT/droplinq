@@ -210,7 +210,7 @@ const LiveProductCard = memo(function LiveProductCard({
           onPress={() => onOpen(product)}
           style={({ pressed }) => [styles.openBtn, pressed && styles.pressed]}>
           <Text style={styles.openBtnText}>OPEN PRODUCT</Text>
-          <Ionicons color={palette.black} name="open-outline" size={16} />
+          <Ionicons color={palette.cardInk} name="open-outline" size={16} />
         </Pressable>
       </View>
     </Pressable>
@@ -266,7 +266,7 @@ const CatalogProductCard = memo(function CatalogProductCard({
               <Text style={styles.subtle}>Not observed in stock yet</Text>
             ) : null}
           </View>
-          <Ionicons color={palette.blackSoft} name="chevron-forward" size={18} />
+          <Ionicons color={palette.cardMuted} name="chevron-forward" size={18} />
         </View>
       </View>
     </Pressable>
@@ -317,7 +317,7 @@ function ActivityRow({
               {event.retailerName} · {when}
             </Text>
           </View>
-          <Ionicons color={palette.blackSoft} name="chevron-forward" size={18} />
+          <Ionicons color={palette.cardMuted} name="chevron-forward" size={18} />
         </View>
       </View>
     </Pressable>
@@ -652,7 +652,7 @@ export default function StockScreen() {
               {statusLine}
             </Text>
           </View>
-          <Ionicons color={palette.blackSoft} name="options-outline" size={20} />
+          <Ionicons color={palette.cardMuted} name="options-outline" size={20} />
         </View>
       </Pressable>
 
@@ -690,13 +690,13 @@ export default function StockScreen() {
             requestAnimationFrame(() => searchInputRef.current?.focus());
           }}
           style={({ pressed }) => [styles.searchCollapsed, pressed && styles.pressed]}>
-          <Ionicons color={palette.blackSoft} name="search" size={18} />
+          <Ionicons color={palette.cardMuted} name="search" size={18} />
           <Text style={styles.searchCollapsedText}>Search products</Text>
         </Pressable>
       ) : (
         <Reanimated.View entering={FadeInDown.duration(200)} style={styles.searchExpanded}>
           <View style={styles.searchWell}>
-            <Ionicons color={palette.blackSoft} name="search" size={18} />
+            <Ionicons color={palette.cardMuted} name="search" size={18} />
             <TextInput
               ref={searchInputRef}
               autoCapitalize="none"
@@ -705,7 +705,7 @@ export default function StockScreen() {
               clearButtonMode="while-editing"
               onChangeText={setQuery}
               placeholder="Search monitored products…"
-              placeholderTextColor={palette.whiteShadow}
+              placeholderTextColor={palette.cardMuted}
               returnKeyType="search"
               style={styles.searchInput}
               value={query}
@@ -720,7 +720,7 @@ export default function StockScreen() {
                 setViewFilter('all');
                 setSearchOpen(false);
               }}>
-              <Ionicons color={palette.blackSoft} name="close-circle" size={20} />
+              <Ionicons color={palette.cardMuted} name="close-circle" size={20} />
             </Pressable>
           </View>
           <View style={styles.chips}>
@@ -956,15 +956,15 @@ const styles = StyleSheet.create({
     maxWidth: '32%',
   },
   coverageShadow: {
-    backgroundColor: palette.whiteShadow,
+    backgroundColor: palette.cardBorder,
     borderRadius: 16,
     marginBottom: 16,
     paddingBottom: 3,
   },
   coverageCard: {
     alignItems: 'center',
-    backgroundColor: palette.white,
-    borderColor: palette.whiteDim,
+    backgroundColor: palette.card,
+    borderColor: palette.cardBorder,
     borderRadius: 15,
     borderWidth: 1,
     flexDirection: 'row',
@@ -974,19 +974,19 @@ const styles = StyleSheet.create({
   },
   coverageCopy: { flex: 1 },
   coverageTitle: {
-    color: palette.black,
+    color: palette.cardInk,
     fontSize: 15,
     fontWeight: '900',
   },
   statusLine: {
-    color: palette.blackSoft,
+    color: palette.cardMuted,
     fontSize: 12,
     fontWeight: '600',
     lineHeight: 17,
     marginTop: 6,
   },
   heartbeatLamp: {
-    backgroundColor: palette.whiteShadow,
+    backgroundColor: palette.cardBorder,
     borderRadius: 5,
     height: 10,
     width: 10,
@@ -1059,7 +1059,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     marginTop: 8,
   },
-  compactEmptyTitleLight: { color: palette.black },
+  compactEmptyTitleLight: { color: palette.cardInk },
   compactEmptyCaption: {
     color: palette.whiteShadow,
     fontSize: 11,
@@ -1068,17 +1068,17 @@ const styles = StyleSheet.create({
     maxWidth: 280,
     textAlign: 'center',
   },
-  compactEmptyCaptionLight: { color: palette.blackSoft },
+  compactEmptyCaptionLight: { color: palette.cardMuted },
   cardShadow: {
-    backgroundColor: palette.whiteShadow,
+    backgroundColor: palette.cardBorder,
     borderRadius: 20,
     marginBottom: 12,
     paddingBottom: 4,
   },
   pressed: { opacity: 0.88 },
   card: {
-    backgroundColor: palette.white,
-    borderColor: palette.whiteDim,
+    backgroundColor: palette.card,
+    borderColor: palette.cardBorder,
     borderRadius: 19,
     borderWidth: 1,
     padding: 12,
@@ -1111,28 +1111,28 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   cardTitle: {
-    color: palette.black,
+    color: palette.cardInk,
     fontSize: 15,
     fontWeight: '900',
     lineHeight: 20,
     marginTop: 6,
   },
   cardTitleSm: {
-    color: palette.black,
+    color: palette.cardInk,
     fontSize: 14,
     fontWeight: '900',
     lineHeight: 19,
     marginTop: 5,
   },
   metaLine: {
-    color: palette.blackSoft,
+    color: palette.cardMuted,
     fontSize: 11,
     fontWeight: '600',
     lineHeight: 16,
     marginTop: 6,
   },
   price: {
-    color: palette.black,
+    color: palette.cardInk,
     fontSize: 14,
     fontWeight: '900',
     marginTop: 8,
@@ -1150,7 +1150,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 5,
   },
-  liveDot: { backgroundColor: palette.white, borderRadius: 4, height: 8, width: 8 },
+  liveDot: { backgroundColor: palette.card, borderRadius: 4, height: 8, width: 8 },
   soldDot: { backgroundColor: palette.red, borderRadius: 4, height: 8, width: 8 },
   liveBadgeText: {
     color: palette.white,
@@ -1159,14 +1159,14 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   subtle: {
-    color: palette.blackSoft,
+    color: palette.cardMuted,
     fontSize: 10,
     fontWeight: '600',
     marginTop: 5,
   },
   openBtn: {
     alignItems: 'center',
-    backgroundColor: palette.whiteDim,
+    backgroundColor: palette.cardBorder,
     borderRadius: 12,
     flexDirection: 'row',
     gap: 8,
@@ -1175,7 +1175,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   openBtnText: {
-    color: palette.black,
+    color: palette.cardInk,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1,
@@ -1201,7 +1201,7 @@ const styles = StyleSheet.create({
   },
   statusDot: { borderRadius: 4, height: 7, width: 7 },
   activityKind: {
-    color: palette.blackSoft,
+    color: palette.cardMuted,
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1,
@@ -1209,9 +1209,9 @@ const styles = StyleSheet.create({
   kindRed: { color: palette.redDark },
   kindNew: { color: '#0F7A4A' },
   kindPreorder: { color: '#2F5FCC' },
-  kindMuted: { color: palette.blackSoft },
+  kindMuted: { color: palette.cardMuted },
   activityMeta: {
-    color: palette.blackSoft,
+    color: palette.cardMuted,
     fontSize: 11,
     fontWeight: '600',
     lineHeight: 16,
@@ -1219,8 +1219,8 @@ const styles = StyleSheet.create({
   },
   searchCollapsed: {
     alignItems: 'center',
-    backgroundColor: palette.white,
-    borderColor: palette.whiteDim,
+    backgroundColor: palette.card,
+    borderColor: palette.cardBorder,
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
@@ -1230,7 +1230,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   searchCollapsedText: {
-    color: palette.blackSoft,
+    color: palette.cardMuted,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -1244,8 +1244,8 @@ const styles = StyleSheet.create({
   },
   searchWell: {
     alignItems: 'center',
-    backgroundColor: palette.white,
-    borderColor: palette.whiteDim,
+    backgroundColor: palette.card,
+    borderColor: palette.cardBorder,
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
@@ -1254,7 +1254,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   searchInput: {
-    color: palette.black,
+    color: palette.cardInk,
     flex: 1,
     fontSize: 15,
     fontWeight: '700',

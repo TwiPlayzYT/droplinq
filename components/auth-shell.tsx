@@ -53,7 +53,7 @@ export function AuthShell({ tagline, children }: AuthShellProps) {
 
 export const authStyles = StyleSheet.create({
   sectionLabel: {
-    color: palette.white,
+    color: '#F7F5F2',
     fontSize: 15,
     fontWeight: '700',
     marginBottom: 12,
@@ -69,12 +69,12 @@ export const authStyles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   emailCtaText: {
-    color: palette.black,
+    color: '#0A0A0A',
     fontSize: 15,
     fontWeight: '800',
   },
   recommendHint: {
-    color: palette.whiteShadow,
+    color: '#A9A6A2',
     fontSize: 12,
     fontStyle: 'italic',
     lineHeight: 17,
@@ -93,14 +93,14 @@ export const authStyles = StyleSheet.create({
   },
   dividerLine: { backgroundColor: palette.blackSoft, flex: 1, height: 1 },
   dividerText: {
-    color: palette.whiteShadow,
+    color: '#A9A6A2',
     fontSize: 13,
     fontWeight: '600',
   },
   oauthBtn: {
     alignItems: 'center',
     backgroundColor: '#141414',
-    borderColor: palette.blackSoft,
+    borderColor: '#2A2A2A',
     borderRadius: 10,
     borderWidth: 1,
     flexDirection: 'row',
@@ -110,16 +110,16 @@ export const authStyles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   oauthText: {
-    color: palette.white,
+    color: '#F7F5F2',
     fontSize: 15,
     fontWeight: '700',
   },
   input: {
     backgroundColor: '#141414',
-    borderColor: palette.blackSoft,
+    borderColor: '#2A2A2A',
     borderRadius: 10,
     borderWidth: 1,
-    color: palette.white,
+    color: '#F7F5F2',
     fontSize: 15,
     fontWeight: '600',
     marginBottom: 10,
@@ -144,12 +144,12 @@ export const authStyles = StyleSheet.create({
     minHeight: 48,
   },
   submitText: {
-    color: palette.black,
+    color: '#0A0A0A',
     fontSize: 15,
     fontWeight: '800',
   },
   linkMuted: {
-    color: palette.whiteDim,
+    color: '#D8D5D0',
     fontSize: 13,
     fontWeight: '600',
     marginTop: 14,
@@ -157,7 +157,7 @@ export const authStyles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   footerBox: {
-    borderColor: palette.blackSoft,
+    borderColor: '#2A2A2A',
     borderRadius: 10,
     borderWidth: 1,
     flexDirection: 'row',
@@ -168,20 +168,20 @@ export const authStyles = StyleSheet.create({
   },
   footerCopy: { flex: 1 },
   footerTitle: {
-    color: palette.white,
+    color: '#F7F5F2',
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 18,
   },
   footerLink: {
-    color: palette.white,
+    color: '#F7F5F2',
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 18,
     textDecorationLine: 'underline',
   },
   footerSecondary: {
-    color: palette.whiteShadow,
+    color: '#A9A6A2',
     fontSize: 12,
     lineHeight: 17,
     marginTop: 4,
@@ -223,13 +223,13 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   brand: {
-    color: palette.white,
+    color: '#F7F5F2',
     fontSize: 28,
     fontWeight: '900',
     letterSpacing: 2.2,
   },
   tagline: {
-    color: palette.whiteShadow,
+    color: '#A9A6A2',
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.8,

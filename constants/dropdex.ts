@@ -5,17 +5,29 @@ import { droplinqTokens, paletteToken } from '@/constants/appearance';
 /**
  * App color tokens. On web these are CSS variables so Appearance
  * (Dark / Light / DropLinq Special) can update the whole UI live.
+ *
+ * Naming note:
+ * - black / white / * = page chrome (bg + text on the page)
+ * - card* = bubble panels (cream/white cards with dark ink — stay readable in every theme)
  */
 export const palette = {
   red: paletteToken('--dl-red', droplinqTokens.red),
   redDark: paletteToken('--dl-red-dark', droplinqTokens.redDark),
   redLight: paletteToken('--dl-red-light', droplinqTokens.redLight),
-  black: paletteToken('--dl-bg', droplinqTokens.black),
-  blackRaised: paletteToken('--dl-raised', droplinqTokens.blackRaised),
-  blackSoft: paletteToken('--dl-soft', droplinqTokens.blackSoft),
-  white: paletteToken('--dl-text', droplinqTokens.white),
-  whiteDim: paletteToken('--dl-text-dim', droplinqTokens.whiteDim),
-  whiteShadow: paletteToken('--dl-text-shadow', droplinqTokens.whiteShadow),
+  black: paletteToken('--dl-bg', droplinqTokens.bg),
+  blackRaised: paletteToken('--dl-raised', droplinqTokens.raised),
+  blackSoft: paletteToken('--dl-soft', droplinqTokens.soft),
+  white: paletteToken('--dl-text', droplinqTokens.text),
+  whiteDim: paletteToken('--dl-text-dim', droplinqTokens.textDim),
+  whiteShadow: paletteToken('--dl-text-muted', droplinqTokens.textMuted),
+  card: paletteToken('--dl-card', droplinqTokens.card),
+  cardInk: paletteToken('--dl-card-ink', droplinqTokens.cardInk),
+  cardMuted: paletteToken('--dl-card-muted', droplinqTokens.cardMuted),
+  cardBorder: paletteToken('--dl-card-border', droplinqTokens.cardBorder),
+  control: paletteToken('--dl-control', droplinqTokens.control),
+  controlInk: paletteToken('--dl-control-ink', droplinqTokens.controlInk),
+  onRaised: paletteToken('--dl-on-raised', droplinqTokens.onRaised),
+  onRaisedDim: paletteToken('--dl-on-raised-dim', droplinqTokens.onRaisedDim),
 } as const;
 
 /** @deprecated Prefer Filter tab coverage modes */

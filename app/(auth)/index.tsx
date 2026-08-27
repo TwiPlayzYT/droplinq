@@ -70,7 +70,7 @@ export default function SignUpScreen() {
               pressed && authStyles.pressed,
               locked && authStyles.disabled,
             ]}>
-            <Ionicons color={palette.black} name="mail" size={18} />
+            <Ionicons color={palette.controlInk} name="mail" size={18} />
             <Text style={authStyles.emailCtaText}>Continue with email</Text>
           </Pressable>
           <Text style={authStyles.recommendHint}>
@@ -109,7 +109,7 @@ export default function SignUpScreen() {
               pressed && authStyles.pressed,
               locked && authStyles.disabled,
             ]}>
-            <Ionicons color={palette.black} name="person-add" size={18} />
+            <Ionicons color={palette.controlInk} name="person-add" size={18} />
             <Text style={authStyles.submitText}>{busy ? 'Creating…' : 'Create account'}</Text>
           </Pressable>
         </View>
