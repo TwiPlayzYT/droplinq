@@ -21,6 +21,10 @@ body {
 [data-focusable="true"], button, a, [role="button"] {
   transition: opacity 120ms ease, background-color 120ms ease, border-color 120ms ease;
 }
+[data-focusable="true"]:focus, button:focus, a:focus, [role="button"]:focus {
+  outline: none;
+  box-shadow: none;
+}
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb {
   background: #333;

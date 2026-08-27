@@ -37,7 +37,7 @@ export default function LegalAcceptScreen() {
       <AuthShell tagline="Monitor · Alert · Secure">
         <Text style={authStyles.sectionLabel}>Legal</Text>
         <Text style={styles.webLead}>
-          Review and accept before opening your command center.
+          Review and accept before using DropLinq on the web.
         </Text>
 
         <Pressable

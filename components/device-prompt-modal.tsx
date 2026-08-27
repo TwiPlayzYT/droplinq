@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -12,15 +13,20 @@ import {
   markDevicePromptDone,
   subscribeDevicePromptDone,
 } from '@/constants/preferred-device';
+import { hasAcceptedCurrentLegal, useAuth } from '@/store/auth-context';
 import { useDropDex } from '@/store/dropdex-context';
 
 type Phase = 'device' | 'offer' | 'guide';
 
+const choiceWebFocus = Platform.OS === 'web' ? ({ outlineStyle: 'none', tabIndex: -1 } as object) : null;
+
 /**
- * Web-only: pops up as soon as the site opens until the visitor finishes
- * desktop/mobile choice (and optional mobile notification guide).
+ * Web-only: after sign-up and Terms acceptance, ask desktop vs mobile
+ * (optional mobile notification guide).
  */
 export function DevicePromptModal() {
+  const { profile, profileReady, session } = useAuth();
+  const segments = useSegments();
   const { enableWebPush, webPushState, refreshWebPushState } = useDropDex();
   const [ready, setReady] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -28,6 +34,10 @@ export function DevicePromptModal() {
   const [device, setDevice] = useState<PreferredDevice | null>(null);
   const [pushBusy, setPushBusy] = useState(false);
   const [pushNote, setPushNote] = useState<string | null>(null);
+
+  const legalOk = hasAcceptedCurrentLegal(profile);
+  const onAuth = segments[0] === '(auth)';
+  const mayShow = Platform.OS === 'web' && profileReady && Boolean(session) && legalOk && !onAuth;
 
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -39,6 +49,12 @@ export function DevicePromptModal() {
     const unsub = subscribeDevicePromptDone(() => {
       setVisible(false);
     });
+
+    if (!mayShow) {
+      setVisible(false);
+      setReady(true);
+      return unsub;
+    }
 
     let cancelled = false;
     AsyncStorage.getItem(DEVICE_PROMPT_DONE_KEY)
@@ -58,7 +74,7 @@ export function DevicePromptModal() {
       cancelled = true;
       unsub();
     };
-  }, []);
+  }, [mayShow, legalOk, session?.user.id]);
 
   if (Platform.OS !== 'web' || !ready || !visible) return null;
 
@@ -108,14 +124,16 @@ export function DevicePromptModal() {
               </Text>
               <View style={styles.choices}>
                 <Pressable
+                  focusable={false}
                   onPress={() => setDevice('phone')}
-                  style={[styles.choiceBtn, device === 'phone' && styles.choiceSelected]}>
+                  style={[styles.choiceBtn, device === 'phone' && styles.choiceSelected, choiceWebFocus]}>
                   <Text style={styles.choiceTitle}>Mobile</Text>
                   <Text style={styles.choiceSub}>iPhone or Android</Text>
                 </Pressable>
                 <Pressable
+                  focusable={false}
                   onPress={() => setDevice('desktop')}
-                  style={[styles.choiceBtn, device === 'desktop' && styles.choiceSelected]}>
+                  style={[styles.choiceBtn, device === 'desktop' && styles.choiceSelected, choiceWebFocus]}>
                   <Text style={styles.choiceTitle}>Desktop</Text>
                   <Text style={styles.choiceSub}>Laptop or computer</Text>
                 </Pressable>
