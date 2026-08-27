@@ -29,9 +29,7 @@ export default function LegalAcceptScreen() {
     setBusy(false);
     if (!result.ok) {
       setError(result.message);
-      return;
     }
-    router.replace('/(legal)/device');
   };
 
   if (isWeb) {

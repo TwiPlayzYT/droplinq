@@ -3,8 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { PreferredDevice } from '@/components/notification-setup-guide';
 
 export const PREFERRED_DEVICE_KEY = '@droplinq/preferred-device';
-/** Set after the post-terms phone/desktop prompt finishes (or is skipped). */
-export const DEVICE_PROMPT_DONE_KEY = '@droplinq/device-prompt-done';
+/** Bumped so everyone sees the immediate site-open popup once. */
+export const DEVICE_PROMPT_DONE_KEY = '@droplinq/device-prompt-done-v2';
 
 export type { PreferredDevice };
 
