@@ -98,7 +98,8 @@ type DropDexContextValue = PersistedState & {
   feedback: UXFeedback | null;
   operation: UXOperation | null;
   webPushState: WebPushState;
-  enableWebPush: () => Promise<void>;
+  enableWebPush: () => Promise<boolean>;
+  refreshWebPushState: () => Promise<void>;
   setMonitoring: (enabled: boolean) => void;
   setRegion: (region: RegionId) => void;
   retryMonitoring: () => void;
@@ -798,7 +799,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
         'Web Push is not configured',
         'Add the VAPID environment variables to Railway, deploy, then try again.',
       );
-      return;
+      return false;
     }
 
     setWebPushState('checking');
@@ -806,19 +807,24 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       const subscription = await subscribeToWebPush(webPushPublicKey);
       setWebPushSubscription(subscription);
       setWebPushState('subscribed');
+      setState((previous) => ({
+        ...previous,
+        alerts: { ...previous.alerts, push: true },
+      }));
       await monitorService.register({
         installationId: stateRef.current.installationId,
         enabled: stateRef.current.monitoring,
         region: stateRef.current.region,
         filters: stateRef.current.filters,
-        alerts: stateRef.current.alerts,
+        alerts: { ...stateRef.current.alerts, push: true },
         webPushSubscription: subscription,
       });
       showFeedback(
         'success',
         'Lock-screen alerts enabled',
-        'DropLinq can now alert this Home Screen app while it is closed.',
+        'DropLinq can now alert this device while the site is closed.',
       );
+      return true;
     } catch (error) {
       const nextState = await getWebPushState();
       setWebPushState(nextState === 'checking' ? 'error' : nextState);
@@ -827,8 +833,24 @@ export function DropDexProvider({ children }: PropsWithChildren) {
         'Could not enable Web Push',
         error instanceof Error ? error.message : 'Check notification permissions and try again.',
       );
+      return false;
     }
   }, [showFeedback, webPushPublicKey]);
+
+  const refreshWebPushState = useCallback(async () => {
+    const [pushState, subscription, publicKey] = await Promise.all([
+      getWebPushState(),
+      getExistingWebPushSubscription(),
+      monitorService.getWebPushPublicKey().catch(() => undefined),
+    ]);
+    setWebPushSubscription(subscription);
+    if (publicKey) setWebPushPublicKey(publicKey);
+    setWebPushState(
+      (pushState === 'ready' || pushState === 'subscribed') && !(publicKey || webPushPublicKey)
+        ? 'error'
+        : pushState,
+    );
+  }, [webPushPublicKey]);
 
   const triggerTestAlert = useCallback(() => {
     void unlockAlertAudio();
@@ -1030,6 +1052,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       operation,
       webPushState,
       enableWebPush,
+      refreshWebPushState,
       setMonitoring,
       setRegion,
       retryMonitoring,
@@ -1064,6 +1087,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       catalogLoading,
       liveStatus,
       refreshCatalog,
+      refreshWebPushState,
       openProductBrowser,
       operation,
       pendingOpenProduct,

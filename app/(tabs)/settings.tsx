@@ -1,17 +1,26 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+
 import {
   BrandHeader,
+  ChoiceChip,
   MechanicalToggle,
   MetalButton,
   Panel,
   Screen,
   SectionTitle,
 } from '@/components/dropdex-ui';
+import {
+  NotificationSetupGuide,
+  type PreferredDevice,
+} from '@/components/notification-setup-guide';
+import { PREFERRED_DEVICE_KEY } from '@/constants/preferred-device';
 import { palette } from '@/constants/dropdex';
 import { coverageModeCopy } from '@/data/pokemon-center-filters';
 import { useAuth } from '@/store/auth-context';
 import { useDropDex } from '@/store/dropdex-context';
-import { useRouter } from 'expo-router';
-import { Platform, StyleSheet, Text, View } from 'react-native';
 
 function AlertToggle({
   hint,
@@ -37,6 +46,7 @@ export default function SettingsScreen() {
     alerts,
     enableWebPush,
     filters,
+    refreshWebPushState,
     triggerTestAlert,
     updateAlertPreferences,
     webPushState,
@@ -45,9 +55,36 @@ export default function SettingsScreen() {
   const router = useRouter();
   const plan = profile?.subscriptionTier ?? 'FREE';
   const coverage = coverageModeCopy[filters.coverageMode];
+  const [device, setDevice] = useState<PreferredDevice>('desktop');
+  const [pushBusy, setPushBusy] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(PREFERRED_DEVICE_KEY)
+      .then((saved) => {
+        if (saved === 'phone' || saved === 'desktop') {
+          setDevice(saved);
+          return;
+        }
+        if (Platform.OS === 'web' && typeof navigator !== 'undefined') {
+          setDevice(/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'phone' : 'desktop');
+        }
+      })
+      .catch(() => undefined);
+  }, []);
 
   const updateAlert = (key: keyof typeof alerts, value: boolean) => {
     updateAlertPreferences({ ...alerts, [key]: value });
+  };
+
+  const persistDevice = (next: PreferredDevice) => {
+    setDevice(next);
+    void AsyncStorage.setItem(PREFERRED_DEVICE_KEY, next);
+  };
+
+  const onEnable = async () => {
+    setPushBusy(true);
+    await enableWebPush();
+    setPushBusy(false);
   };
 
   return (
@@ -77,21 +114,45 @@ export default function SettingsScreen() {
         />
       </Panel>
 
-      {Platform.OS === 'web' && webPushState === 'ready' ? (
+      {Platform.OS === 'web' ? (
         <Panel tone="dark">
           <SectionTitle light title="Lock-screen alerts" />
-          <MetalButton
-            icon="notifications"
-            label="Enable lock-screen alerts"
-            onPress={enableWebPush}
+          <Text style={styles.devicePrompt}>I’m mainly using DropLinq on</Text>
+          <View style={styles.deviceRow}>
+            <ChoiceChip
+              label="Phone"
+              onPress={() => persistDevice('phone')}
+              selected={device === 'phone'}
+            />
+            <ChoiceChip
+              label="Desktop"
+              onPress={() => persistDevice('desktop')}
+              selected={device === 'desktop'}
+            />
+          </View>
+          <NotificationSetupGuide
+            device={device}
+            dense
+            enableBusy={pushBusy}
+            light
+            onEnable={() => void onEnable()}
+            showEnable={webPushState === 'ready'}
+            webPushState={webPushState}
           />
+          {webPushState === 'install-required' ? (
+            <MetalButton
+              icon="refresh"
+              label="I’ve added it — check again"
+              onPress={() => void refreshWebPushState()}
+            />
+          ) : null}
         </Panel>
       ) : null}
 
       <Panel>
         <SectionTitle title="Alerts" />
         <AlertToggle
-          hint="Browser / lock-screen notifications — we’ll wire this next."
+          hint="System notifications when a drop hits (needs Lock-screen alerts enabled above on web)."
           label="Push"
           onChange={(value) => updateAlert('push', value)}
           value={alerts.push}
@@ -180,6 +241,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     lineHeight: 19,
+    marginBottom: 14,
+  },
+  devicePrompt: {
+    color: palette.whiteDim,
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  deviceRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 14,
   },
 });
