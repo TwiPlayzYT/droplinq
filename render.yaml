@@ -1,9 +1,6 @@
-# DropLinq static web app (Expo export → dist/)
-# Free tier: Render Static Site — no always-on Node bill for the UI.
-#
-# Dashboard: New → Static Site → connect this repo
-# Build command: npm ci && npm run export:web
-# Publish directory: dist
+# DropLinq infrastructure (Blueprint)
+# - droplinq-web: static Expo web UI
+# - droplinq-monitor: always-on Node monitor + Web Push sender
 #
 # Native iOS/Android builds are unchanged (EAS / Expo Go).
 
@@ -22,10 +19,31 @@ services:
         name: X-Content-Type-Options
         value: nosniff
     routes:
-      # Expo Router static export emits real HTML per route; keep assets direct.
       - type: rewrite
         source: /sw.js
         destination: /sw.js
       - type: rewrite
         source: /manifest.webmanifest
         destination: /manifest.webmanifest
+
+  - type: web
+    name: droplinq-monitor
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: npm ci
+    startCommand: npm run monitor
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATA_FILE
+        value: /tmp/droplinq-state.json
+      - key: POLL_INTERVAL_MS
+        value: "30000"
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false

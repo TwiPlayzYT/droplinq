@@ -1,5 +1,5 @@
-const POPULAR_FORMATS = new Set(['etb', 'upc']);
-const ALLOWED_FORMATS = new Set(['etb', 'booster-bundle', 'booster-box', 'upc']);
+export const POPULAR_FORMATS = new Set(['etb', 'upc']);
+export const ALLOWED_FORMATS = new Set(['etb', 'booster-bundle', 'booster-box', 'upc']);
 const ALLOWED_MODES = new Set(['POPULAR', 'ALL_TCG', 'CUSTOM']);
 
 /** Legacy format → category ids used by the mobile Filter catalog. */

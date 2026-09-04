@@ -28,6 +28,10 @@ export interface MonitorService {
   register(registration: MonitorRegistration): Promise<void>;
   getWebPushPublicKey(): Promise<string | undefined>;
   reportObservations(products: Product[]): Promise<void>;
+  sendTestWebPush(
+    subscription: WebPushSubscriptionPayload,
+    product?: Product,
+  ): Promise<void>;
 }
 
 class RemoteMonitorService implements MonitorService {
@@ -47,10 +51,17 @@ class RemoteMonitorService implements MonitorService {
   }
 
   async getWebPushPublicKey() {
-    const response = await fetch(`${this.baseUrl}/v1/web-push/config`);
-    if (!response.ok) throw new Error(`Web Push configuration failed (${response.status})`);
-    const config = (await response.json()) as { enabled?: boolean; publicKey?: string };
-    return config.enabled && typeof config.publicKey === 'string' ? config.publicKey : undefined;
+    try {
+      const response = await fetch(`${this.baseUrl}/v1/web-push/config`);
+      if (response.ok) {
+        const config = (await response.json()) as { enabled?: boolean; publicKey?: string };
+        if (config.enabled && typeof config.publicKey === 'string') return config.publicKey;
+      }
+    } catch {
+      // Fall through to baked-in public key.
+    }
+    const baked = process.env.EXPO_PUBLIC_VAPID_PUBLIC_KEY;
+    return typeof baked === 'string' && baked.length > 20 ? baked : undefined;
   }
 
   async reportObservations(products: Product[]) {
@@ -68,14 +79,30 @@ class RemoteMonitorService implements MonitorService {
       throw new Error(`Observation sync failed (${response.status})`);
     }
   }
+
+  async sendTestWebPush(subscription: WebPushSubscriptionPayload, product?: Product) {
+    const response = await fetch(`${this.baseUrl}/v1/web-push/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ webPushSubscription: subscription, product }),
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      throw new Error(`Test push failed (${response.status}) ${detail}`.trim());
+    }
+  }
 }
 
 class DevelopmentMonitorService implements MonitorService {
   async register() {}
   async getWebPushPublicKey() {
-    return undefined;
+    const baked = process.env.EXPO_PUBLIC_VAPID_PUBLIC_KEY;
+    return typeof baked === 'string' && baked.length > 20 ? baked : undefined;
   }
   async reportObservations() {}
+  async sendTestWebPush() {
+    throw new Error('Monitor API URL is not configured.');
+  }
 }
 
 const apiUrl =

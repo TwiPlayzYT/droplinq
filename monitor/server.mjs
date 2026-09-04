@@ -13,9 +13,12 @@ import { JsonStore } from './storage.mjs';
 import {
   getWebPushPublicConfig,
   isValidWebPushSubscription,
+  sendTestWebPush,
 } from './web-push.mjs';
+import { ALLOWED_FORMATS } from './coverage-match.mjs';
 
 const allowedRegions = new Set(['us', 'ca', 'uk', 'de', 'au', 'nz', 'jp']);
+const allowedFormats = ALLOWED_FORMATS;
 
 const sendJson = (response, status, value) => {
   response.writeHead(status, {
@@ -171,6 +174,22 @@ const server = createServer(async (request, response) => {
 
   if (request.method === 'GET' && request.url === '/v1/web-push/config') {
     sendJson(response, 200, getWebPushPublicConfig());
+    return;
+  }
+
+  if (request.method === 'POST' && request.url === '/v1/web-push/test') {
+    try {
+      const body = JSON.parse(await readBody(request));
+      if (!isValidWebPushSubscription(body.webPushSubscription)) {
+        sendJson(response, 422, { ok: false, error: 'webPushSubscription is required' });
+        return;
+      }
+      await sendTestWebPush(body.webPushSubscription, body.product);
+      sendJson(response, 200, { ok: true });
+    } catch (error) {
+      const status = /VAPID|not configured/i.test(error.message) ? 503 : 422;
+      sendJson(response, status, { ok: false, error: error.message });
+    }
     return;
   }
 

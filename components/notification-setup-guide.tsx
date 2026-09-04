@@ -62,18 +62,18 @@ const PHONE_ANDROID_STEPS: GuideStep[] = [
 const DESKTOP_STEPS: GuideStep[] = [
   {
     n: '1',
-    title: 'Keep this tab signed in',
-    body: 'Use Chrome, Edge, or Firefox on this computer for the most reliable alerts.',
+    title: 'Use Chrome, Edge, or Firefox',
+    body: 'These browsers support real lock-screen / system Web Push for DropLinq.',
   },
   {
     n: '2',
-    title: 'Allow notifications',
-    body: 'Tap Enable alerts. When the browser asks, choose Allow — not Block.',
+    title: 'Tap Enable alerts',
+    body: 'When the browser asks, choose Allow. DropLinq will register this computer for background alerts.',
   },
   {
     n: '3',
-    title: 'Leave DropLinq running in the background',
-    body: 'You don’t need the tab focused. As long as the browser isn’t fully quit, lock-screen / system alerts can still arrive.',
+    title: 'You’re set',
+    body: 'You can close the tab after that. Matching drops can still reach your notification center while the browser is installed on this computer.',
   },
 ];
 
@@ -175,7 +175,12 @@ export function NotificationSetupGuide({
       {showEnable && onEnable && webPushState !== 'subscribed' && webPushState !== 'unsupported' ? (
         <MetalButton
           icon="notifications"
-          label={enableBusy ? 'Enabling…' : enableLabel ?? 'Enable alerts'}
+          label={
+            enableBusy
+              ? 'Enabling…'
+              : enableLabel ??
+                (webPushState === 'denied' ? 'Try again — allow notifications' : 'Enable alerts')
+          }
           onPress={onEnable}
         />
       ) : null}

@@ -99,6 +99,7 @@ type DropDexContextValue = PersistedState & {
   operation: UXOperation | null;
   webPushState: WebPushState;
   enableWebPush: () => Promise<boolean>;
+  sendTestLockScreenPush: () => Promise<boolean>;
   refreshWebPushState: () => Promise<void>;
   setMonitoring: (enabled: boolean) => void;
   setRegion: (region: RegionId) => void;
@@ -792,37 +793,68 @@ export function DropDexProvider({ children }: PropsWithChildren) {
   }, []);
 
   const enableWebPush = useCallback(async () => {
-    if (!webPushPublicKey) {
+    const publicKey =
+      webPushPublicKey ||
+      (await monitorService.getWebPushPublicKey().catch(() => undefined));
+    if (publicKey) setWebPushPublicKey(publicKey);
+
+    if (!publicKey) {
       setWebPushState('error');
       showFeedback(
         'error',
         'Web Push is not configured',
-        'Add the VAPID environment variables to Railway, deploy, then try again.',
+        'The alert server is missing VAPID keys. Deploy the DropLinq monitor, then try again.',
       );
       return false;
     }
 
     setWebPushState('checking');
     try {
-      const subscription = await subscribeToWebPush(webPushPublicKey);
+      // Unlock audio + turn monitoring on in the same user gesture as permission.
+      await unlockAlertAudio();
+      if (!stateRef.current.monitoring) {
+        setState((previous) => ({ ...previous, monitoring: true }));
+      }
+
+      const subscription = await subscribeToWebPush(publicKey);
       setWebPushSubscription(subscription);
       setWebPushState('subscribed');
       setState((previous) => ({
         ...previous,
+        monitoring: true,
         alerts: { ...previous.alerts, push: true },
       }));
+
       await monitorService.register({
         installationId: stateRef.current.installationId,
-        enabled: stateRef.current.monitoring,
+        enabled: true,
         region: stateRef.current.region,
         filters: stateRef.current.filters,
         alerts: { ...stateRef.current.alerts, push: true },
         webPushSubscription: subscription,
       });
+
+      // Immediate proof the OS can show DropLinq notifications on this device.
+      try {
+        await deliverProductAlert(
+          { ...testAlertProduct, detectedAt: new Date().toISOString() },
+          {
+            push: true,
+            sound: true,
+            vibration: true,
+            speech: false,
+            fullScreen: false,
+            dropMode: false,
+          },
+        );
+      } catch {
+        // Permission was granted; local preview is best-effort.
+      }
+
       showFeedback(
         'success',
         'Lock-screen alerts enabled',
-        'DropLinq can now alert this device while the site is closed.',
+        'DropLinq can alert this device even when the site is closed. Use Test lock-screen push to verify.',
       );
       return true;
     } catch (error) {
@@ -836,6 +868,38 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       return false;
     }
   }, [showFeedback, webPushPublicKey]);
+
+  const sendTestLockScreenPush = useCallback(async () => {
+    const subscription =
+      webPushSubscription || (await getExistingWebPushSubscription());
+    if (!subscription) {
+      showFeedback(
+        'error',
+        'Enable lock-screen alerts first',
+        'Tap Enable alerts above, allow notifications, then try again.',
+      );
+      return false;
+    }
+    try {
+      await monitorService.sendTestWebPush(subscription, {
+        ...testAlertProduct,
+        detectedAt: new Date().toISOString(),
+      });
+      showFeedback(
+        'success',
+        'Test push sent',
+        'Check your lock screen / notification center — you should see a DropLinq test alert.',
+      );
+      return true;
+    } catch (error) {
+      showFeedback(
+        'error',
+        'Test push failed',
+        error instanceof Error ? error.message : 'The alert server could not deliver a push.',
+      );
+      return false;
+    }
+  }, [showFeedback, webPushSubscription]);
 
   const refreshWebPushState = useCallback(async () => {
     const [pushState, subscription, publicKey] = await Promise.all([
@@ -1052,6 +1116,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       operation,
       webPushState,
       enableWebPush,
+      sendTestLockScreenPush,
       refreshWebPushState,
       setMonitoring,
       setRegion,
@@ -1078,6 +1143,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       clearFeedback,
       confirmOpenProduct,
       enableWebPush,
+      sendTestLockScreenPush,
       feedback,
       hydrated,
       isWatched,

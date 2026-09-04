@@ -77,3 +77,29 @@ export async function sendMatchingWebPushes(product, registrations) {
 
   return { expiredInstallationIds, sent };
 }
+
+/** Send one lock-screen notification to a single subscription (Settings → Test). */
+export async function sendTestWebPush(subscription, product) {
+  if (!configured) {
+    throw new Error('Web Push is not configured on the monitor (missing VAPID keys).');
+  }
+  if (!isValidWebPushSubscription(subscription)) {
+    throw new Error('A valid Web Push subscription is required.');
+  }
+
+  const payload = {
+    title: 'DropLinq test alert',
+    body: product?.title ?? 'Lock-screen alerts are working on this device.',
+    product: product ?? {
+      id: 'droplinq-test-alert',
+      title: 'DropLinq Test Alert',
+      url: 'https://www.pokemoncenter.com/en-ca/category/trading-card-game',
+    },
+  };
+
+  await webPush.sendNotification(subscription, JSON.stringify(payload), {
+    TTL: 120,
+    urgency: 'high',
+  });
+  return { ok: true };
+}

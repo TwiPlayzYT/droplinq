@@ -47,6 +47,7 @@ export default function SettingsScreen() {
     enableWebPush,
     filters,
     refreshWebPushState,
+    sendTestLockScreenPush,
     triggerTestAlert,
     updateAlertPreferences,
     webPushState,
@@ -57,6 +58,7 @@ export default function SettingsScreen() {
   const coverage = coverageModeCopy[filters.coverageMode];
   const [device, setDevice] = useState<PreferredDevice>('desktop');
   const [pushBusy, setPushBusy] = useState(false);
+  const [testPushBusy, setTestPushBusy] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(PREFERRED_DEVICE_KEY)
@@ -85,6 +87,12 @@ export default function SettingsScreen() {
     setPushBusy(true);
     await enableWebPush();
     setPushBusy(false);
+  };
+
+  const onTestLockScreen = async () => {
+    setTestPushBusy(true);
+    await sendTestLockScreenPush();
+    setTestPushBusy(false);
   };
 
   return (
@@ -136,9 +144,20 @@ export default function SettingsScreen() {
             enableBusy={pushBusy}
             light
             onEnable={() => void onEnable()}
-            showEnable={webPushState === 'ready'}
+            showEnable={
+              webPushState === 'ready' ||
+              webPushState === 'error' ||
+              webPushState === 'denied'
+            }
             webPushState={webPushState}
           />
+          {webPushState === 'subscribed' ? (
+            <MetalButton
+              icon="notifications-outline"
+              label={testPushBusy ? 'Sending test…' : 'Test lock-screen push'}
+              onPress={() => void onTestLockScreen()}
+            />
+          ) : null}
           {webPushState === 'install-required' ? (
             <MetalButton
               icon="refresh"
