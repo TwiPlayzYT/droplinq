@@ -719,6 +719,21 @@ export function DropDexProvider({ children }: PropsWithChildren) {
     });
   }, [hydrated, state.monitoring, state.region]);
 
+  // Keep the free-tier monitor awake while this browser has monitoring on.
+  useEffect(() => {
+    if (!hydrated || !remoteMonitorConfigured || !state.monitoring) return;
+    if (Platform.OS !== 'web') return;
+    const base = process.env.EXPO_PUBLIC_MONITOR_API_URL?.replace(/\/$/, '');
+    if (!base) return;
+
+    const ping = () => {
+      void fetch(`${base}/health`).catch(() => undefined);
+    };
+    ping();
+    const timer = setInterval(ping, 4 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, [hydrated, state.monitoring]);
+
   // Stable callbacks (reading current values through refs) so screens and
   // memoized cards don't re-render every time unrelated state changes.
   const activeAlertRef = useRef(activeAlert);
