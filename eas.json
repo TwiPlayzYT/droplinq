@@ -8,7 +8,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_MONITOR_API_URL": "https://monitor-production-d673.up.railway.app"
+        "EXPO_PUBLIC_MONITOR_API_URL": "https://droplinq-monitor.onrender.com",
+        "EXPO_PUBLIC_VAPID_PUBLIC_KEY": "BONf5u1IOJY-UUnTX5EdUn62HrCm7LyO3oK3BHlhm37eqfuUfCJ4q-QdJjK2v9NSf5NdgpLUgDGR-o-AbAFTGdU"
       }
     },
     "preview": {
@@ -21,13 +22,15 @@
         "simulator": false
       },
       "env": {
-        "EXPO_PUBLIC_MONITOR_API_URL": "https://monitor-production-d673.up.railway.app"
+        "EXPO_PUBLIC_MONITOR_API_URL": "https://droplinq-monitor.onrender.com",
+        "EXPO_PUBLIC_VAPID_PUBLIC_KEY": "BONf5u1IOJY-UUnTX5EdUn62HrCm7LyO3oK3BHlhm37eqfuUfCJ4q-QdJjK2v9NSf5NdgpLUgDGR-o-AbAFTGdU"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_MONITOR_API_URL": "https://monitor-production-d673.up.railway.app"
+        "EXPO_PUBLIC_MONITOR_API_URL": "https://droplinq-monitor.onrender.com",
+        "EXPO_PUBLIC_VAPID_PUBLIC_KEY": "BONf5u1IOJY-UUnTX5EdUn62HrCm7LyO3oK3BHlhm37eqfuUfCJ4q-QdJjK2v9NSf5NdgpLUgDGR-o-AbAFTGdU"
       }
     }
   },
