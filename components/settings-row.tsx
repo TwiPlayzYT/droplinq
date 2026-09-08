@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MechanicalToggle } from '@/components/dropdex-ui';
 import { tourDomProps } from '@/components/tour-anchor';
 import { palette } from '@/constants/dropdex';
+import { emitTourAction, isTutorialSessionActive } from '@/services/tour-session';
 
 type RowBase = {
   title: string;
@@ -38,7 +39,13 @@ export function SettingsNavRow({
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={onPress}
+      onPress={() => {
+        if (tourId && isTutorialSessionActive()) {
+          emitTourAction(tourId === 'settings-homescreen' ? 'tap' : tourId);
+          if (tourId === 'settings-homescreen') return;
+        }
+        onPress();
+      }}
       style={({ pressed }) => [styles.row, last && styles.rowLast, pressed && styles.pressed]}
       {...(tourId ? tourDomProps(tourId) : null)}>
       <View style={styles.copy}>

@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BrandHeader, ChoiceChip, MechanicalToggle, Panel, Screen, SectionTitle } from '@/components/dropdex-ui';
 import { TourAnchor } from '@/components/tour-anchor';
+import { emitTourAction } from '@/services/tour-session';
 import { palette, previewSamples } from '@/constants/dropdex';
 import {
   coverageModeCopy,
@@ -69,7 +70,10 @@ export default function FilterScreen() {
                 key={mode}
                 accessibilityRole="radio"
                 accessibilityState={{ selected }}
-                onPress={() => setMode(mode)}
+                onPress={() => {
+                  emitTourAction('coverage');
+                  setMode(mode);
+                }}
                 style={({ pressed }) => [
                   styles.modeCard,
                   selected && styles.modeCardSelected,

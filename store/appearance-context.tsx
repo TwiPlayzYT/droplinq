@@ -19,6 +19,7 @@ import {
   applyAppearanceCss,
   droplinqTokens,
 } from '@/constants/appearance';
+import { emitTourAction } from '@/services/tour-session';
 
 type AppearanceContextValue = {
   appearanceId: AppearanceId;
@@ -72,6 +73,7 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
   const setAppearance = useCallback((id: AppearanceId) => {
     setAppearanceId(id);
     void AsyncStorage.setItem(APPEARANCE_STORAGE_KEY, id);
+    emitTourAction('appearance');
   }, []);
 
   const value = useMemo(

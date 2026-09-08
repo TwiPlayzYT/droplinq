@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Modal,
   Platform,
@@ -12,8 +12,9 @@ import {
   type LayoutRectangle,
 } from 'react-native';
 
-import { TourAnchor } from '@/components/tour-anchor';
+import { TourAnchor, tourDomProps } from '@/components/tour-anchor';
 import { palette } from '@/constants/dropdex';
+import { emitTourAction, subscribeTutorialStep } from '@/services/tour-session';
 import { useAppearance, useAppearanceOptions } from '@/store/appearance-context';
 import { useAuth } from '@/store/auth-context';
 
@@ -110,13 +111,26 @@ export function ProfileMenu({ compact = false }: Props) {
     return '@droplinq';
   }, [profile?.email, profile?.username]);
 
-  const openMenu = () => {
+  const openMenu = (appearance = false) => {
     triggerRef.current?.measureInWindow((x, y, w, h) => {
       setAnchor({ x, y, width: w, height: h });
-      setAppearanceOpen(false);
+      setAppearanceOpen(appearance);
       setOpen(true);
+      emitTourAction('profile');
     });
   };
+
+  useEffect(() => {
+    return subscribeTutorialStep((id) => {
+      if (id === 'appearance') {
+        openMenu(true);
+        return;
+      }
+      if (id !== 'profile') {
+        closeMenu();
+      }
+    });
+  }, []);
 
   const closeMenu = () => {
     setOpen(false);
@@ -142,7 +156,7 @@ export function ProfileMenu({ compact = false }: Props) {
         <View ref={triggerRef} collapsable={false}>
         <Pressable
           accessibilityLabel="Account menu"
-          onPress={openMenu}
+          onPress={() => openMenu()}
           style={[styles.trigger, compact && styles.triggerCompact]}>
           <ProfileAvatar label={displayName} size={compact ? 30 : 34} />
           {!compact ? (
@@ -175,7 +189,8 @@ export function ProfileMenu({ compact = false }: Props) {
 
             <Pressable
               onPress={() => setAppearanceOpen((v) => !v)}
-              style={[styles.row, appearanceOpen && styles.rowActive]}>
+              style={[styles.row, appearanceOpen && styles.rowActive]}
+              {...tourDomProps('appearance-menu')}>
               <Ionicons color="#D8D5D0" name="color-palette-outline" size={18} />
               <Text style={styles.rowLabel}>Appearance</Text>
               <Ionicons

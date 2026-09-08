@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BrandHeader, Screen } from '@/components/dropdex-ui';
 import { TourAnchor } from '@/components/tour-anchor';
@@ -18,6 +18,7 @@ import { legalHref } from '@/constants/legal';
 import { TUTORIAL_STORAGE_KEY } from '@/constants/tutorial';
 import { coverageModeCopy } from '@/data/pokemon-center-filters';
 import { useAuth } from '@/store/auth-context';
+import { emitTourAction, isTutorialSessionActive } from '@/services/tour-session';
 import { useDropDex } from '@/store/dropdex-context';
 import { requestTutorialRestart } from '@/components/site-tutorial';
 
@@ -71,6 +72,10 @@ export default function SettingsScreen() {
       <BrandHeader eyebrow="Settings" />
 
       <TourAnchor id="settings">
+      <Pressable
+        onPress={() => {
+          if (isTutorialSessionActive()) emitTourAction('tap');
+        }}>
       <View style={styles.profileCard}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initialsFrom(displayName)}</Text>
@@ -82,6 +87,7 @@ export default function SettingsScreen() {
           <Text style={styles.plan}>{plan}</Text>
         </View>
       </View>
+      </Pressable>
       </TourAnchor>
 
       <SettingsGroup title="Alerts">

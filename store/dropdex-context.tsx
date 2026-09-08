@@ -21,6 +21,11 @@ import { loadCloudAlertPreferences, syncCloudAlertPreferences } from '@/services
 import { canAddToWatchlist } from '@/services/subscriptions/tiers';
 import { isGuestUserId } from '@/services/auth/guest-auth';
 import { authAdapter } from '@/services/auth';
+import {
+  emitTourAction,
+  isTutorialPowerHold,
+  setTutorialPowerHold,
+} from '@/services/tour-session';
 import { useAuth } from '@/store/auth-context';
 import { seededEtbs } from '@/data/historical-etbs';
 import {
@@ -297,6 +302,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
 
         if (!cancelled) {
           loadedUserKeyRef.current = userKey;
+          if (isTutorialPowerHold()) next.monitoring = false;
           setState(next);
         }
         await AsyncStorage.removeItem('@dropdex/live-snapshot/v1');
@@ -810,12 +816,21 @@ export function DropDexProvider({ children }: PropsWithChildren) {
   }, [activeAlert]);
 
   const setMonitoring = useCallback((monitoring: boolean) => {
+    if (isTutorialPowerHold()) {
+      if (!monitoring) {
+        setState((previous) => ({ ...previous, monitoring: false }));
+        return;
+      }
+      setTutorialPowerHold(false);
+      emitTourAction('home-power');
+    }
     if (monitoring) void unlockAlertAudio();
     setState((previous) => ({ ...previous, monitoring }));
   }, []);
 
   const setRegion = useCallback(
     (region: RegionId) => {
+      emitTourAction('region');
       if (region === stateRef.current.region) return;
       const monitoring = stateRef.current.monitoring;
       const selected = getRegion(region);
@@ -856,7 +871,16 @@ export function DropDexProvider({ children }: PropsWithChildren) {
 
   const updateFilters = useCallback(
     (filters: FilterPreferences) => {
-      setState((previous) => ({ ...previous, filters }));
+      const previous = stateRef.current.filters;
+      if (previous.coverageMode !== filters.coverageMode) emitTourAction('coverage');
+      if (
+        previous.includeNewReleases !== filters.includeNewReleases ||
+        previous.includeRestocks !== filters.includeRestocks ||
+        previous.includePreorders !== filters.includePreorders
+      ) {
+        emitTourAction('events');
+      }
+      setState((current) => ({ ...current, filters }));
       const userId = session?.user.id;
       if (userId && !isGuestUserId(userId)) {
         void syncCoveragePreferences(userId, stateRef.current.region, filters).catch(() => {
@@ -875,6 +899,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
 
   const updateAlertPreferences = useCallback((alerts: AlertPreferences) => {
     const previous = stateRef.current.alerts;
+    if (previous.sound !== alerts.sound) emitTourAction('sound');
     if (
       (alerts.sound && !previous.sound) ||
       (alerts.speech && !previous.speech) ||
@@ -1028,6 +1053,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
   }, [refreshWebPushState]);
 
   const triggerTestAlert = useCallback(() => {
+    emitTourAction('test-alert');
     void unlockAlertAudio();
     processProduct(
       { ...testAlertProduct, detectedAt: new Date().toISOString() },

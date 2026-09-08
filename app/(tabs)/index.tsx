@@ -16,6 +16,7 @@ import Reanimated, {
 
 import { BrandHeader, MetalButton, Panel, Screen } from '@/components/dropdex-ui';
 import { TourAnchor } from '@/components/tour-anchor';
+import { isTutorialPowerHold, isTutorialSessionActive } from '@/services/tour-session';
 import { palette } from '@/constants/dropdex';
 import { getRegion } from '@/data/regions';
 import { useWebLayout } from '@/hooks/use-web-layout';
@@ -317,8 +318,14 @@ export default function HomeScreen() {
                   accessibilityHint="Turns DropLinq alerts on or off"
                   accessibilityLabel={`Alerts ${monitoring ? 'on' : 'off'}`}
                   accessibilityRole="button"
-                  disabled={!hydrated}
-                  onPress={() => setMonitoring(!monitoring)}
+                  disabled={!hydrated && !isTutorialSessionActive()}
+                  onPress={() => {
+                    if (isTutorialSessionActive() && isTutorialPowerHold()) {
+                      setMonitoring(true);
+                      return;
+                    }
+                    setMonitoring(!monitoring);
+                  }}
                   style={({ pressed }) => [styles.powerBase, pressed && styles.powerPressed]}>
                   <View style={[styles.powerRim, monitoring && styles.powerRimOn]}>
                     <View style={styles.powerFace}>
@@ -457,8 +464,14 @@ export default function HomeScreen() {
               accessibilityHint="Turns DropLinq alerts on or off"
               accessibilityLabel={`Alerts ${monitoring ? 'on' : 'off'}`}
               accessibilityRole="button"
-              disabled={!hydrated}
-              onPress={() => setMonitoring(!monitoring)}
+              disabled={!hydrated && !isTutorialSessionActive()}
+              onPress={() => {
+                if (isTutorialSessionActive() && isTutorialPowerHold()) {
+                  setMonitoring(true);
+                  return;
+                }
+                setMonitoring(!monitoring);
+              }}
               style={({ pressed }) => [styles.powerBase, pressed && styles.powerPressed]}>
               <View style={[styles.powerRim, monitoring && styles.powerRimOn]}>
                 <View style={styles.powerFace}>

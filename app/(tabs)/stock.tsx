@@ -25,6 +25,7 @@ import {
   Screen,
 } from '@/components/dropdex-ui';
 import { TourAnchor } from '@/components/tour-anchor';
+import { emitTourAction, isTutorialSessionActive } from '@/services/tour-session';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -638,7 +639,13 @@ export default function StockScreen() {
       <Pressable
         unstable_pressDelay={0}
         accessibilityHint="Opens Filter tab"
-        onPress={() => router.push('/(tabs)/filter')}
+        onPress={() => {
+          if (isTutorialSessionActive()) {
+            emitTourAction('tap');
+            return;
+          }
+          router.push('/(tabs)/filter');
+        }}
         style={({ pressed }) => [styles.coverageShadow, pressed && styles.pressed]}>
         <View style={styles.coverageCard}>
           <Animated.View
