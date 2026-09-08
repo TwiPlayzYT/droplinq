@@ -16,9 +16,11 @@ import { migrateLegacyFilters } from '@/data/pokemon-center-filters';
 import { catalogRepository } from '@/services/data';
 import { isMockData } from '@/config/app-config';
 import { CatalogStockEvent } from '@/types/catalog';
-import { syncCoveragePreferences } from '@/services/filters/coverage-prefs';
+import { loadCoveragePreferences, syncCoveragePreferences } from '@/services/filters/coverage-prefs';
+import { loadCloudAlertPreferences, syncCloudAlertPreferences } from '@/services/user-prefs';
 import { canAddToWatchlist } from '@/services/subscriptions/tiers';
 import { isGuestUserId } from '@/services/auth/guest-auth';
+import { authAdapter } from '@/services/auth';
 import { useAuth } from '@/store/auth-context';
 import { seededEtbs } from '@/data/historical-etbs';
 import {
@@ -65,8 +67,22 @@ import {
 } from '@/types/dropdex';
 
 const STORAGE_KEY = '@dropdex/state/v2';
+const INSTALL_KEY = '@dropdex/installation-id';
 const MAX_RECENTS = 40;
 const MAX_WATCHLIST = 40;
+
+function stateStorageKey(userId?: string | null) {
+  if (!userId || isGuestUserId(userId)) return `${STORAGE_KEY}/guest`;
+  return `${STORAGE_KEY}/${userId}`;
+}
+
+async function readInstallationId() {
+  const existing = await AsyncStorage.getItem(INSTALL_KEY);
+  if (existing) return existing;
+  const id = `dropdex-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  await AsyncStorage.setItem(INSTALL_KEY, id);
+  return id;
+}
 
 type SyncState = 'local' | 'syncing' | 'connected' | 'error';
 
@@ -148,7 +164,7 @@ const sanitizeHistory = (history: DropAlert[] = []) =>
   history.filter((alert) => !isSyntheticProductId(alert.product.id));
 
 export function DropDexProvider({ children }: PropsWithChildren) {
-  const { session } = useAuth();
+  const { session, profile, profileReady } = useAuth();
   const [state, setState] = useState<PersistedState>(initialState);
   const [hydrated, setHydrated] = useState(false);
   const [syncState, setSyncState] = useState<SyncState>('local');
@@ -204,23 +220,35 @@ export function DropDexProvider({ children }: PropsWithChildren) {
     stateRef.current = state;
   }, [state]);
 
+  const loadedUserKeyRef = useRef<string | null>(null);
+
   useEffect(() => {
     configureNotifications().catch(() => undefined);
 
+    if (!profileReady) return;
+    const userKey = session?.user.id ?? 'guest';
+    if (loadedUserKeyRef.current === userKey) return;
+    let cancelled = false;
+    setHydrated(false);
+
     const hydrate = async () => {
       try {
-        const [current, legacy] = await Promise.all([
+        const userId = session?.user.id;
+        const key = stateStorageKey(userId);
+        const installationId = await readInstallationId();
+        const [current, legacyShared, legacyV1] = await Promise.all([
+          AsyncStorage.getItem(key),
           AsyncStorage.getItem(STORAGE_KEY),
           AsyncStorage.getItem('@dropdex/state/v1'),
         ]);
-        const raw = current ?? legacy;
+        const raw = current ?? legacyShared ?? legacyV1;
+        let next: PersistedState = { ...initialState, installationId };
         if (raw) {
           const parsed = JSON.parse(raw) as Partial<PersistedState>;
-          setState({
+          next = {
             ...initialState,
             ...parsed,
-            // Monitoring is active on every launch so the device and cloud
-            // registration recover automatically after an app restart.
+            installationId,
             monitoring: true,
             region: regions.some((item) => item.id === parsed.region)
               ? (parsed.region as RegionId)
@@ -230,12 +258,47 @@ export function DropDexProvider({ children }: PropsWithChildren) {
             alertHistory: sanitizeHistory(parsed.alertHistory),
             recentVisits: Array.isArray(parsed.recentVisits) ? parsed.recentVisits : [],
             watchlist: Array.isArray(parsed.watchlist) ? parsed.watchlist : [],
-          });
+          };
+        }
+
+        if (userId && !isGuestUserId(userId)) {
+          const profileRegion = profile?.selectedRegionId;
+          if (profileRegion && regions.some((item) => item.id === profileRegion)) {
+            next.region = profileRegion as RegionId;
+          }
+          const [coverage, cloudAlerts] = await Promise.all([
+            loadCoveragePreferences(userId, next.region, next.filters).catch(() => null),
+            loadCloudAlertPreferences(userId).catch(() => null),
+          ]);
+          if (coverage) {
+            next.filters = {
+              ...next.filters,
+              ...coverage,
+              coverageMode:
+                coverage.coverageMode === 'POPULAR' ||
+                coverage.coverageMode === 'ALL_TCG' ||
+                coverage.coverageMode === 'CUSTOM'
+                  ? coverage.coverageMode
+                  : next.filters.coverageMode,
+            };
+          }
+          if (cloudAlerts) {
+            next.alerts = { ...defaultAlertPreferences, ...cloudAlerts.alerts };
+            next.filters = {
+              ...next.filters,
+              includeNewReleases: cloudAlerts.includeNewReleases,
+              includeRestocks: cloudAlerts.includeRestocks,
+              includePreorders: cloudAlerts.includePreorders,
+            };
+          }
+        }
+
+        if (!cancelled) {
+          loadedUserKeyRef.current = userKey;
+          setState(next);
         }
         await AsyncStorage.removeItem('@dropdex/live-snapshot/v1');
-        if (legacy && !current) {
-          await AsyncStorage.removeItem('@dropdex/state/v1');
-        }
+        if (legacyV1) await AsyncStorage.removeItem('@dropdex/state/v1');
       } catch {
         showFeedback(
           'error',
@@ -243,12 +306,15 @@ export function DropDexProvider({ children }: PropsWithChildren) {
           'DropLinq started safely with default settings. You can keep using the app.',
         );
       } finally {
-        setHydrated(true);
+        if (!cancelled) setHydrated(true);
       }
     };
 
     hydrate();
-  }, [showFeedback]);
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.selectedRegionId, profileReady, session?.user.id, showFeedback]);
 
   useEffect(() => {
     let cancelled = false;
@@ -281,7 +347,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
     if (!hydrated || !webPushChecked) return;
     const timer = setTimeout(() => {
       AsyncStorage.setItem(
-        STORAGE_KEY,
+        stateStorageKey(session?.user.id),
         JSON.stringify({
           ...state,
           alertHistory: sanitizeHistory(state.alertHistory),
@@ -289,7 +355,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       ).catch(() => undefined);
     }, 400);
     return () => clearTimeout(timer);
-  }, [hydrated, state]);
+  }, [hydrated, session?.user.id, state, webPushChecked]);
 
   const processProduct = useCallback((
     product: Product,
@@ -760,8 +826,12 @@ export function DropDexProvider({ children }: PropsWithChildren) {
         progress: monitoring ? 8 : 0,
       });
       setState((previous) => ({ ...previous, region }));
+      const userId = session?.user.id;
+      if (userId && !isGuestUserId(userId)) {
+        void authAdapter.saveProfile(userId, { selectedRegionId: region }).catch(() => undefined);
+      }
     },
-    [],
+    [session?.user.id],
   );
 
   const retryMonitoring = useCallback(() => {
@@ -790,6 +860,12 @@ export function DropDexProvider({ children }: PropsWithChildren) {
         void syncCoveragePreferences(userId, stateRef.current.region, filters).catch(() => {
           // Local filters still apply; cloud sync is best-effort.
         });
+        void syncCloudAlertPreferences(userId, {
+          alerts: stateRef.current.alerts,
+          includeNewReleases: filters.includeNewReleases,
+          includeRestocks: filters.includeRestocks,
+          includePreorders: filters.includePreorders,
+        }).catch(() => undefined);
       }
     },
     [session?.user.id],
@@ -805,7 +881,17 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       void unlockAlertAudio();
     }
     setState((current) => ({ ...current, alerts }));
-  }, []);
+    const userId = session?.user.id;
+    if (userId && !isGuestUserId(userId)) {
+      const filters = stateRef.current.filters;
+      void syncCloudAlertPreferences(userId, {
+        alerts,
+        includeNewReleases: filters.includeNewReleases,
+        includeRestocks: filters.includeRestocks,
+        includePreorders: filters.includePreorders,
+      }).catch(() => undefined);
+    }
+  }, [session?.user.id]);
 
   const enableWebPush = useCallback(async () => {
     const publicKey =
@@ -849,28 +935,23 @@ export function DropDexProvider({ children }: PropsWithChildren) {
         webPushSubscription: subscription,
       });
 
-      // Immediate proof the OS can show DropLinq notifications on this device.
       try {
-        await deliverProductAlert(
-          { ...testAlertProduct, detectedAt: new Date().toISOString() },
-          {
-            push: true,
-            sound: true,
-            vibration: true,
-            speech: false,
-            fullScreen: false,
-            dropMode: false,
-          },
+        await monitorService.sendTestWebPush(subscription, {
+          ...testAlertProduct,
+          detectedAt: new Date().toISOString(),
+        });
+        showFeedback(
+          'success',
+          'This device is registered',
+          'A lock-screen test was sent from the alert server. Leave DropLinq and wait a few seconds. If nothing arrives, the monitor may be asleep — in-app alerts still work while the site is open.',
         );
       } catch {
-        // Permission was granted; local preview is best-effort.
+        showFeedback(
+          'error',
+          'Permission is on — test push did not arrive',
+          'This device can show DropLinq alerts, but the alert server could not deliver a closed-app test. That is separate from the in-app test on Home. The monitor may be sleeping.',
+        );
       }
-
-      showFeedback(
-        'success',
-        'Lock-screen alerts enabled',
-        'DropLinq can alert this device even when the site is closed. Use Test lock-screen push to verify.',
-      );
       return true;
     } catch (error) {
       const nextState = await getWebPushState();
@@ -902,15 +983,17 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       });
       showFeedback(
         'success',
-        'Test push sent',
-        'Check your lock screen / notification center — you should see a DropLinq test alert.',
+        'Lock-screen test sent',
+        'Switch to another app or the Home Screen. You should see a DropLinq notification from the alert server — not the in-app overlay.',
       );
       return true;
     } catch (error) {
       showFeedback(
         'error',
-        'Test push failed',
-        error instanceof Error ? error.message : 'The alert server could not deliver a push.',
+        'Lock-screen test failed',
+        error instanceof Error
+          ? error.message
+          : 'The alert server could not deliver a push. In-app Test on Home still only works while DropLinq is open.',
       );
       return false;
     }
@@ -930,6 +1013,17 @@ export function DropDexProvider({ children }: PropsWithChildren) {
         : pushState,
     );
   }, [webPushPublicKey]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof navigator === 'undefined') return undefined;
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'DROPLINQ_PUSH_SUB_CHANGED') {
+        void refreshWebPushState();
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
+  }, [refreshWebPushState]);
 
   const triggerTestAlert = useCallback(() => {
     void unlockAlertAudio();

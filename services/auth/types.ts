@@ -11,11 +11,14 @@ export type AuthProfile = {
   subscriptionTier: 'FREE' | 'PRO' | 'PRO_PLUS';
   legalAcceptedAt: string | null;
   legalVersion: string | null;
+  appearanceId?: string | null;
 };
 
 export type OAuthProvider = 'google' | 'apple';
 
-export type AuthResult = { ok: true } | { ok: false; message: string };
+export type AuthResult =
+  | { ok: true; pendingEmailConfirm?: boolean }
+  | { ok: false; message: string };
 
 export interface AuthAdapter {
   getSession(): Promise<{ session: Session | null; user: User | null }>;

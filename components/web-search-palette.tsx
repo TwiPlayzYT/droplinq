@@ -232,6 +232,8 @@ export function WebSearchPalette({ visible, onClose }: Props) {
                 ) : (
                   products.map((product, index) => (
                     <Pressable
+                      accessibilityLabel={`Open ${product.title}`}
+                      accessibilityRole="button"
                       key={product.id}
                       onHoverIn={() => setActiveIndex(index)}
                       onPress={() => openProduct(product)}
@@ -239,6 +241,8 @@ export function WebSearchPalette({ visible, onClose }: Props) {
                       <View style={styles.thumb}>
                         {product.imageUrl ? (
                           <Image
+                            accessibilityLabel={`Product photo of ${product.title}. Image belongs to the retailer.`}
+                            alt={`Product photo of ${product.title}`}
                             contentFit="cover"
                             source={{ uri: product.imageUrl }}
                             style={styles.thumbImage}

@@ -20,9 +20,10 @@ export function OpenProductChooser() {
           <Text numberOfLines={2} style={styles.title}>
             {pendingOpenProduct.title}
           </Text>
-          <Text style={styles.copy}>Choose how to open Pokémon Center.</Text>
+          <Text style={styles.copy}>Choose how to open the retailer product page.</Text>
 
           <Pressable
+            accessibilityLabel="Open product in a new browser tab"
             accessibilityRole="button"
             onPress={() => confirmOpenProduct('tab')}
             style={({ pressed }) => [styles.option, pressed && styles.pressed]}>
@@ -34,6 +35,7 @@ export function OpenProductChooser() {
           </Pressable>
 
           <Pressable
+            accessibilityLabel="Open product in a smaller popup window"
             accessibilityRole="button"
             onPress={() => confirmOpenProduct('popup')}
             style={({ pressed }) => [styles.option, pressed && styles.pressed]}>

@@ -77,7 +77,9 @@ export function WebTopNav() {
           </Pressable>
           <View style={styles.mobileActions}>
             <Pressable
-              accessibilityLabel="Search"
+              accessibilityLabel="Open product search"
+              accessibilityHint="Search products by name"
+              accessibilityRole="button"
               onPress={() => setSearchOpen(true)}
               style={styles.mobileSearch}>
               <Ionicons color={palette.white} name="search" size={18} />
@@ -101,7 +103,7 @@ export function WebTopNav() {
             onPress={() => router.push('/(tabs)')}
             style={styles.brandBlock}>
             <Text style={styles.brand}>DROPLINQ</Text>
-            <Text style={styles.tagline}>MONITOR · ALERT · CHECKOUT</Text>
+            <Text style={styles.tagline}>MONITOR · ALERT · CHECK</Text>
           </Pressable>
 
           <View style={styles.links}>
@@ -111,6 +113,7 @@ export function WebTopNav() {
                 <Pressable
                   key={link.key}
                   accessibilityRole="link"
+                  nativeID={`tour-${link.key}`}
                   onPress={() => router.push(link.href)}
                   style={[styles.link, active && styles.linkActive]}>
                   <Text style={[styles.linkText, active && styles.linkTextActive]}>{link.label}</Text>
@@ -121,7 +124,9 @@ export function WebTopNav() {
 
           <View style={styles.actions}>
             <Pressable
-              accessibilityLabel="Search"
+              accessibilityLabel="Open product search"
+              accessibilityHint="Type a product name or press slash"
+              accessibilityRole="button"
               onPress={() => setSearchOpen(true)}
               style={styles.searchChip}>
               <Ionicons color={palette.whiteShadow} name="search" size={16} />

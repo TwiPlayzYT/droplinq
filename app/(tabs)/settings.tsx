@@ -1,277 +1,268 @@
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
 
+import { BrandHeader, Screen } from '@/components/dropdex-ui';
 import {
-  BrandHeader,
-  ChoiceChip,
-  MechanicalToggle,
-  MetalButton,
-  Panel,
-  Screen,
-  SectionTitle,
-} from '@/components/dropdex-ui';
-import {
-  NotificationSetupGuide,
-  type PreferredDevice,
-} from '@/components/notification-setup-guide';
-import { PREFERRED_DEVICE_KEY } from '@/constants/preferred-device';
+  SettingsGroup,
+  SettingsLinkRow,
+  SettingsNavRow,
+  SettingsToggleRow,
+} from '@/components/settings-row';
+import { brand } from '@/config/app-config';
 import { palette } from '@/constants/dropdex';
+import { legalHref } from '@/constants/legal';
+import { TUTORIAL_STORAGE_KEY } from '@/constants/tutorial';
 import { coverageModeCopy } from '@/data/pokemon-center-filters';
 import { useAuth } from '@/store/auth-context';
 import { useDropDex } from '@/store/dropdex-context';
+import { requestTutorialRestart } from '@/components/site-tutorial';
 
-function AlertToggle({
-  hint,
-  label,
-  onChange,
-  value,
-}: {
-  hint: string;
-  label: string;
-  onChange: (value: boolean) => void;
-  value: boolean;
-}) {
-  return (
-    <View>
-      <MechanicalToggle label={label} onChange={onChange} value={value} />
-      <Text style={styles.hint}>{hint}</Text>
-    </View>
-  );
+function initialsFrom(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase() || 'DL';
 }
 
 export default function SettingsScreen() {
-  const {
-    alerts,
-    enableWebPush,
-    filters,
-    refreshWebPushState,
-    sendTestLockScreenPush,
-    triggerTestAlert,
-    updateAlertPreferences,
-    webPushState,
-  } = useDropDex();
+  const { alerts, filters, updateAlertPreferences, webPushState } = useDropDex();
   const { profile, signOut } = useAuth();
   const router = useRouter();
   const plan = profile?.subscriptionTier ?? 'FREE';
   const coverage = coverageModeCopy[filters.coverageMode];
-  const [device, setDevice] = useState<PreferredDevice>('desktop');
-  const [pushBusy, setPushBusy] = useState(false);
-  const [testPushBusy, setTestPushBusy] = useState(false);
+  const [tourDone, setTourDone] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(PREFERRED_DEVICE_KEY)
-      .then((saved) => {
-        if (saved === 'phone' || saved === 'desktop') {
-          setDevice(saved);
-          return;
-        }
-        if (Platform.OS === 'web' && typeof navigator !== 'undefined') {
-          setDevice(/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'phone' : 'desktop');
-        }
-      })
+    AsyncStorage.getItem(TUTORIAL_STORAGE_KEY)
+      .then((value) => setTourDone(value === 'done' || value === 'skipped'))
       .catch(() => undefined);
   }, []);
 
+  const displayName = useMemo(() => {
+    if (profile?.username?.trim()) return profile.username.trim();
+    if (profile?.email && profile.email !== 'guest@droplinq.local') {
+      return profile.email.split('@')[0] || 'Account';
+    }
+    return 'Guest';
+  }, [profile?.email, profile?.username]);
+
+  const handle = useMemo(() => {
+    if (profile?.username?.trim()) return `@${profile.username.trim()}`;
+    if (profile?.email === 'guest@droplinq.local') return '@guest';
+    return profile?.email ? profile.email.split('@')[0] : 'droplinq';
+  }, [profile?.email, profile?.username]);
+
+  const pushCaption =
+    Platform.OS === 'web'
+      ? webPushState === 'subscribed'
+        ? 'This device is registered. Closed-app delivery still needs the alert server to be awake.'
+        : 'Home Screen setup is required on iPhone. This is not the in-app overlay on Home.'
+      : 'Uses the system notification permission on this device.';
+
   const updateAlert = (key: keyof typeof alerts, value: boolean) => {
     updateAlertPreferences({ ...alerts, [key]: value });
-  };
-
-  const persistDevice = (next: PreferredDevice) => {
-    setDevice(next);
-    void AsyncStorage.setItem(PREFERRED_DEVICE_KEY, next);
-  };
-
-  const onEnable = async () => {
-    setPushBusy(true);
-    await enableWebPush();
-    setPushBusy(false);
-  };
-
-  const onTestLockScreen = async () => {
-    setTestPushBusy(true);
-    await sendTestLockScreenPush();
-    setTestPushBusy(false);
   };
 
   return (
     <Screen>
       <BrandHeader eyebrow="Settings" />
 
-      <Panel>
-        <SectionTitle title="Account" />
-        <Text style={styles.plan}>{plan}</Text>
-        <MetalButton
-          icon="log-out"
-          label={profile?.email === 'guest@droplinq.local' ? 'Exit guest' : 'Sign out'}
-          onPress={() => void signOut()}
-        />
-      </Panel>
+      <View nativeID="tour-settings" style={styles.profileCard}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initialsFrom(displayName)}</Text>
+        </View>
+        <View style={styles.profileCopy}>
+          <Text style={styles.profileName}>{displayName}</Text>
+          <Text style={styles.profileHandle}>@{handle.replace(/^@/, '')}</Text>
+          {profile?.email ? <Text style={styles.profileEmail}>{profile.email}</Text> : null}
+          <Text style={styles.plan}>{plan}</Text>
+        </View>
+      </View>
 
-      <Panel>
-        <SectionTitle title="Product coverage" />
-        <Text style={styles.coverageTitle}>
-          {coverage.emoji} {coverage.title}
-        </Text>
-        <Text style={styles.coverageCopy}>{coverage.description}</Text>
-        <MetalButton
-          icon="options-outline"
-          label="Edit in Filter"
-          onPress={() => router.push('/(tabs)/filter')}
+      <SettingsGroup title="Alerts">
+        <SettingsNavRow
+          caption={pushCaption}
+          onPress={() => router.push('/setup/notifications')}
+          title="Home Screen & lock-screen"
+          value={webPushState === 'subscribed' ? 'On' : 'Set up'}
         />
-      </Panel>
-
-      {Platform.OS === 'web' ? (
-        <Panel tone="dark">
-          <SectionTitle light title="Lock-screen alerts" />
-          <Text style={styles.devicePrompt}>I’m mainly using DropLinq on</Text>
-          <View style={styles.deviceRow}>
-            <ChoiceChip
-              label="Mobile"
-              onPress={() => persistDevice('phone')}
-              selected={device === 'phone'}
-            />
-            <ChoiceChip
-              label="Desktop"
-              onPress={() => persistDevice('desktop')}
-              selected={device === 'desktop'}
-            />
-          </View>
-          <NotificationSetupGuide
-            device={device}
-            dense
-            enableBusy={pushBusy}
-            light
-            onEnable={() => void onEnable()}
-            showEnable={
-              webPushState === 'ready' ||
-              webPushState === 'error' ||
-              webPushState === 'denied'
-            }
-            webPushState={webPushState}
-          />
-          {webPushState === 'subscribed' ? (
-            <MetalButton
-              icon="notifications-outline"
-              label={testPushBusy ? 'Sending test…' : 'Test lock-screen push'}
-              onPress={() => void onTestLockScreen()}
-            />
-          ) : null}
-          {webPushState === 'install-required' ? (
-            <MetalButton
-              icon="refresh"
-              label="I’ve added it — check again"
-              onPress={() => void refreshWebPushState()}
-            />
-          ) : null}
-        </Panel>
-      ) : null}
-
-      <Panel>
-        <SectionTitle title="Alerts" />
-        <AlertToggle
-          hint="System notifications when a drop hits (needs Lock-screen alerts enabled above on web)."
-          label="Push"
-          onChange={(value) => updateAlert('push', value)}
-          value={alerts.push}
-        />
-        <View style={styles.rule} />
-        <AlertToggle
-          hint="Play an alert tone when a drop is detected."
-          label="Sound"
+        <SettingsToggleRow
+          caption="Tone while DropLinq is open. Does not replace lock-screen push."
           onChange={(value) => updateAlert('sound', value)}
+          title="Sound"
           value={alerts.sound}
         />
-        <View style={styles.rule} />
-        <AlertToggle
-          hint="Vibrate on phones that support it (no effect on most desktops)."
-          label="Vibration"
+        <SettingsToggleRow
+          caption="Phones only. No effect on most desktops."
           onChange={(value) => updateAlert('vibration', value)}
+          title="Vibration"
           value={alerts.vibration}
         />
-        <View style={styles.rule} />
-        <AlertToggle
-          hint="Speak the product name aloud when a drop hits."
-          label="Speech"
+        <SettingsToggleRow
+          caption="Speaks the product name while DropLinq is open."
           onChange={(value) => updateAlert('speech', value)}
+          title="Speech"
           value={alerts.speech}
         />
-        <View style={styles.rule} />
-        <AlertToggle
-          hint="Show the full-screen red drop overlay. Off still plays sound/speech; Test uses a smaller centered popup."
-          label="Full-screen"
+        <SettingsToggleRow
+          caption="Full-screen overlay while you are in the app."
           onChange={(value) => updateAlert('fullScreen', value)}
+          title="Full-screen overlay"
           value={alerts.fullScreen}
         />
-        <View style={styles.rule} />
-        <AlertToggle
-          hint="Max alerts: always show overlay and force sound, speech, and vibration together."
-          label="Drop Mode"
+        <SettingsToggleRow
+          caption="Forces overlay, sound, speech, and vibration together while the app is open."
+          last
           onChange={(value) => updateAlert('dropMode', value)}
+          title="Drop Mode"
           value={alerts.dropMode ?? false}
         />
-        <MetalButton icon="flash" label="Test alert" onPress={triggerTestAlert} />
-      </Panel>
+      </SettingsGroup>
 
-      <Panel>
-        <SectionTitle title="Legal" />
-        <MetalButton
-          icon="document-text-outline"
-          label="Terms of Service"
-          onPress={() => router.push('/legal/terms')}
+      <SettingsGroup title="Coverage">
+        <SettingsNavRow
+          caption={coverage.description}
+          onPress={() => router.push('/(tabs)/filter')}
+          title={`${coverage.emoji} ${coverage.title}`}
         />
-        <View style={{ height: 10 }} />
-        <MetalButton
-          icon="shield-checkmark-outline"
-          label="Privacy Policy"
-          onPress={() => router.push('/legal/privacy')}
+        <SettingsNavRow
+          caption="New on the site, back in stock, or a preorder opening."
+          last
+          onPress={() => router.push('/(tabs)/filter')}
+          title="When to ping you"
         />
-      </Panel>
+      </SettingsGroup>
+
+      <SettingsGroup title="General">
+        <SettingsNavRow
+          caption={tourDone ? 'Replay the 10-step walkthrough.' : 'Learn the main tabs.'}
+          last
+          onPress={() => {
+            requestTutorialRestart();
+            router.push('/(tabs)');
+          }}
+          title="Website tutorial"
+        />
+      </SettingsGroup>
+
+      <SettingsGroup title="Legal">
+        <SettingsLinkRow onPress={() => router.push('/legal/terms')} title="Terms of Service" />
+        <SettingsLinkRow onPress={() => router.push('/legal/privacy')} title="Privacy Policy" />
+        <SettingsLinkRow
+          onPress={() => router.push(legalHref('/legal/cookies'))}
+          title="Cookie Policy"
+        />
+        <SettingsLinkRow
+          last
+          onPress={() => router.push(legalHref('/legal/refund'))}
+          title="Refund Policy"
+        />
+      </SettingsGroup>
+
+      <SettingsGroup title="Account">
+        <SettingsNavRow
+          caption={`${brand.legalName} · ${brand.jurisdiction}. ${brand.contactEmail}`}
+          onPress={() => void Linking.openURL(`mailto:${brand.contactEmail}`)}
+          title="Email support"
+        />
+        <SettingsNavRow
+          caption="We will delete the account tied to this email."
+          onPress={() =>
+            void Linking.openURL(
+              `mailto:${brand.contactEmail}?subject=${encodeURIComponent('DropLinq account deletion')}&body=${encodeURIComponent(
+                'Please delete the DropLinq account associated with this email.',
+              )}`,
+            )
+          }
+          title="Request account deletion"
+        />
+        <SettingsNavRow
+          last
+          onPress={() => void signOut()}
+          title={profile?.email === 'guest@droplinq.local' ? 'Exit guest' : 'Sign out'}
+        />
+      </SettingsGroup>
+
+      <View style={styles.testHint}>
+        <Ionicons color={palette.cardMuted} name="information-circle-outline" size={16} />
+        <Text style={styles.testHintText}>
+          Home → Test plays the in-app overlay only. Lock-screen tests live on the Home Screen
+          setup page.
+        </Text>
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  rule: { backgroundColor: palette.cardBorder, height: 1, marginVertical: 12 },
-  hint: {
+  profileCard: {
+    alignItems: 'center',
+    backgroundColor: palette.card,
+    borderColor: palette.cardBorder,
+    borderRadius: 20,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 28,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+  },
+  avatar: {
+    alignItems: 'center',
+    backgroundColor: palette.red,
+    borderRadius: 36,
+    height: 72,
+    justifyContent: 'center',
+    width: 72,
+  },
+  avatarText: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '900',
+  },
+  profileCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  profileName: {
+    color: palette.cardInk,
+    fontSize: 22,
+    fontWeight: '800',
+    lineHeight: 28,
+  },
+  profileHandle: {
     color: palette.cardMuted,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
-    lineHeight: 17,
-    marginTop: 6,
+    marginTop: 2,
+  },
+  profileEmail: {
+    color: palette.cardMuted,
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 4,
   },
   plan: {
-    color: palette.redDark,
-    fontSize: 12,
+    color: palette.red,
+    fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.2,
-    marginBottom: 14,
+    marginTop: 8,
   },
-  coverageTitle: {
-    color: palette.cardInk,
-    fontSize: 15,
-    fontWeight: '900',
-    lineHeight: 21,
-    marginBottom: 8,
-  },
-  coverageCopy: {
-    color: palette.cardMuted,
-    fontSize: 13,
-    fontWeight: '600',
-    lineHeight: 19,
-    marginBottom: 14,
-  },
-  devicePrompt: {
-    color: palette.onRaisedDim,
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 10,
-  },
-  deviceRow: {
+  testHint: {
+    alignItems: 'flex-start',
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 14,
+    marginBottom: 24,
+    paddingHorizontal: 6,
+  },
+  testHintText: {
+    color: palette.cardMuted,
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500',
+    lineHeight: 18,
   },
 });

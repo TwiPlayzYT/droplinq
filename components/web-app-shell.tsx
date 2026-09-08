@@ -14,12 +14,12 @@ const WEB_SMOOTH_CSS = `
   --dl-text: #F7F5F2;
   --dl-text-dim: #D8D5D0;
   --dl-text-muted: #A9A6A2;
-  --dl-card: #F7F5F2;
-  --dl-card-ink: #090909;
-  --dl-card-muted: #303030;
-  --dl-card-border: #D8D5D0;
-  --dl-control: #F7F5F2;
-  --dl-control-ink: #090909;
+  --dl-card: #1B1B1B;
+  --dl-card-ink: #F7F5F2;
+  --dl-card-muted: #A9A6A2;
+  --dl-card-border: #2C2C2C;
+  --dl-control: #242424;
+  --dl-control-ink: #F7F5F2;
   --dl-on-raised: #F7F5F2;
   --dl-on-raised-dim: #D8D5D0;
   color-scheme: dark;
@@ -57,9 +57,30 @@ html, body, #root {
 [data-focusable="true"], button, a, [role="button"] {
   transition: opacity 120ms ease, background-color 120ms ease, border-color 120ms ease;
 }
-[data-focusable="true"]:focus, button:focus, a:focus, [role="button"]:focus {
+[data-focusable="true"]:focus, button:focus, a:focus, [role="button"]:focus, input:focus, textarea:focus, select:focus {
   outline: none;
-  box-shadow: none;
+}
+[data-focusable="true"]:focus-visible, button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [role="checkbox"]:focus-visible, [role="switch"]:focus-visible, [role="radio"]:focus-visible, [role="link"]:focus-visible {
+  outline: 2px solid var(--dl-red-light, #FF2638);
+  outline-offset: 3px;
+}
+.dl-skip-link {
+  background: var(--dl-control, #242424);
+  border-radius: 10px;
+  color: var(--dl-control-ink, #F7F5F2);
+  font: 700 14px/1.2 system-ui, sans-serif;
+  left: 12px;
+  padding: 10px 14px;
+  position: absolute;
+  text-decoration: none;
+  top: -80px;
+  z-index: 1000;
+}
+.dl-skip-link:focus {
+  top: 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
 }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb {
@@ -85,6 +106,15 @@ export function WebAppShell({ children }: PropsWithChildren) {
     style.id = 'droplinq-smooth-css';
     style.textContent = WEB_SMOOTH_CSS;
     document.head.appendChild(style);
+
+    if (!document.getElementById('droplinq-skip-link')) {
+      const skip = document.createElement('a');
+      skip.id = 'droplinq-skip-link';
+      skip.className = 'dl-skip-link';
+      skip.href = '#main-content';
+      skip.textContent = 'Skip to main content';
+      document.body.prepend(skip);
+    }
   }, []);
 
   if (Platform.OS !== 'web') {
@@ -92,7 +122,10 @@ export function WebAppShell({ children }: PropsWithChildren) {
   }
 
   return (
-    <View accessibilityLabel="DropLinq web app" style={styles.root}>
+    <View
+      accessibilityLabel="DropLinq web app"
+      nativeID="main-content"
+      style={styles.root}>
       {children}
     </View>
   );

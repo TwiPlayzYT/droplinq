@@ -9,7 +9,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AuthLegalLinks } from '@/components/auth-legal-links';
 import { palette } from '@/constants/dropdex';
+import { useCookieConsent } from '@/hooks/use-cookie-consent';
 import { useWebLayout } from '@/hooks/use-web-layout';
 
 /** Collectr-style teal for the recommended email CTA */
@@ -25,6 +27,7 @@ type AuthShellProps = PropsWithChildren<{
  */
 export function AuthShell({ tagline, children }: AuthShellProps) {
   const { isWeb } = useWebLayout();
+  const { needsBanner } = useCookieConsent();
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safe}>
@@ -35,6 +38,7 @@ export function AuthShell({ tagline, children }: AuthShellProps) {
           contentContainerStyle={[
             styles.scrollContent,
             isWeb && styles.scrollContentWeb,
+            needsBanner && styles.scrollBanner,
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
@@ -44,6 +48,7 @@ export function AuthShell({ tagline, children }: AuthShellProps) {
               <Text style={styles.tagline}>{tagline}</Text>
             </View>
             {children}
+            <AuthLegalLinks />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -74,7 +79,7 @@ export const authStyles = StyleSheet.create({
     fontWeight: '800',
   },
   recommendHint: {
-    color: '#A9A6A2',
+    color: '#C2BEB8',
     fontSize: 12,
     fontStyle: 'italic',
     lineHeight: 17,
@@ -93,7 +98,7 @@ export const authStyles = StyleSheet.create({
   },
   dividerLine: { backgroundColor: palette.blackSoft, flex: 1, height: 1 },
   dividerText: {
-    color: '#A9A6A2',
+    color: '#C2BEB8',
     fontSize: 13,
     fontWeight: '600',
   },
@@ -181,13 +186,20 @@ export const authStyles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   footerSecondary: {
-    color: '#A9A6A2',
+    color: '#C2BEB8',
     fontSize: 12,
     lineHeight: 17,
     marginTop: 4,
   },
   pressed: { opacity: 0.88 },
   disabled: { opacity: 0.55 },
+  fieldLabel: {
+    color: '#D8D5D0',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    marginBottom: 6,
+  },
   emailForm: {
     marginTop: 12,
   },
@@ -204,6 +216,9 @@ const styles = StyleSheet.create({
   },
   scrollContentWeb: {
     alignItems: 'center',
+  },
+  scrollBanner: {
+    paddingBottom: 180,
   },
   card: {
     backgroundColor: '#111111',
@@ -229,7 +244,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2.2,
   },
   tagline: {
-    color: '#A9A6A2',
+    color: '#C2BEB8',
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.8,

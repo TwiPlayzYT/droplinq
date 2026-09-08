@@ -143,6 +143,8 @@ function ProductThumbnail({ product, size = 72 }: { product: Product; size?: num
         </View>
       ) : null}
       <Image
+        accessibilityLabel={`Product photo of ${product.title}. Image belongs to the retailer.`}
+        alt={`Product photo of ${product.title}`}
         cachePolicy="memory-disk"
         contentFit="cover"
         onError={() => setFailed(true)}

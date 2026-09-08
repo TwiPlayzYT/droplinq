@@ -41,7 +41,7 @@ type AuthContextValue = {
   requestPasswordReset: (email: string) => Promise<AuthResult>;
   acceptLegal: () => Promise<AuthResult>;
   completeOnboarding: (input: {
-    dateOfBirth: string;
+    dateOfBirth?: string | null;
     regionId: string;
     username?: string;
   }) => Promise<AuthResult>;
@@ -138,7 +138,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       completeOnboarding: async (input) => {
         if (!session?.user.id) return { ok: false, message: 'Not signed in.' };
         const result = await authAdapter.saveProfile(session.user.id, {
-          dateOfBirth: input.dateOfBirth,
+          ...(input.dateOfBirth !== undefined ? { dateOfBirth: input.dateOfBirth } : null),
           selectedRegionId: input.regionId,
           username: input.username,
           onboardingCompleted: true,

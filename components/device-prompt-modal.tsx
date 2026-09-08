@@ -1,10 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useSegments } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { MetalButton } from '@/components/dropdex-ui';
-import { NotificationSetupGuide, type PreferredDevice } from '@/components/notification-setup-guide';
+import { type PreferredDevice } from '@/components/notification-setup-guide';
 import { palette } from '@/constants/dropdex';
 import {
   DEVICE_PROMPT_DONE_KEY,
@@ -14,9 +14,8 @@ import {
   subscribeDevicePromptDone,
 } from '@/constants/preferred-device';
 import { hasAcceptedCurrentLegal, useAuth } from '@/store/auth-context';
-import { useDropDex } from '@/store/dropdex-context';
 
-type Phase = 'device' | 'offer' | 'guide';
+type Phase = 'device' | 'offer';
 
 const choiceWebFocus = Platform.OS === 'web' ? ({ outlineStyle: 'none', tabIndex: -1 } as object) : null;
 
@@ -27,13 +26,11 @@ const choiceWebFocus = Platform.OS === 'web' ? ({ outlineStyle: 'none', tabIndex
 export function DevicePromptModal() {
   const { profile, profileReady, session } = useAuth();
   const segments = useSegments();
-  const { enableWebPush, webPushState, refreshWebPushState } = useDropDex();
+  const router = useRouter();
   const [ready, setReady] = useState(false);
   const [visible, setVisible] = useState(false);
   const [phase, setPhase] = useState<Phase>('device');
   const [device, setDevice] = useState<PreferredDevice | null>(null);
-  const [pushBusy, setPushBusy] = useState(false);
-  const [pushNote, setPushNote] = useState<string | null>(null);
 
   const legalOk = hasAcceptedCurrentLegal(profile);
   const onAuth = segments[0] === '(auth)';
@@ -96,18 +93,6 @@ export function DevicePromptModal() {
     await finish();
   };
 
-  const onEnableAlerts = async () => {
-    setPushBusy(true);
-    setPushNote(null);
-    const ok = await enableWebPush();
-    setPushNote(
-      ok
-        ? 'Alerts enabled for this device.'
-        : 'Couldn’t enable yet — finish the steps above, then try again from Settings anytime.',
-    );
-    setPushBusy(false);
-  };
-
   return (
     <Modal animationType="fade" transparent visible>
       <View style={styles.scrim}>
@@ -161,41 +146,16 @@ export function DevicePromptModal() {
               <MetalButton
                 icon="notifications"
                 label="Yes, show me the guide"
-                onPress={() => setPhase('guide')}
+                onPress={() => {
+                  void finish();
+                  router.push('/setup/notifications');
+                }}
               />
               <View style={styles.spacer} />
               <MetalButton icon="arrow-forward" label="Not now" onPress={() => void finish()} />
               <Text style={styles.footer}>
-                You can check how to set this up anytime in Settings → Lock-screen alerts.
+                You can open Home Screen & lock-screen setup anytime from Settings.
               </Text>
-            </>
-          ) : null}
-
-          {phase === 'guide' ? (
-            <>
-              <Text style={styles.kicker}>MOBILE SETUP</Text>
-              <Text style={styles.title}>Get notified on your mobile</Text>
-              <NotificationSetupGuide
-                device="phone"
-                dense
-                enableBusy={pushBusy}
-                light
-                onEnable={() => void onEnableAlerts()}
-                showEnable={webPushState === 'ready'}
-                webPushState={webPushState}
-              />
-              {webPushState === 'install-required' ? (
-                <MetalButton
-                  icon="refresh"
-                  label="I’ve added it — check again"
-                  onPress={() => void refreshWebPushState()}
-                />
-              ) : null}
-              {pushNote ? <Text style={styles.note}>{pushNote}</Text> : null}
-              <Text style={styles.footer}>
-                You can check how to set this up anytime in Settings → Lock-screen alerts.
-              </Text>
-              <MetalButton icon="arrow-forward" label="Done" onPress={() => void finish()} />
             </>
           ) : null}
         </ScrollView>
@@ -233,14 +193,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    color: palette.white,
+    color: '#F7F5F2',
     fontSize: 22,
     fontWeight: '900',
     lineHeight: 28,
     marginBottom: 10,
   },
   lead: {
-    color: palette.whiteShadow,
+    color: '#C8C8CC',
     fontSize: 14,
     fontWeight: '600',
     lineHeight: 20,
@@ -248,7 +208,7 @@ const styles = StyleSheet.create({
   },
   choices: { gap: 10 },
   choiceBtn: {
-    backgroundColor: palette.black,
+    backgroundColor: '#0C0C0E',
     borderColor: '#2C2C2C',
     borderRadius: 14,
     borderWidth: 1,
@@ -260,13 +220,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#1c1010',
   },
   choiceTitle: {
-    color: palette.white,
+    color: '#F7F5F2',
     fontSize: 16,
     fontWeight: '900',
     marginBottom: 4,
   },
   choiceSub: {
-    color: palette.whiteShadow,
+    color: '#A9A6A2',
     fontSize: 13,
     fontWeight: '600',
   },
@@ -283,7 +243,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   footer: {
-    color: palette.whiteShadow,
+    color: '#A9A6A2',
     fontSize: 12,
     fontWeight: '600',
     lineHeight: 17,

@@ -8,9 +8,12 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
+import { CookieConsentBanner } from '@/components/cookie-consent-banner';
 import { DevicePromptModal } from '@/components/device-prompt-modal';
 import { DropAlertModal } from '@/components/drop-alert-modal';
 import { OpenProductChooser } from '@/components/open-product-chooser';
+import { SiteTutorial } from '@/components/site-tutorial';
+import { UserAppearanceSync } from '@/components/user-appearance-sync';
 import { AppBootScreen, GlobalUXFeedback } from '@/components/ux-feedback';
 import { WebAppShell } from '@/components/web-app-shell';
 import { brand } from '@/config/app-config';
@@ -32,12 +35,13 @@ function AuthGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!ready || !profileReady) return;
     const root = segments[0];
-    const inAuth = root === '(auth)';
+    const inAuth = root === '(auth)' || root === 'auth';
     const inLegal = root === '(legal)' || root === 'legal';
+    const inPublicLegal = root === 'legal';
     const inOnboarding = root === '(onboarding)';
     const legalOk = hasAcceptedCurrentLegal(profile);
 
-    if (!session && !inAuth) {
+    if (!session && !inAuth && !inPublicLegal) {
       router.replace('/(auth)');
       return;
     }
@@ -105,9 +109,12 @@ function AppExperience() {
           <Stack.Screen name="(legal)" />
           <Stack.Screen name="legal/terms" />
           <Stack.Screen name="legal/privacy" />
+          <Stack.Screen name="legal/cookies" />
+          <Stack.Screen name="legal/refund" />
           <Stack.Screen name="(onboarding)" />
           <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
           <Stack.Screen name="auth/callback" options={{ animation: 'none' }} />
+          <Stack.Screen name="setup/notifications" options={{ animation: 'none' }} />
           <Stack.Screen
             name="product/[id]"
             options={{
@@ -120,8 +127,10 @@ function AppExperience() {
           />
         </Stack>
         <DevicePromptModal />
+        <SiteTutorial />
         <DropAlertModal />
         <OpenProductChooser />
+        <CookieConsentBanner />
         <GlobalUXFeedback />
         <StatusBar style={appearanceId === 'light' ? 'dark' : 'light'} />
       </AuthGate>
@@ -140,11 +149,11 @@ export default function RootLayout() {
       }}>
       <Head>
         <title>{brand.name}</title>
-        <meta name="description" content="Independent product availability alerts" />
         <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+          name="description"
+          content="Independent product availability alerts. Not affiliated with the retailers we monitor."
         />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content={droplinqTokens.red} />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -157,6 +166,7 @@ export default function RootLayout() {
         <AppearanceProvider>
           <AuthProvider>
             <DropDexProvider>
+              <UserAppearanceSync />
               <WebAppShell>
                 <AppExperience />
               </WebAppShell>

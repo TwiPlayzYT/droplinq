@@ -106,7 +106,10 @@ export default function FilterScreen() {
             return (
               <View key={group.id} style={styles.groupBlock}>
                 <Pressable
-      unstable_pressDelay={0}
+                  accessibilityLabel={`${open ? 'Collapse' : 'Expand'} ${group.title}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: open }}
+                  unstable_pressDelay={0}
                   onPress={() => toggleGroup(group.key)}
                   style={styles.groupHeader}>
                   <View>
@@ -148,30 +151,37 @@ export default function FilterScreen() {
       ) : null}
 
       <Panel>
-        <SectionTitle title="Stock events" />
+        <SectionTitle
+          caption="These switches decide which stock changes can ping you. They work with coverage above."
+          title="Alert me when"
+        />
         <MechanicalToggle
-          label="New releases"
+          caption="A product is listed on Pokémon Center for the first time."
+          label="New on the site"
           onChange={(includeNewReleases) => updateFilters({ ...filters, includeNewReleases })}
           value={filters.includeNewReleases}
         />
         <View style={styles.rule} />
         <MechanicalToggle
-          label="Restocks"
+          caption="Something that was sold out comes back."
+          label="Back in stock"
           onChange={(includeRestocks) => updateFilters({ ...filters, includeRestocks })}
           value={filters.includeRestocks}
         />
         <View style={styles.rule} />
         <MechanicalToggle
-          label="Preorders"
+          caption="A preorder window opens."
+          label="Preorder opens"
           onChange={(includePreorders) => updateFilters({ ...filters, includePreorders })}
           value={filters.includePreorders}
         />
       </Panel>
 
       <Panel tone="dark">
-        <Text style={styles.previewLabel}>PREVIEW</Text>
+        <Text style={styles.previewLabel}>EXAMPLE COVERAGE</Text>
         <Text style={styles.previewValue}>
-          {previewCount} of {previewSamples.length} sample TCG products match this coverage
+          {previewCount} of {previewSamples.length} sample products match this coverage. These are
+          examples for filters — not customer reviews.
         </Text>
       </Panel>
     </Screen>
@@ -187,7 +197,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   lead: {
-    color: palette.whiteDim,
+    color: palette.onRaisedDim,
     fontSize: 14,
     fontWeight: '600',
     lineHeight: 20,
@@ -195,7 +205,7 @@ const styles = StyleSheet.create({
   modeList: { gap: 10 },
   modeCard: {
     alignItems: 'center',
-    backgroundColor: palette.card,
+    backgroundColor: palette.black,
     borderColor: palette.cardBorder,
     borderRadius: 14,
     borderWidth: 2,
@@ -206,8 +216,9 @@ const styles = StyleSheet.create({
   },
   modeCardSelected: {
     borderColor: palette.red,
-    backgroundColor: '#FFF5F5',
+    backgroundColor: palette.blackRaised,
   },
+  modeTitleSelected: { color: palette.red },
   modeEmoji: { fontSize: 22 },
   modeCopy: { flex: 1 },
   modeTitle: {
@@ -216,7 +227,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 0.2,
   },
-  modeTitleSelected: { color: palette.redDark },
   modeDescription: {
     color: palette.cardMuted,
     fontSize: 12,
@@ -256,7 +266,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   groupMeta: {
-    color: palette.whiteShadow,
+    color: palette.cardMuted,
     fontSize: 11,
     fontWeight: '700',
     lineHeight: 16,
@@ -272,7 +282,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   previewValue: {
-    color: palette.white,
+    color: palette.onRaised,
     fontSize: 13,
     fontWeight: '700',
   },

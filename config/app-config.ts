@@ -6,9 +6,17 @@ export const brand = {
   name: 'DropLinq',
   displayName: 'DROPLINQ',
   legalName: 'DropLinq',
+  /** Public support inbox — update if you later use a different domain. */
+  contactEmail: 'hello@droplinq.app',
+  /** Operating region for privacy / consumer-law notices. Not a street address. */
+  jurisdiction: 'Canada',
+  tagline: 'Monitor · Alert · Check',
   disclaimer:
     'DropLinq is an independent product availability monitoring service and is not affiliated with or endorsed by the retailers or brands it monitors.',
 } as const;
+
+/** Live static site. Update when a custom domain is connected. */
+export const productionWebOrigin = 'https://droplinq-web.onrender.com';
 
 export type DataMode = 'mock' | 'supabase';
 

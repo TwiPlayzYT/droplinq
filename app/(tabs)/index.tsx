@@ -86,12 +86,16 @@ const RecentBubble = memo(function RecentBubble({
       <Pressable
         unstable_pressDelay={0}
         accessibilityHint="Opens this product again"
+        accessibilityLabel={`Open ${visit.product.title}`}
+        accessibilityRole="button"
         onPress={() => onOpen(visit)}
         style={({ pressed }) => [styles.recentShadow, pressed && styles.recentPressed]}>
         <View style={styles.recentCard}>
           <View style={styles.recentThumb}>
             {visit.product.imageUrl ? (
               <Image
+                accessibilityLabel={`Product photo of ${visit.product.title}. Image belongs to the retailer.`}
+                alt={`Product photo of ${visit.product.title}`}
                 contentFit="cover"
                 source={{ uri: visit.product.imageUrl }}
                 style={styles.recentImage}
@@ -139,12 +143,16 @@ const WatchBubble = memo(function WatchBubble({
       <Pressable
         unstable_pressDelay={0}
         accessibilityHint="Opens this watched product"
+        accessibilityLabel={`Open ${item.product.title}`}
+        accessibilityRole="button"
         onPress={() => onOpen(item)}
         style={({ pressed }) => [styles.recentShadow, pressed && styles.recentPressed]}>
         <View style={styles.recentCard}>
           <View style={styles.recentThumb}>
             {item.product.imageUrl ? (
               <Image
+                accessibilityLabel={`Product photo of ${item.product.title}. Image belongs to the retailer.`}
+                alt={`Product photo of ${item.product.title}`}
                 contentFit="cover"
                 source={{ uri: item.product.imageUrl }}
                 style={styles.recentImage}
@@ -296,7 +304,7 @@ export default function HomeScreen() {
                 </View>
                 <Text style={styles.statusRegion}>
                   {monitoring
-                    ? `${regionConfig.label} · live coverage`
+                    ? `${regionConfig.label} · monitoring on`
                     : `${regionConfig.label} · tap power to arm`}
                 </Text>
               </View>
@@ -354,7 +362,7 @@ export default function HomeScreen() {
                 </View>
               ) : (
                 <Text style={styles.powerHint}>
-                  {monitoring ? 'Monitoring Pokémon Center stock' : 'Alerts are off'}
+                  {monitoring ? 'Checking Pokémon Center stock' : 'Alerts are off'}
                 </Text>
               )}
             </View>
@@ -364,6 +372,8 @@ export default function HomeScreen() {
                 <View style={styles.sideCardHeader}>
                   <Text style={[styles.sideCardTitle, styles.sideCardTitleInline]}>Activity</Text>
                   <Pressable
+                    accessibilityLabel="Send test alert"
+                    accessibilityRole="button"
                     unstable_pressDelay={0}
                     onPress={triggerTestAlert}
                     style={({ pressed }) => [styles.testChip, pressed && styles.subNavPressed]}>
@@ -488,7 +498,7 @@ export default function HomeScreen() {
 
           <Panel tone="dark" style={styles.bottomPanel}>
             <Text style={styles.testLabel}>ALARM CHECK</Text>
-            <MetalButton icon="flash" label="Test" onPress={triggerTestAlert} />
+            <MetalButton icon="flash" label="Send test alert" onPress={triggerTestAlert} />
             <View style={styles.divider} />
             <Text style={styles.recentsLabel}>ACTIVITY</Text>
             {stockEvents.length === 0 ? (

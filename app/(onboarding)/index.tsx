@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { BrandHeader, ChoiceChip, MetalButton, Panel, Screen } from '@/components/dropdex-ui';
+import { ConsentCheckbox } from '@/components/consent-checkbox';
 import { palette } from '@/constants/dropdex';
 import { coverageModeCopy } from '@/data/pokemon-center-filters';
 import { regions } from '@/data/regions';
@@ -12,7 +13,7 @@ import { useAuth } from '@/store/auth-context';
 import { useDropDex } from '@/store/dropdex-context';
 import { CoverageMode, RegionId } from '@/types/dropdex';
 
-const steps = ['Birthday', 'Region', 'TCG', 'Coverage'] as const;
+const steps = ['Age', 'Region', 'TCG', 'Coverage'] as const;
 const coverageModes: CoverageMode[] = ['POPULAR', 'ALL_TCG', 'CUSTOM'];
 
 export default function OnboardingScreen() {
@@ -20,7 +21,7 @@ export default function OnboardingScreen() {
   const { updateFilters, setRegion, filters, setMonitoring } = useDropDex();
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [dob, setDob] = useState('');
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [regionId, setRegionId] = useState<RegionId>('ca');
   const [coverageMode, setCoverageMode] = useState<CoverageMode>(
     filters.coverageMode ?? 'ALL_TCG',
@@ -38,7 +39,7 @@ export default function OnboardingScreen() {
       customCategoryIds: coverageMode === 'CUSTOM' ? filters.customCategoryIds : [],
     });
     const result = await completeOnboarding({
-      dateOfBirth: dob,
+      dateOfBirth: null,
       regionId,
       username: profile?.username ?? undefined,
     });
@@ -53,8 +54,8 @@ export default function OnboardingScreen() {
   };
 
   const next = async () => {
-    if (step === 0 && !/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
-      setError('Use YYYY-MM-DD for date of birth.');
+    if (step === 0 && !ageConfirmed) {
+      setError('Confirm you are old enough to use DropLinq.');
       return;
     }
     setError(null);
@@ -72,14 +73,19 @@ export default function OnboardingScreen() {
         <Text style={styles.kicker}>{steps[step].toUpperCase()}</Text>
         {step === 0 ? (
           <>
-            <Text style={styles.copy}>Date of birth (YYYY-MM-DD)</Text>
-            <TextInput
-              onChangeText={setDob}
-              placeholder="2000-01-15"
-              placeholderTextColor={palette.whiteShadow}
-              style={styles.input}
-              value={dob}
-            />
+            <Text style={styles.copy}>
+              DropLinq is not for children under 13 (or the higher digital-consent age in your
+              region). We do not collect your date of birth.
+            </Text>
+            <ConsentCheckbox
+              checked={ageConfirmed}
+              label="Confirm minimum age"
+              onChange={(value) => {
+                setAgeConfirmed(value);
+                if (value) setError(null);
+              }}>
+              I confirm I am at least 13, or the minimum age required in my region.
+            </ConsentCheckbox>
           </>
         ) : null}
         {step === 1 ? (

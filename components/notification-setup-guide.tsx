@@ -119,7 +119,7 @@ export function NotificationSetupGuide({
   const statusCopy = (() => {
     switch (webPushState) {
       case 'subscribed':
-        return 'Lock-screen alerts are on for this device.';
+        return 'This device is registered. Send a lock-screen test, then leave the app to confirm.';
       case 'install-required':
         return 'Finish Add to Home Screen first, then open DropLinq from that icon.';
       case 'denied':
@@ -127,7 +127,7 @@ export function NotificationSetupGuide({
       case 'unsupported':
         return 'This browser can’t receive Web Push. Try Chrome/Edge/Firefox, or Safari on iPhone via Home Screen.';
       case 'error':
-        return 'Push isn’t fully configured on the server yet, or the browser failed. You can still use in-app alerts while the site is open.';
+        return 'The alert server may be unreachable, or the browser failed. In-app alerts still work while DropLinq is open.';
       case 'ready':
         return 'Ready — tap Enable alerts when you finish the steps above.';
       default:
@@ -143,8 +143,8 @@ export function NotificationSetupGuide({
           : 'Get notified on this computer — even when the tab isn’t focused'}
       </Text>
       <Text style={[styles.sub, { color: bodyColor }]}>
-        Same idea as other sites asking “Allow notifications?” — this is how drops reach you in the
-        background.
+        iPhone needs Safari → Add to Home Screen → open the icon → Enable alerts. A Home Test
+        overlay is not a lock-screen push. Closed-app delivery also needs the alert server awake.
       </Text>
 
       {steps.map((step) => (

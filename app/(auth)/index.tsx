@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { AuthShell, authStyles } from '@/components/auth-shell';
+import { ConsentCheckbox } from '@/components/consent-checkbox';
 import { palette } from '@/constants/dropdex';
 import { oauthRedirectHint } from '@/services/auth/oauth';
 import { OAuthProvider } from '@/services/auth/types';
@@ -19,18 +20,31 @@ export default function SignUpScreen() {
   const [oauthBusy, setOauthBusy] = useState<OAuthProvider | null>(null);
   const [guestBusy, setGuestBusy] = useState(false);
   const [emailMode, setEmailMode] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+
+  const requireConsent = () => {
+    if (agreed) return true;
+    setMessage('Please agree to the Terms, Privacy, Cookie, and Refund policies to continue.');
+    return false;
+  };
 
   const submit = async () => {
+    if (!requireConsent()) return;
     setBusy(true);
     setMessage(null);
     const result = await signUp(email.trim(), password);
     setBusy(false);
     if (!result.ok) {
       setMessage(result.message);
+      return;
+    }
+    if (result.pendingEmailConfirm) {
+      setMessage('Check your email to confirm this account, then sign in. Your profile will be waiting.');
     }
   };
 
   const oauth = async (provider: OAuthProvider) => {
+    if (!requireConsent()) return;
     setOauthBusy(provider);
     setMessage(null);
     const result = await signInWithProvider(provider);
@@ -41,6 +55,7 @@ export default function SignUpScreen() {
   };
 
   const enterGuest = async () => {
+    if (!requireConsent()) return;
     setGuestBusy(true);
     setMessage(null);
     const result = await signInAsGuest();
@@ -53,12 +68,14 @@ export default function SignUpScreen() {
   const locked = busy || !!oauthBusy || guestBusy;
 
   return (
-    <AuthShell tagline="Monitor · Alert · Secure">
+    <AuthShell tagline="Monitor · Alert · Check">
       <Text style={authStyles.sectionLabel}>Recommended</Text>
 
       {!emailMode ? (
         <>
           <Pressable
+            accessibilityLabel="Continue with email"
+            accessibilityRole="button"
             unstable_pressDelay={0}
             disabled={locked}
             onPress={() => {
@@ -80,27 +97,40 @@ export default function SignUpScreen() {
         </>
       ) : (
         <View style={authStyles.emailForm}>
+          <Text style={authStyles.fieldLabel}>Email</Text>
           <TextInput
+            accessibilityLabel="Email"
             autoCapitalize="none"
+            autoComplete="email"
             autoCorrect={false}
             autoFocus
             keyboardType="email-address"
             onChangeText={setEmail}
-            placeholder="Email"
+            placeholder="you@email.com"
             placeholderTextColor={palette.whiteShadow}
+            returnKeyType="next"
             style={authStyles.input}
+            textContentType="emailAddress"
             value={email}
           />
+          <Text style={authStyles.fieldLabel}>Password</Text>
           <TextInput
+            accessibilityLabel="Password, 8 or more characters"
+            autoComplete="new-password"
             onChangeText={setPassword}
-            placeholder="Password (8+ characters)"
+            onSubmitEditing={() => void submit()}
+            placeholder="8 or more characters"
             placeholderTextColor={palette.whiteShadow}
+            returnKeyType="done"
             secureTextEntry
             style={authStyles.input}
+            textContentType="newPassword"
             value={password}
           />
           {message ? <Text style={authStyles.error}>{message}</Text> : null}
           <Pressable
+            accessibilityLabel="Create account"
+            accessibilityRole="button"
             unstable_pressDelay={0}
             disabled={locked}
             onPress={() => void submit()}
@@ -110,7 +140,7 @@ export default function SignUpScreen() {
               locked && authStyles.disabled,
             ]}>
             <Ionicons color={palette.controlInk} name="person-add" size={18} />
-            <Text style={authStyles.submitText}>{busy ? 'Creating…' : 'Create account'}</Text>
+            <Text style={authStyles.submitText}>{busy ? 'Creating account…' : 'Create account'}</Text>
           </Pressable>
         </View>
       )}
@@ -122,7 +152,8 @@ export default function SignUpScreen() {
       </View>
 
       <Pressable
-        unstable_pressDelay={0}
+        accessibilityLabel="Continue with Google"
+        accessibilityRole="button"
         disabled={locked}
         onPress={() => void oauth('google')}
         style={({ pressed }) => [
@@ -137,22 +168,8 @@ export default function SignUpScreen() {
       </Pressable>
 
       <Pressable
-        unstable_pressDelay={0}
-        disabled={locked}
-        onPress={() => void oauth('apple')}
-        style={({ pressed }) => [
-          authStyles.oauthBtn,
-          pressed && authStyles.pressed,
-          locked && authStyles.disabled,
-        ]}>
-        <Ionicons color={palette.white} name="logo-apple" size={22} />
-        <Text style={authStyles.oauthText}>
-          {oauthBusy === 'apple' ? 'Opening Apple…' : 'Continue with Apple'}
-        </Text>
-      </Pressable>
-
-      <Pressable
-        unstable_pressDelay={0}
+        accessibilityLabel="Continue as guest"
+        accessibilityRole="button"
         disabled={locked}
         onPress={() => void enterGuest()}
         style={({ pressed }) => [
@@ -166,9 +183,22 @@ export default function SignUpScreen() {
         </Text>
       </Pressable>
 
+      <ConsentCheckbox
+        checked={agreed}
+        label="Agree to Terms, Privacy, Cookie, and Refund policies"
+        onChange={(value) => {
+          setAgreed(value);
+          if (value) setMessage(null);
+        }}>
+        I agree to the Terms of Service, Privacy Policy, Cookie Policy, and Refund Policy. DropLinq
+        only collects the account details needed to run alerts.
+      </ConsentCheckbox>
+
       {!emailMode && message ? <Text style={authStyles.error}>{message}</Text> : null}
 
       <Pressable
+        accessibilityLabel="Go to sign in"
+        accessibilityRole="button"
         unstable_pressDelay={0}
         onPress={() => router.push('/(auth)/sign-in')}
         style={({ pressed }) => [authStyles.footerBox, pressed && authStyles.pressed]}>
@@ -178,7 +208,7 @@ export default function SignUpScreen() {
             Have an account? <Text style={authStyles.footerLink}>Sign in</Text>
           </Text>
           <Text style={authStyles.footerSecondary}>
-            Use email or social login to open your command center.
+            Use email or Google to open your command center.
           </Text>
         </View>
       </Pressable>

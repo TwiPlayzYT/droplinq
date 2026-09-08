@@ -137,7 +137,7 @@ export function ProfileMenu({ compact = false }: Props) {
 
   return (
     <>
-      <View ref={triggerRef} collapsable={false}>
+      <View nativeID="tour-profile" ref={triggerRef} collapsable={false}>
         <Pressable
           accessibilityLabel="Account menu"
           onPress={openMenu}

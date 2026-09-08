@@ -3,8 +3,9 @@ import { Platform } from 'react-native';
 export type AppearanceId = 'dark' | 'light' | 'droplinq';
 
 /**
- * Semantic tokens. Page chrome (bg/text) and card bubbles (card/cardInk)
- * are separate so Light mode can lighten the page without inverting cards.
+ * Semantic tokens. Page chrome (bg/text) and card surfaces (card/cardInk)
+ * stay in the same family: Dark/DropLinq cards are raised dark panels,
+ * Light cards are white. Never put cream cards on a dark page.
  */
 export type AppearanceTokens = {
   red: string;
@@ -41,17 +42,17 @@ export const droplinqTokens: AppearanceTokens = {
   redDark: '#7D0610',
   redLight: '#FF2638',
   bg: '#090909',
-  raised: '#1B1B1B',
-  soft: '#303030',
+  raised: '#141414',
+  soft: '#2C2C2C',
   text: '#F7F5F2',
   textDim: '#D8D5D0',
   textMuted: '#A9A6A2',
-  card: '#F7F5F2',
-  cardInk: '#090909',
-  cardMuted: '#303030',
-  cardBorder: '#D8D5D0',
-  control: '#F7F5F2',
-  controlInk: '#090909',
+  card: '#1B1B1B',
+  cardInk: '#F7F5F2',
+  cardMuted: '#A9A6A2',
+  cardBorder: '#2C2C2C',
+  control: '#242424',
+  controlInk: '#F7F5F2',
   onRaised: '#F7F5F2',
   onRaisedDim: '#D8D5D0',
 };
@@ -65,13 +66,13 @@ export const darkTokens: AppearanceTokens = {
   soft: '#2A2A2E',
   text: '#F4F4F5',
   textDim: '#C8C8CC',
-  textMuted: '#8E8E93',
-  card: '#F4F4F5',
-  cardInk: '#0C0C0E',
-  cardMuted: '#3A3A3E',
-  cardBorder: '#C8C8CC',
-  control: '#F4F4F5',
-  controlInk: '#0C0C0E',
+  textMuted: '#A8A8AE',
+  card: '#1C1C22',
+  cardInk: '#F4F4F5',
+  cardMuted: '#A8A8AE',
+  cardBorder: '#2E2E36',
+  control: '#26262C',
+  controlInk: '#F4F4F5',
   onRaised: '#F4F4F5',
   onRaisedDim: '#C8C8CC',
 };
@@ -121,7 +122,7 @@ export const APPEARANCES: Record<
     id: 'droplinq',
     label: 'DropLinq Special',
     tokens: droplinqTokens,
-    preview: ['#090909', '#D20D1E', '#F7F5F2'],
+    preview: ['#090909', '#1B1B1B', '#D20D1E'],
   },
 };
 

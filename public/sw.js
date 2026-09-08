@@ -1,4 +1,4 @@
-const CACHE_NAME = 'droplinq-shell-v1';
+const CACHE_NAME = 'droplinq-shell-v2';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/droplinq-icon.svg'];
 
 self.addEventListener('install', (event) => {
@@ -70,6 +70,14 @@ self.addEventListener('push', (event) => {
       }),
       self.registration.setAppBadge?.(1),
     ]),
+  );
+});
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      clients.forEach((client) => client.postMessage({ type: 'DROPLINQ_PUSH_SUB_CHANGED' }));
+    }),
   );
 });
 

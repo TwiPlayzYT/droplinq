@@ -60,7 +60,7 @@ export async function sendMatchingWebPushes(product, registrations) {
           body: product.title,
           product,
         }),
-        { TTL: 300, urgency: 'high' },
+        { TTL: 86400, urgency: 'high' },
       );
       sent += 1;
     } catch (error) {
@@ -98,7 +98,7 @@ export async function sendTestWebPush(subscription, product) {
   };
 
   await webPush.sendNotification(subscription, JSON.stringify(payload), {
-    TTL: 120,
+    TTL: 86400,
     urgency: 'high',
   });
   return { ok: true };

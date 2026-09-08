@@ -120,6 +120,8 @@ export default function ProductDetailScreen() {
         <View style={styles.imageWell}>
           {product.imageUrl ? (
             <Image
+              accessibilityLabel={`Product photo of ${product.title}. Image belongs to the retailer.`}
+              alt={`Product photo of ${product.title}`}
               cachePolicy="memory-disk"
               contentFit="cover"
               source={{ uri: product.imageUrl }}
@@ -137,6 +139,10 @@ export default function ProductDetailScreen() {
         <Text style={styles.status}>{stockStatusLabel(product.stockStatus)}</Text>
         <Text style={styles.meta}>
           {product.price != null ? `${product.currency} ${product.price}` : 'Price unavailable'}
+        </Text>
+        <Text style={styles.meta}>
+          Product photo is provided by the retailer for identification. DropLinq does not claim
+          copyright in retailer or brand imagery.
         </Text>
         <Text style={styles.meta}>
           Last checked:{' '}

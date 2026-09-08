@@ -43,12 +43,14 @@ export default function SignInScreen() {
   const locked = busy || !!oauthBusy;
 
   return (
-    <AuthShell tagline="Monitor · Alert · Secure">
+    <AuthShell tagline="Monitor · Alert · Check">
       <Text style={authStyles.sectionLabel}>Recommended</Text>
 
       {!emailMode ? (
         <>
           <Pressable
+            accessibilityLabel="Continue with email"
+            accessibilityRole="button"
             unstable_pressDelay={0}
             disabled={locked}
             onPress={() => {
@@ -70,27 +72,40 @@ export default function SignInScreen() {
         </>
       ) : (
         <View style={authStyles.emailForm}>
+          <Text style={authStyles.fieldLabel}>Email</Text>
           <TextInput
+            accessibilityLabel="Email"
             autoCapitalize="none"
+            autoComplete="email"
             autoCorrect={false}
             autoFocus
             keyboardType="email-address"
             onChangeText={setEmail}
-            placeholder="Email"
+            placeholder="you@email.com"
             placeholderTextColor={palette.whiteShadow}
+            returnKeyType="next"
             style={authStyles.input}
+            textContentType="emailAddress"
             value={email}
           />
+          <Text style={authStyles.fieldLabel}>Password</Text>
           <TextInput
+            accessibilityLabel="Password"
+            autoComplete="password"
             onChangeText={setPassword}
+            onSubmitEditing={() => void submit()}
             placeholder="Password"
             placeholderTextColor={palette.whiteShadow}
+            returnKeyType="done"
             secureTextEntry
             style={authStyles.input}
+            textContentType="password"
             value={password}
           />
           {message ? <Text style={authStyles.error}>{message}</Text> : null}
           <Pressable
+            accessibilityLabel="Sign in"
+            accessibilityRole="button"
             unstable_pressDelay={0}
             disabled={locked}
             onPress={() => void submit()}
@@ -103,6 +118,8 @@ export default function SignInScreen() {
             <Text style={authStyles.submitText}>{busy ? 'Signing in…' : 'Sign in'}</Text>
           </Pressable>
           <Pressable
+            accessibilityLabel="Send password reset email"
+            accessibilityRole="button"
             unstable_pressDelay={0}
             onPress={async () => {
               if (!email.trim()) {
@@ -130,6 +147,8 @@ export default function SignInScreen() {
       </View>
 
       <Pressable
+        accessibilityLabel="Continue with Google"
+        accessibilityRole="button"
         unstable_pressDelay={0}
         disabled={locked}
         onPress={() => void oauth('google')}
@@ -144,24 +163,11 @@ export default function SignInScreen() {
         </Text>
       </Pressable>
 
-      <Pressable
-        unstable_pressDelay={0}
-        disabled={locked}
-        onPress={() => void oauth('apple')}
-        style={({ pressed }) => [
-          authStyles.oauthBtn,
-          pressed && authStyles.pressed,
-          locked && authStyles.disabled,
-        ]}>
-        <Ionicons color={palette.white} name="logo-apple" size={22} />
-        <Text style={authStyles.oauthText}>
-          {oauthBusy === 'apple' ? 'Opening Apple…' : 'Continue with Apple'}
-        </Text>
-      </Pressable>
-
       {!emailMode && message ? <Text style={authStyles.error}>{message}</Text> : null}
 
       <Pressable
+        accessibilityLabel="Go to create account"
+        accessibilityRole="button"
         unstable_pressDelay={0}
         onPress={() => router.replace('/(auth)')}
         style={({ pressed }) => [authStyles.footerBox, pressed && authStyles.pressed]}>

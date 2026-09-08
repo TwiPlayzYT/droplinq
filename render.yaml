@@ -25,6 +25,12 @@ services:
       - type: rewrite
         source: /manifest.webmanifest
         destination: /manifest.webmanifest
+      - type: rewrite
+        source: /auth/callback
+        destination: /index.html
+      - type: rewrite
+        source: /auth/callback/
+        destination: /index.html
 
   - type: web
     name: droplinq-monitor

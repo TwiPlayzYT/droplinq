@@ -1,14 +1,15 @@
 import { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
+import * as QueryParams from 'expo-auth-session/build/QueryParams';
 
 import { palette } from '@/constants/dropdex';
 import { getSupabase } from '@/services/supabase/client';
-import * as QueryParams from 'expo-auth-session/build/QueryParams';
 
 /**
- * Deep-link landing for OAuth returns (Expo Go exp://…/--/auth/callback).
+ * OAuth / email-confirm landing. On web this reads window.location so Google
+ * PKCE codes in ?code= (and hash tokens) become a session.
  */
 export default function AuthCallbackScreen() {
   const router = useRouter();
@@ -17,9 +18,19 @@ export default function AuthCallbackScreen() {
     let active = true;
 
     const finish = async (url: string | null) => {
-      if (!url || !active) return;
       const supabase = getSupabase();
       if (!supabase) {
+        router.replace('/(auth)');
+        return;
+      }
+
+      const { data: existing } = await supabase.auth.getSession();
+      if (existing.session) {
+        if (active) router.replace('/(onboarding)');
+        return;
+      }
+
+      if (!url || !active) {
         router.replace('/(auth)');
         return;
       }
@@ -31,16 +42,36 @@ export default function AuthCallbackScreen() {
       }
 
       if (params.code) {
-        await supabase.auth.exchangeCodeForSession(params.code);
+        const { error } = await supabase.auth.exchangeCodeForSession(params.code);
+        if (error) {
+          router.replace('/(auth)');
+          return;
+        }
       } else if (params.access_token && params.refresh_token) {
-        await supabase.auth.setSession({
+        const { error } = await supabase.auth.setSession({
           access_token: params.access_token,
           refresh_token: params.refresh_token,
         });
+        if (error) {
+          router.replace('/(auth)');
+          return;
+        }
       }
 
-      router.replace('/(onboarding)');
+      if (active) router.replace('/(onboarding)');
     };
+
+    const href =
+      Platform.OS === 'web' && typeof window !== 'undefined'
+        ? window.location.href
+        : null;
+
+    if (href) {
+      void finish(href);
+      return () => {
+        active = false;
+      };
+    }
 
     Linking.getInitialURL().then(finish);
     const sub = Linking.addEventListener('url', ({ url }) => {

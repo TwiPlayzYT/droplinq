@@ -5,7 +5,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AuthShell, authStyles } from '@/components/auth-shell';
-import { LEGAL_VERSION } from '@/constants/legal';
+import { ConsentCheckbox } from '@/components/consent-checkbox';
+import { LEGAL_VERSION, legalHref } from '@/constants/legal';
 import { palette } from '@/constants/dropdex';
 import { useWebLayout } from '@/hooks/use-web-layout';
 import { useAuth } from '@/store/auth-context';
@@ -34,13 +35,15 @@ export default function LegalAcceptScreen() {
 
   if (isWeb) {
     return (
-      <AuthShell tagline="Monitor · Alert · Secure">
+      <AuthShell tagline="Monitor · Alert · Check">
         <Text style={authStyles.sectionLabel}>Legal</Text>
         <Text style={styles.webLead}>
-          Review and accept before using DropLinq on the web.
+          Review and accept the policies below before using DropLinq.
         </Text>
 
         <Pressable
+          accessibilityLabel="Open terms of service"
+          accessibilityRole="link"
           unstable_pressDelay={0}
           onPress={() => router.push('/legal/terms')}
           style={({ pressed }) => [authStyles.oauthBtn, pressed && authStyles.pressed]}>
@@ -48,30 +51,45 @@ export default function LegalAcceptScreen() {
           <Text style={authStyles.oauthText}>Terms of Service</Text>
         </Pressable>
         <Pressable
+          accessibilityLabel="Open privacy policy"
+          accessibilityRole="link"
           unstable_pressDelay={0}
           onPress={() => router.push('/legal/privacy')}
           style={({ pressed }) => [authStyles.oauthBtn, pressed && authStyles.pressed]}>
           <Ionicons color={palette.whiteDim} name="shield-checkmark-outline" size={20} />
           <Text style={authStyles.oauthText}>Privacy Policy</Text>
         </Pressable>
-
         <Pressable
+          accessibilityLabel="Open cookie policy"
+          accessibilityRole="link"
           unstable_pressDelay={0}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: agreed }}
-          onPress={() => setAgreed((value) => !value)}
-          style={styles.checkRow}>
-          <View style={[styles.box, agreed && styles.boxOn]}>
-            {agreed ? <Ionicons color={palette.white} name="checkmark" size={16} /> : null}
-          </View>
-          <Text style={styles.checkText}>
-            I agree to the Terms of Service and Privacy Policy
-          </Text>
+          onPress={() => router.push(legalHref('/legal/cookies'))}
+          style={({ pressed }) => [authStyles.oauthBtn, pressed && authStyles.pressed]}>
+          <Ionicons color={palette.whiteDim} name="layers-outline" size={20} />
+          <Text style={authStyles.oauthText}>Cookie Policy</Text>
         </Pressable>
+        <Pressable
+          accessibilityLabel="Open refund policy"
+          accessibilityRole="link"
+          unstable_pressDelay={0}
+          onPress={() => router.push(legalHref('/legal/refund'))}
+          style={({ pressed }) => [authStyles.oauthBtn, pressed && authStyles.pressed]}>
+          <Ionicons color={palette.whiteDim} name="card-outline" size={20} />
+          <Text style={authStyles.oauthText}>Refund Policy</Text>
+        </Pressable>
+
+        <ConsentCheckbox
+          checked={agreed}
+          label="Agree to Terms, Privacy, Cookie, and Refund policies"
+          onChange={setAgreed}>
+          I agree to the Terms of Service, Privacy Policy, Cookie Policy, and Refund Policy.
+        </ConsentCheckbox>
 
         {error ? <Text style={authStyles.error}>{error}</Text> : null}
 
         <Pressable
+          accessibilityLabel="Accept policies and continue"
+          accessibilityRole="button"
           unstable_pressDelay={0}
           disabled={busy}
           onPress={() => void continueNext()}
@@ -80,7 +98,7 @@ export default function LegalAcceptScreen() {
             pressed && authStyles.pressed,
             busy && authStyles.disabled,
           ]}>
-          <Text style={authStyles.submitText}>{busy ? 'Saving…' : 'Continue'}</Text>
+          <Text style={authStyles.submitText}>{busy ? 'Saving…' : 'Accept and continue'}</Text>
         </Pressable>
         <Text style={styles.version}>v{LEGAL_VERSION}</Text>
       </AuthShell>
@@ -94,6 +112,8 @@ export default function LegalAcceptScreen() {
         <Text style={styles.title}>Legal</Text>
 
         <Pressable
+          accessibilityLabel="Open terms of service"
+          accessibilityRole="link"
           unstable_pressDelay={0}
           onPress={() => router.push('/legal/terms')}
           style={styles.linkRow}>
@@ -101,33 +121,50 @@ export default function LegalAcceptScreen() {
           <Ionicons color={palette.whiteShadow} name="chevron-forward" size={18} />
         </Pressable>
         <Pressable
+          accessibilityLabel="Open privacy policy"
+          accessibilityRole="link"
           unstable_pressDelay={0}
           onPress={() => router.push('/legal/privacy')}
           style={styles.linkRow}>
           <Text style={styles.linkLabel}>Privacy Policy</Text>
           <Ionicons color={palette.whiteShadow} name="chevron-forward" size={18} />
         </Pressable>
-
         <Pressable
+          accessibilityLabel="Open cookie policy"
+          accessibilityRole="link"
           unstable_pressDelay={0}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: agreed }}
-          onPress={() => setAgreed((value) => !value)}
-          style={styles.checkRow}>
-          <View style={[styles.box, agreed && styles.boxOn]}>
-            {agreed ? <Ionicons color={palette.white} name="checkmark" size={16} /> : null}
-          </View>
-          <Text style={styles.checkText}>I agree to the Terms of Service and Privacy Policy</Text>
+          onPress={() => router.push(legalHref('/legal/cookies'))}
+          style={styles.linkRow}>
+          <Text style={styles.linkLabel}>Cookie Policy</Text>
+          <Ionicons color={palette.whiteShadow} name="chevron-forward" size={18} />
         </Pressable>
+        <Pressable
+          accessibilityLabel="Open refund policy"
+          accessibilityRole="link"
+          unstable_pressDelay={0}
+          onPress={() => router.push(legalHref('/legal/refund'))}
+          style={styles.linkRow}>
+          <Text style={styles.linkLabel}>Refund Policy</Text>
+          <Ionicons color={palette.whiteShadow} name="chevron-forward" size={18} />
+        </Pressable>
+
+        <ConsentCheckbox
+          checked={agreed}
+          label="Agree to Terms, Privacy, Cookie, and Refund policies"
+          onChange={setAgreed}>
+          I agree to the Terms of Service, Privacy Policy, Cookie Policy, and Refund Policy.
+        </ConsentCheckbox>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <Pressable
+          accessibilityLabel="Accept policies and continue"
+          accessibilityRole="button"
           unstable_pressDelay={0}
           disabled={busy}
           onPress={() => void continueNext()}
           style={({ pressed }) => [styles.cta, pressed && styles.pressed, busy && styles.disabled]}>
-          <Text style={styles.ctaText}>{busy ? 'Saving…' : 'Continue'}</Text>
+          <Text style={styles.ctaText}>{busy ? 'Saving…' : 'Accept and continue'}</Text>
         </Pressable>
 
         <Text style={styles.version}>v{LEGAL_VERSION}</Text>

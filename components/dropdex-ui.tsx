@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { SiteFooter } from '@/components/site-footer';
 import { palette } from '@/constants/dropdex';
 import { useMobileWebChrome } from '@/hooks/use-mobile-web-chrome';
 import { useWebLayout } from '@/hooks/use-web-layout';
@@ -77,6 +78,7 @@ export function Screen({
       }
       showsVerticalScrollIndicator={false}>
       {children}
+      {isDesktopWeb || isMobileWeb ? <SiteFooter /> : <SiteFooter compact />}
     </ScrollView>
   ) : (
     <View style={[contentStyle, styles.fill]}>{children}</View>
@@ -101,7 +103,7 @@ export function BrandHeader({ eyebrow }: { eyebrow: string }) {
     return (
       <View style={styles.webPageHeader}>
         <Text style={styles.webPageEyebrow}>DROPLINQ</Text>
-        <Text style={styles.webPageTitle}>{eyebrow}</Text>
+        <Text accessibilityRole="header" style={styles.webPageTitle}>{eyebrow}</Text>
       </View>
     );
   }
@@ -110,7 +112,7 @@ export function BrandHeader({ eyebrow }: { eyebrow: string }) {
     <View style={styles.header}>
       <View>
         <Text style={styles.eyebrow}>{eyebrow.toUpperCase()}</Text>
-        <Text style={styles.brand}>DROPLINQ</Text>
+        <Text accessibilityRole="header" style={styles.brand}>DROPLINQ</Text>
       </View>
       <View style={styles.headerBall}>
         <View style={styles.headerBallTop} />
@@ -214,6 +216,7 @@ export function TagInput({
       <Text style={styles.fieldLabel}>{label.toUpperCase()}</Text>
       <View style={styles.inputWell}>
         <TextInput
+          accessibilityLabel={label}
           autoCapitalize="none"
           onChangeText={setDraft}
           onSubmitEditing={add}
@@ -223,7 +226,7 @@ export function TagInput({
           style={styles.input}
           value={draft}
         />
-        <InstantPressable accessibilityLabel={`Add ${label}`} onPress={add} style={styles.inputButton}>
+        <InstantPressable accessibilityLabel={`Add ${label}`} accessibilityRole="button" onPress={add} style={styles.inputButton}>
           <Ionicons color={palette.white} name="add" size={22} />
         </InstantPressable>
       </View>
@@ -232,6 +235,8 @@ export function TagInput({
           {values.map((value) => (
             <InstantPressable
               key={value}
+              accessibilityLabel={`Remove ${value} from ${label}`}
+              accessibilityRole="button"
               onPress={() => onChange(values.filter((item) => item !== value))}
               style={styles.tag}>
               <Text numberOfLines={1} style={styles.tagText}>{value}</Text>
@@ -278,6 +283,8 @@ export function MetalButton({
 }) {
   return (
     <InstantPressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [styles.metalButton, pressed && styles.pressed, disabled && { opacity: 0.5 }]}>
@@ -386,9 +393,9 @@ const styles = StyleSheet.create({
   },
   panel: {
     borderRadius: 24,
-    borderTopColor: 'rgba(255,255,255,0.35)',
+    borderTopColor: 'rgba(255,255,255,0.12)',
     borderTopWidth: 1,
-    padding: 18,
+    padding: 20,
   },
   lightPanel: {
     backgroundColor: palette.card,
@@ -407,42 +414,37 @@ const styles = StyleSheet.create({
   lightText: { color: palette.onRaised },
   dimLightText: { color: palette.onRaisedDim },
   toggleRow: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     flexDirection: 'row',
-    gap: 12,
+    gap: 14,
     justifyContent: 'space-between',
-    minHeight: 56,
+    minHeight: 58,
+    paddingVertical: 8,
   },
-  toggleCopy: { flex: 1, paddingRight: 4 },
-  toggleLabel: { color: palette.cardInk, fontSize: 15, fontWeight: '800', lineHeight: 20 },
-  toggleCaption: { color: palette.cardMuted, fontSize: 11, lineHeight: 16, marginTop: 5 },
+  toggleCopy: { flex: 1, minWidth: 0, paddingRight: 8, paddingTop: 4 },
+  toggleLabel: { color: palette.cardInk, fontSize: 15, fontWeight: '800', lineHeight: 21 },
+  toggleCaption: { color: palette.cardMuted, fontSize: 12, lineHeight: 18, marginTop: 6 },
   switchWell: {
-    backgroundColor: palette.cardInk,
-    borderColor: palette.cardMuted,
+    backgroundColor: palette.blackSoft,
+    borderColor: palette.cardBorder,
     borderRadius: 18,
     borderWidth: 2,
+    flexShrink: 0,
     height: 34,
+    marginTop: 4,
     padding: 3,
-    shadowColor: palette.cardInk,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 3,
     width: 58,
   },
   switchWellOn: { backgroundColor: palette.redDark, borderColor: palette.red },
   switchKnob: {
-    backgroundColor: palette.cardBorder,
+    backgroundColor: palette.white,
     borderRadius: 12,
     height: 24,
-    shadowColor: palette.cardInk,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 2,
     width: 24,
   },
-  switchKnobOn: { backgroundColor: palette.control, transform: [{ translateX: 24 }] },
+  switchKnobOn: { backgroundColor: '#FFFFFF', transform: [{ translateX: 24 }] },
   switchHighlight: {
-    backgroundColor: palette.control,
+    backgroundColor: 'rgba(255,255,255,0.45)',
     borderRadius: 8,
     height: 8,
     left: 5,
@@ -515,11 +517,11 @@ const styles = StyleSheet.create({
   choiceText: { color: palette.cardMuted, fontSize: 12, fontWeight: '800' },
   choiceTextSelected: { color: palette.cardInk },
   metalButton: {
-    backgroundColor: palette.cardBorder,
+    backgroundColor: palette.blackSoft,
     borderRadius: 16,
     marginTop: 12,
     paddingBottom: 4,
-    shadowColor: palette.cardInk,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 4,

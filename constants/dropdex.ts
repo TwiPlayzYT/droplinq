@@ -8,7 +8,7 @@ import { droplinqTokens, paletteToken } from '@/constants/appearance';
  *
  * Naming note:
  * - black / white / * = page chrome (bg + text on the page)
- * - card* = bubble panels (cream/white cards with dark ink — stay readable in every theme)
+ * - card* = setting/list surfaces (dark on Dark, white on Light)
  */
 export const palette = {
   red: paletteToken('--dl-red', droplinqTokens.red),

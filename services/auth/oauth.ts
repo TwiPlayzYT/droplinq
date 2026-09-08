@@ -7,6 +7,7 @@ import { Platform } from 'react-native';
 
 import { AuthResult } from '@/services/auth/types';
 import { getSupabase } from '@/services/supabase/client';
+import { productionWebOrigin } from '@/config/app-config';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -20,10 +21,24 @@ function looksLikeIpHost(hostUri: string) {
 }
 
 /**
- * Supabase rejects redirect URLs that contain raw LAN IPs ("requested path is invalid").
- * Expo Go on Wi‑Fi normally uses exp://192.168.x.x:8081 — that breaks Google OAuth.
- * Use `npm run start:tunnel` so the host is *.exp.direct instead of an IP.
+ * Supabase returns {"error":"requested path is invalid"} when redirectTo is a
+ * LAN IP, an Expo `--/` deep link, or a URL that is not in Authentication →
+ * Redirect URLs. Web must send a plain https origin + /auth/callback.
  */
+export function webRedirectUri() {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const origin = window.location.origin.replace(/\/$/, '');
+    const host = origin.replace(/^https?:\/\//, '');
+    const isLocal = /^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(host);
+    const isHttps = origin.startsWith('https://');
+    if ((isHttps || isLocal) && !looksLikeIpHost(host) && !origin.includes('.supabase.co')) {
+      return `${origin}/auth/callback`;
+    }
+    return `${productionWebOrigin}/auth/callback`;
+  }
+  return redirectUri();
+}
+
 export function redirectUri() {
   if (Constants.appOwnership === 'expo') {
     const hostUri =
@@ -79,6 +94,29 @@ async function createSessionFromUrl(url: string): Promise<AuthResult> {
 async function signInWithOAuthBrowser(provider: OAuthProvider): Promise<AuthResult> {
   const supabase = getSupabase();
   if (!supabase) return { ok: false, message: 'Supabase is not configured.' };
+
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const redirectTo = webRedirectUri();
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo,
+        skipBrowserRedirect: true,
+        queryParams: { prompt: 'select_account' },
+      },
+    });
+    if (error) {
+      return {
+        ok: false,
+        message: `${error.message}\n\nIn Supabase → Authentication → URL configuration, set Site URL to ${productionWebOrigin} and add this Redirect URL:\n${redirectTo}`,
+      };
+    }
+    if (data.url) {
+      window.location.assign(data.url);
+      return { ok: true };
+    }
+    return { ok: false, message: 'Could not start Google sign-in.' };
+  }
 
   if (oauthNeedsTunnel()) {
     return {
@@ -166,5 +204,5 @@ export async function signInWithProvider(provider: OAuthProvider): Promise<AuthR
 }
 
 export function oauthRedirectHint() {
-  return redirectUri();
+  return webRedirectUri();
 }

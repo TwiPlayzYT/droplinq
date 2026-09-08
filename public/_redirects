@@ -1,0 +1,4 @@
+# Render / Netlify: OAuth return must hit the app, not a missing static file.
+/auth/callback  /index.html  200
+/auth/callback/ /index.html  200
+/setup/*        /index.html  200

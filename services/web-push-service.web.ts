@@ -28,7 +28,22 @@ const supportsWebPush = () =>
 
 export async function registerWebServiceWorker() {
   if (!('serviceWorker' in navigator)) return undefined;
-  return navigator.serviceWorker.register('/sw.js', { scope: '/' });
+  const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+  try {
+    await registration.update();
+  } catch {
+    // Update is best-effort; an existing worker can still handle push.
+  }
+  return registration;
+}
+
+async function activeRegistration() {
+  await registerWebServiceWorker();
+  const ready = navigator.serviceWorker.ready;
+  const timeout = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('Service worker did not become ready.')), 10_000);
+  });
+  return Promise.race([ready, timeout]);
 }
 
 export async function getWebPushState(): Promise<WebPushState> {
@@ -37,8 +52,8 @@ export async function getWebPushState(): Promise<WebPushState> {
   if (Notification.permission === 'denied') return 'denied';
 
   try {
-    const registration = await registerWebServiceWorker();
-    const subscription = await registration?.pushManager.getSubscription();
+    const registration = await activeRegistration();
+    const subscription = await registration.pushManager.getSubscription();
     return subscription ? 'subscribed' : 'ready';
   } catch {
     return 'error';
@@ -47,9 +62,13 @@ export async function getWebPushState(): Promise<WebPushState> {
 
 export async function getExistingWebPushSubscription() {
   if (!window.isSecureContext || !supportsWebPush()) return undefined;
-  const registration = await registerWebServiceWorker();
-  const subscription = (await registration?.pushManager.getSubscription())?.toJSON();
-  return serializeSubscription(subscription);
+  try {
+    const registration = await activeRegistration();
+    const subscription = (await registration.pushManager.getSubscription())?.toJSON();
+    return serializeSubscription(subscription);
+  } catch {
+    return undefined;
+  }
 }
 
 const serializeSubscription = (
@@ -80,22 +99,22 @@ export async function subscribeToWebPush(vapidPublicKey: string) {
     throw new Error('Add DropLinq to your Home Screen before enabling alerts.');
   }
 
-  // This must run directly from the settings button press on iOS.
+  // Permission must come from the same user gesture on iOS.
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') {
     throw new Error('Notification permission was not granted.');
   }
 
-  const registration = await registerWebServiceWorker();
-  if (!registration) throw new Error('The DropLinq service worker is unavailable.');
+  const registration = await activeRegistration();
 
   const existing = await registration.pushManager.getSubscription();
-  const subscription =
-    existing ??
-    (await registration.pushManager.subscribe({
+  let subscription = existing;
+  if (!subscription) {
+    subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: decodeVapidKey(vapidPublicKey),
-    }));
+    });
+  }
 
   const serialized = serializeSubscription(subscription.toJSON());
   if (!serialized) throw new Error('The browser returned an incomplete push subscription.');
