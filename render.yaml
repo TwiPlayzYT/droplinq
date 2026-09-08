@@ -18,6 +18,15 @@ services:
       - path: /*
         name: X-Content-Type-Options
         value: nosniff
+      - path: /
+        name: Cache-Control
+        value: no-cache
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache
     routes:
       - type: rewrite
         source: /sw.js
