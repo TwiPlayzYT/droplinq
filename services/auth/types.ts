@@ -4,6 +4,7 @@ export type AuthProfile = {
   id: string;
   email: string;
   username: string | null;
+  displayName: string | null;
   dateOfBirth: string | null;
   onboardingCompleted: boolean;
   alertsActive: boolean;

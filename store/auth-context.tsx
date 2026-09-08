@@ -45,6 +45,7 @@ type AuthContextValue = {
     regionId: string;
     username?: string;
   }) => Promise<AuthResult>;
+  updateIdentity: (input: { displayName: string; handle: string }) => Promise<AuthResult>;
   refreshProfile: () => Promise<void>;
 };
 
@@ -142,6 +143,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
           selectedRegionId: input.regionId,
           username: input.username,
           onboardingCompleted: true,
+        });
+        if (result.ok) await loadProfile(session.user.id);
+        return result;
+      },
+      updateIdentity: async (input) => {
+        if (!session?.user.id) return { ok: false, message: 'Not signed in.' };
+        const result = await authAdapter.saveProfile(session.user.id, {
+          displayName: input.displayName,
+          username: input.handle,
         });
         if (result.ok) await loadProfile(session.user.id);
         return result;

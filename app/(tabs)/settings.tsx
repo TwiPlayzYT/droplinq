@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { EditProfileModal } from '@/components/edit-profile-modal';
 import { BrandHeader, Screen } from '@/components/dropdex-ui';
 import { TourAnchor } from '@/components/tour-anchor';
 import {
@@ -17,6 +18,7 @@ import { palette } from '@/constants/dropdex';
 import { legalHref } from '@/constants/legal';
 import { TUTORIAL_STORAGE_KEY } from '@/constants/tutorial';
 import { coverageModeCopy } from '@/data/pokemon-center-filters';
+import { displayNameFrom, handleFrom } from '@/lib/profile-identity';
 import { useAuth } from '@/store/auth-context';
 import { emitTourAction, isTutorialSessionActive } from '@/services/tour-session';
 import { useDropDex } from '@/store/dropdex-context';
@@ -30,11 +32,14 @@ function initialsFrom(name: string) {
 
 export default function SettingsScreen() {
   const { alerts, filters, updateAlertPreferences, webPushState } = useDropDex();
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, updateIdentity } = useAuth();
   const router = useRouter();
   const plan = profile?.subscriptionTier ?? 'FREE';
   const coverage = coverageModeCopy[filters.coverageMode];
   const [tourDone, setTourDone] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editBusy, setEditBusy] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   useEffect(() => {
     AsyncStorage.getItem(TUTORIAL_STORAGE_KEY)
@@ -42,19 +47,8 @@ export default function SettingsScreen() {
       .catch(() => undefined);
   }, []);
 
-  const displayName = useMemo(() => {
-    if (profile?.username?.trim()) return profile.username.trim();
-    if (profile?.email && profile.email !== 'guest@droplinq.local') {
-      return profile.email.split('@')[0] || 'Account';
-    }
-    return 'Guest';
-  }, [profile?.email, profile?.username]);
-
-  const handle = useMemo(() => {
-    if (profile?.username?.trim()) return `@${profile.username.trim()}`;
-    if (profile?.email === 'guest@droplinq.local') return '@guest';
-    return profile?.email ? profile.email.split('@')[0] : 'droplinq';
-  }, [profile?.email, profile?.username]);
+  const displayName = useMemo(() => displayNameFrom(profile), [profile]);
+  const handle = useMemo(() => handleFrom(profile), [profile]);
 
   const pushCaption =
     Platform.OS === 'web'
@@ -73,8 +67,14 @@ export default function SettingsScreen() {
 
       <TourAnchor id="settings">
       <Pressable
+        accessibilityLabel="Edit display name and handle"
         onPress={() => {
-          if (isTutorialSessionActive()) emitTourAction('tap');
+          if (isTutorialSessionActive()) {
+            emitTourAction('tap');
+            return;
+          }
+          setEditError(null);
+          setEditOpen(true);
         }}>
       <View style={styles.profileCard}>
         <View style={styles.avatar}>
@@ -82,13 +82,45 @@ export default function SettingsScreen() {
         </View>
         <View style={styles.profileCopy}>
           <Text style={styles.profileName}>{displayName}</Text>
-          <Text style={styles.profileHandle}>@{handle.replace(/^@/, '')}</Text>
+          <View style={styles.handleRow}>
+            <Text style={styles.profileHandle}>@{handle}</Text>
+            <Ionicons color={palette.red} name="pencil-outline" size={14} />
+          </View>
           {profile?.email ? <Text style={styles.profileEmail}>{profile.email}</Text> : null}
           <Text style={styles.plan}>{plan}</Text>
         </View>
       </View>
       </Pressable>
       </TourAnchor>
+
+      <EditProfileModal
+        busy={editBusy}
+        displayName={displayName}
+        error={editError}
+        handle={handle}
+        onClose={() => {
+          if (editBusy) return;
+          setEditOpen(false);
+          setEditError(null);
+        }}
+        onSave={async ({ displayName: nextName, handle: nextHandle }) => {
+          setEditBusy(true);
+          setEditError(null);
+          try {
+            const result = await updateIdentity({ displayName: nextName, handle: nextHandle });
+            if (!result.ok) {
+              setEditError(result.message);
+              return;
+            }
+            setEditOpen(false);
+          } catch (err) {
+            setEditError(err instanceof Error ? err.message : 'Could not update profile.');
+          } finally {
+            setEditBusy(false);
+          }
+        }}
+        visible={editOpen}
+      />
 
       <SettingsGroup title="Alerts">
         <SettingsNavRow
@@ -223,10 +255,12 @@ const styles = StyleSheet.create({
   avatar: {
     alignItems: 'center',
     backgroundColor: palette.red,
-    borderRadius: 36,
-    height: 72,
+    borderColor: palette.redLight,
+    borderRadius: 40,
+    borderWidth: 3,
+    height: 80,
     justifyContent: 'center',
-    width: 72,
+    width: 80,
   },
   avatarText: {
     color: '#FFFFFF',
@@ -243,11 +277,16 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 28,
   },
-  profileHandle: {
-    color: palette.cardMuted,
-    fontSize: 14,
-    fontWeight: '600',
+  handleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
     marginTop: 2,
+  },
+  profileHandle: {
+    color: palette.red,
+    fontSize: 15,
+    fontWeight: '700',
   },
   profileEmail: {
     color: palette.cardMuted,

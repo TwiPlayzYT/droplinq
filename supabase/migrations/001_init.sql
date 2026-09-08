@@ -103,6 +103,7 @@ create table if not exists public.alert_deliveries (
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   username text,
+  display_name text,
   date_of_birth date,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),

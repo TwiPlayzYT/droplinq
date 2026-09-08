@@ -80,6 +80,7 @@ export const supabaseAuth: AuthAdapter = {
       id: String(data.id),
       email: userData.user?.email ?? '',
       username: (data.username as string | null) ?? null,
+      displayName: (data.display_name as string | null) ?? null,
       dateOfBirth: (data.date_of_birth as string | null) ?? null,
       onboardingCompleted: Boolean(data.onboarding_completed),
       alertsActive: data.alerts_active !== false,
@@ -107,6 +108,7 @@ export const supabaseAuth: AuthAdapter = {
       updated_at: new Date().toISOString(),
     };
     if (patch.username !== undefined) row.username = patch.username;
+    if (patch.displayName !== undefined) row.display_name = patch.displayName;
     if (patch.dateOfBirth !== undefined) row.date_of_birth = patch.dateOfBirth;
     if (patch.onboardingCompleted !== undefined) row.onboarding_completed = patch.onboardingCompleted;
     if (patch.alertsActive !== undefined) row.alerts_active = patch.alertsActive;
@@ -118,36 +120,31 @@ export const supabaseAuth: AuthAdapter = {
 
     await supabase.rpc('ensure_own_profile');
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .update(row)
-      .eq('id', userId)
-      .select('id')
-      .maybeSingle();
+    const stripOptional = (payload: Record<string, unknown>, keys: string[]) => {
+      const next = { ...payload };
+      for (const key of keys) delete next[key];
+      return next;
+    };
+    const variants = [
+      row,
+      stripOptional(row, ['display_name']),
+      stripOptional(row, ['appearance_id']),
+      stripOptional(row, ['display_name', 'appearance_id']),
+    ];
 
-    if (error) {
-      const { appearance_id: _appearance, ...withoutAppearance } = row;
-      const retry = await supabase.from('profiles').update(withoutAppearance).eq('id', userId).select('id').maybeSingle();
-      if (retry.error) return { ok: false, message: retry.error.message };
-      if (retry.data) return { ok: true };
-    } else if (data) {
-      return { ok: true };
+    let lastError = 'Could not save your profile. Try Accept and continue again.';
+    for (const payload of variants) {
+      const updated = await supabase.from('profiles').update(payload).eq('id', userId).select('id').maybeSingle();
+      if (!updated.error && updated.data) return { ok: true };
+      if (updated.error) lastError = updated.error.message;
+      else break;
     }
 
-    const insertRow: Record<string, unknown> = { id: userId, ...row };
-    const inserted = await supabase.from('profiles').insert(insertRow).select('id').maybeSingle();
-    if (inserted.error) {
-      const { appearance_id: _appearance, ...withoutAppearance } = insertRow;
-      const retryInsert = await supabase.from('profiles').insert(withoutAppearance).select('id').maybeSingle();
-      if (retryInsert.error) return { ok: false, message: retryInsert.error.message };
-      if (!retryInsert.data) {
-        return { ok: false, message: 'Could not save your profile. Try Accept and continue again.' };
-      }
-      return { ok: true };
+    for (const payload of variants) {
+      const inserted = await supabase.from('profiles').insert({ id: userId, ...payload }).select('id').maybeSingle();
+      if (!inserted.error && inserted.data) return { ok: true };
+      if (inserted.error) lastError = inserted.error.message;
     }
-    if (!inserted.data) {
-      return { ok: false, message: 'Could not save your profile. Try Accept and continue again.' };
-    }
-    return { ok: true };
+    return { ok: false, message: lastError };
   },
 };

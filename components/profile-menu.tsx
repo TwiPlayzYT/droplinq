@@ -14,6 +14,7 @@ import {
 
 import { TourAnchor, tourDomProps } from '@/components/tour-anchor';
 import { palette } from '@/constants/dropdex';
+import { displayNameFrom, handleFrom } from '@/lib/profile-identity';
 import { emitTourAction, subscribeTutorialStep } from '@/services/tour-session';
 import { useAppearance, useAppearanceOptions } from '@/store/appearance-context';
 import { useAuth } from '@/store/auth-context';
@@ -96,20 +97,8 @@ export function ProfileMenu({ compact = false }: Props) {
   const triggerRef = useRef<View>(null);
   const sideBySide = width >= 720;
 
-  const displayName = useMemo(() => {
-    if (profile?.username?.trim()) return profile.username.trim();
-    if (profile?.email && profile.email !== 'guest@droplinq.local') {
-      return profile.email.split('@')[0] || 'Account';
-    }
-    return 'Guest';
-  }, [profile?.email, profile?.username]);
-
-  const handle = useMemo(() => {
-    if (profile?.username?.trim()) return `@${profile.username.trim()}`;
-    if (profile?.email === 'guest@droplinq.local') return '@guest';
-    if (profile?.email) return profile.email;
-    return '@droplinq';
-  }, [profile?.email, profile?.username]);
+  const displayName = useMemo(() => displayNameFrom(profile), [profile]);
+  const handle = useMemo(() => `@${handleFrom(profile)}`, [profile]);
 
   const openMenu = (appearance = false) => {
     triggerRef.current?.measureInWindow((x, y, w, h) => {

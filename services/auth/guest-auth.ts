@@ -32,7 +32,8 @@ function defaultGuestProfile(): AuthProfile {
   return {
     id: GUEST_ID,
     email: 'guest@droplinq.local',
-    username: 'Guest',
+    username: 'guest',
+    displayName: 'Guest',
     dateOfBirth: null,
     onboardingCompleted: true,
     alertsActive: true,

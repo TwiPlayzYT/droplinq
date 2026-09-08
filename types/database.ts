@@ -7,6 +7,7 @@ export type Database = {
         Row: {
           id: string;
           username: string | null;
+          display_name: string | null;
           date_of_birth: string | null;
           created_at: string;
           updated_at: string;

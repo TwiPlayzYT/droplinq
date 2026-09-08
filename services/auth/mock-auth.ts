@@ -74,7 +74,8 @@ export const mockAuth: AuthAdapter = {
     profiles[user.id] = {
       id: user.id,
       email: user.email,
-      username: user.email.split('@')[0],
+      username: user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9._]/g, '').slice(0, 24),
+      displayName: user.email.split('@')[0],
       dateOfBirth: null,
       onboardingCompleted: false,
       alertsActive: true,
@@ -103,6 +104,7 @@ export const mockAuth: AuthAdapter = {
         id: user.id,
         email,
         username: provider,
+        displayName: provider === 'google' ? 'Google' : 'Apple',
         dateOfBirth: null,
         onboardingCompleted: false,
         alertsActive: true,
