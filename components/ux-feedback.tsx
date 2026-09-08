@@ -8,6 +8,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -62,10 +63,12 @@ export function AppBootScreen() {
 function FeedbackToast({
   feedback,
   top,
+  width,
   onClear,
 }: {
   feedback: NonNullable<ReturnType<typeof useDropDex>['feedback']>;
   top: number;
+  width: number;
   onClear: () => void;
 }) {
   const progress = useRef(new Animated.Value(1)).current;
@@ -95,13 +98,18 @@ function FeedbackToast({
     };
   }, [drop, feedback.id, progress]);
 
+  const toastWidth = Math.min(360, Math.max(240, width - 72));
+  const left = (width - toastWidth) / 2;
+
   return (
     <Animated.View
       accessibilityHint="Dismisses this message"
       style={[
         styles.toast,
         {
+          left,
           top,
+          width: toastWidth,
           opacity: drop.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
           transform: [
             {
@@ -169,6 +177,7 @@ export function GlobalUXFeedback() {
   const { feedback, operation, clearFeedback } = useDropDex();
   const insets = useSafeAreaInsets();
   const segments = useSegments();
+  const { width } = useWindowDimensions();
   const [showOperation, setShowOperation] = useState(false);
 
   // Sign-up / sign-in should stay clean — no cloud-status toasts over the form.
@@ -207,6 +216,7 @@ export function GlobalUXFeedback() {
           feedback={feedback}
           onClear={clearFeedback}
           top={Math.max(insets.top, 8) + 8}
+          width={width}
         />
       ) : null}
     </View>
@@ -327,9 +337,7 @@ const styles = StyleSheet.create({
     borderColor: palette.blackSoft,
     borderRadius: 20,
     borderWidth: 2,
-    left: 14,
     position: 'absolute',
-    right: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.75,

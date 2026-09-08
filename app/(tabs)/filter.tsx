@@ -2,14 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import {
-  BrandHeader,
-  ChoiceChip,
-  MechanicalToggle,
-  Panel,
-  Screen,
-  SectionTitle,
-} from '@/components/dropdex-ui';
+import { BrandHeader, ChoiceChip, MechanicalToggle, Panel, Screen, SectionTitle } from '@/components/dropdex-ui';
+import { TourAnchor } from '@/components/tour-anchor';
 import { palette, previewSamples } from '@/constants/dropdex';
 import {
   coverageModeCopy,
@@ -62,6 +56,7 @@ export default function FilterScreen() {
         </Text>
       </Panel>
 
+      <TourAnchor id="filter-coverage">
       <Panel>
         <SectionTitle title="Coverage" />
         <View style={styles.modeList}>
@@ -93,6 +88,7 @@ export default function FilterScreen() {
           })}
         </View>
       </Panel>
+      </TourAnchor>
 
       {filters.coverageMode === 'CUSTOM' ? (
         <Panel>
@@ -150,6 +146,7 @@ export default function FilterScreen() {
         </Panel>
       ) : null}
 
+      <TourAnchor id="filter-events">
       <Panel>
         <SectionTitle
           caption="These switches decide which stock changes can ping you. They work with coverage above."
@@ -176,6 +173,7 @@ export default function FilterScreen() {
           value={filters.includePreorders}
         />
       </Panel>
+      </TourAnchor>
 
       <Panel tone="dark">
         <Text style={styles.previewLabel}>EXAMPLE COVERAGE</Text>

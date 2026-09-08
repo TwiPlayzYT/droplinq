@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BrandHeader, Panel, Screen } from '@/components/dropdex-ui';
+import { TourAnchor } from '@/components/tour-anchor';
 import { palette } from '@/constants/dropdex';
 import { getRegion, RegionConfig, regions } from '@/data/regions';
 import { useDropDex } from '@/store/dropdex-context';
@@ -61,6 +62,7 @@ export default function RegionScreen() {
         <Text style={styles.statusText}>TRACKING {active.storefront.toUpperCase()}</Text>
       </View>
 
+      <TourAnchor id="region-list">
       <Panel tone="dark">
         <View style={styles.headingRow}>
           <Ionicons color={palette.red} name="globe-outline" size={20} />
@@ -78,6 +80,7 @@ export default function RegionScreen() {
           ))}
         </View>
       </Panel>
+      </TourAnchor>
     </Screen>
   );
 }

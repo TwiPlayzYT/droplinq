@@ -3,6 +3,7 @@ import { type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { MechanicalToggle } from '@/components/dropdex-ui';
+import { tourDomProps } from '@/components/tour-anchor';
 import { palette } from '@/constants/dropdex';
 
 type RowBase = {
@@ -32,12 +33,14 @@ export function SettingsNavRow({
   last,
   onPress,
   value,
-}: RowBase & { onPress: () => void; value?: string }) {
+  tourId,
+}: RowBase & { onPress: () => void; value?: string; tourId?: string }) {
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [styles.row, last && styles.rowLast, pressed && styles.pressed]}>
+      style={({ pressed }) => [styles.row, last && styles.rowLast, pressed && styles.pressed]}
+      {...(tourId ? tourDomProps(tourId) : null)}>
       <View style={styles.copy}>
         <Text style={styles.title}>{title}</Text>
         {caption ? <Text style={styles.caption}>{caption}</Text> : null}
@@ -58,9 +61,12 @@ export function SettingsToggleRow({
   last,
   value,
   onChange,
-}: RowBase & { value: boolean; onChange: (value: boolean) => void }) {
+  tourId,
+}: RowBase & { value: boolean; onChange: (value: boolean) => void; tourId?: string }) {
   return (
-    <View style={[styles.toggleWrap, last && styles.rowLast]}>
+    <View
+      style={[styles.toggleWrap, last && styles.rowLast]}
+      {...(tourId ? tourDomProps(tourId) : null)}>
       <MechanicalToggle caption={caption} label={title} onChange={onChange} value={value} />
     </View>
   );

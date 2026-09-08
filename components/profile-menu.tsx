@@ -12,6 +12,7 @@ import {
   type LayoutRectangle,
 } from 'react-native';
 
+import { TourAnchor } from '@/components/tour-anchor';
 import { palette } from '@/constants/dropdex';
 import { useAppearance, useAppearanceOptions } from '@/store/appearance-context';
 import { useAuth } from '@/store/auth-context';
@@ -137,7 +138,8 @@ export function ProfileMenu({ compact = false }: Props) {
 
   return (
     <>
-      <View nativeID="tour-profile" ref={triggerRef} collapsable={false}>
+      <TourAnchor id="profile">
+        <View ref={triggerRef} collapsable={false}>
         <Pressable
           accessibilityLabel="Account menu"
           onPress={openMenu}
@@ -149,7 +151,8 @@ export function ProfileMenu({ compact = false }: Props) {
             </Text>
           ) : null}
         </Pressable>
-      </View>
+        </View>
+      </TourAnchor>
 
       <Modal animationType="fade" transparent visible={open} onRequestClose={closeMenu}>
         <View style={styles.modalRoot}>

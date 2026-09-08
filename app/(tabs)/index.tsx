@@ -15,6 +15,7 @@ import Reanimated, {
 } from 'react-native-reanimated';
 
 import { BrandHeader, MetalButton, Panel, Screen } from '@/components/dropdex-ui';
+import { TourAnchor } from '@/components/tour-anchor';
 import { palette } from '@/constants/dropdex';
 import { getRegion } from '@/data/regions';
 import { useWebLayout } from '@/hooks/use-web-layout';
@@ -310,6 +311,7 @@ export default function HomeScreen() {
               </View>
 
               <View style={styles.mainCardStage}>
+                <TourAnchor id="home-power">
                 <Pressable
                   unstable_pressDelay={0}
                   accessibilityHint="Turns DropLinq alerts on or off"
@@ -333,6 +335,7 @@ export default function HomeScreen() {
                     </View>
                   </View>
                 </Pressable>
+                </TourAnchor>
               </View>
 
               {monitoring && displayPercent < 100 ? (
@@ -371,6 +374,7 @@ export default function HomeScreen() {
               <View style={styles.sideCard}>
                 <View style={styles.sideCardHeader}>
                   <Text style={[styles.sideCardTitle, styles.sideCardTitleInline]}>Activity</Text>
+                  <TourAnchor id="home-test">
                   <Pressable
                     accessibilityLabel="Send test alert"
                     accessibilityRole="button"
@@ -380,6 +384,7 @@ export default function HomeScreen() {
                     <Ionicons color={palette.cardInk} name="flash" size={14} />
                     <Text style={styles.testChipText}>TEST</Text>
                   </Pressable>
+                  </TourAnchor>
                 </View>
                 {stockEvents.length === 0 ? (
                   <Text style={styles.emptyRecentsText}>No events yet</Text>
@@ -446,6 +451,7 @@ export default function HomeScreen() {
               </Text>
             </View>
 
+            <TourAnchor id="home-power">
             <Pressable
               unstable_pressDelay={0}
               accessibilityHint="Turns DropLinq alerts on or off"
@@ -469,6 +475,7 @@ export default function HomeScreen() {
                 </View>
               </View>
             </Pressable>
+            </TourAnchor>
 
             <View
               accessibilityLabel={`Loading progress ${displayPercent} percent`}
@@ -498,7 +505,9 @@ export default function HomeScreen() {
 
           <Panel tone="dark" style={styles.bottomPanel}>
             <Text style={styles.testLabel}>ALARM CHECK</Text>
-            <MetalButton icon="flash" label="Send test alert" onPress={triggerTestAlert} />
+            <TourAnchor id="home-test">
+              <MetalButton icon="flash" label="Send test alert" onPress={triggerTestAlert} />
+            </TourAnchor>
             <View style={styles.divider} />
             <Text style={styles.recentsLabel}>ACTIVITY</Text>
             {stockEvents.length === 0 ? (

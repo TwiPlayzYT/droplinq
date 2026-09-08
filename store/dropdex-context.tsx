@@ -139,7 +139,7 @@ type DropDexContextValue = PersistedState & {
 
 const initialState: PersistedState = {
   installationId: `dropdex-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-  monitoring: true,
+  monitoring: false,
   region: defaultRegionId,
   filters: defaultFilters,
   alerts: defaultAlertPreferences,
@@ -249,7 +249,9 @@ export function DropDexProvider({ children }: PropsWithChildren) {
             ...initialState,
             ...parsed,
             installationId,
-            monitoring: true,
+            monitoring: current
+              ? parsed.monitoring === true
+              : false,
             region: regions.some((item) => item.id === parsed.region)
               ? (parsed.region as RegionId)
               : defaultRegionId,

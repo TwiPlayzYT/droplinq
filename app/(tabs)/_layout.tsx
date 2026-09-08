@@ -4,6 +4,7 @@ import React from 'react';
 import { Platform, View } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
+import { TourAnchor } from '@/components/tour-anchor';
 import { WebTopNav } from '@/components/web-top-nav';
 import { palette } from '@/constants/dropdex';
 import { useMobileWebChrome } from '@/hooks/use-mobile-web-chrome';
@@ -84,9 +85,9 @@ export default function TabLayout() {
           options={{
             title: 'Home',
             tabBarButton: (props) => (
-              <View collapsable={false} nativeID="tour-home" style={{ flex: 1 }}>
+              <TourAnchor id="home" style={{ flex: 1 }}>
                 <HapticTab {...props} />
-              </View>
+              </TourAnchor>
             ),
             tabBarIcon: ({ color, focused }) => (
               <Ionicons color={color} name={focused ? 'power' : 'power-outline'} size={21} />
@@ -98,9 +99,9 @@ export default function TabLayout() {
           options={{
             title: 'Stock',
             tabBarButton: (props) => (
-              <View collapsable={false} nativeID="tour-stock" style={{ flex: 1 }}>
+              <TourAnchor id="stock" style={{ flex: 1 }}>
                 <HapticTab {...props} />
-              </View>
+              </TourAnchor>
             ),
             tabBarIcon: ({ color, focused }) => (
               <Ionicons color={color} name={focused ? 'cube' : 'cube-outline'} size={21} />
@@ -112,9 +113,9 @@ export default function TabLayout() {
           options={{
             title: 'Filter',
             tabBarButton: (props) => (
-              <View collapsable={false} nativeID="tour-filter" style={{ flex: 1 }}>
+              <TourAnchor id="filter" style={{ flex: 1 }}>
                 <HapticTab {...props} />
-              </View>
+              </TourAnchor>
             ),
             tabBarIcon: ({ color, focused }) => (
               <Ionicons
@@ -130,9 +131,9 @@ export default function TabLayout() {
           options={{
             title: 'Region',
             tabBarButton: (props) => (
-              <View collapsable={false} nativeID="tour-region" style={{ flex: 1 }}>
+              <TourAnchor id="region" style={{ flex: 1 }}>
                 <HapticTab {...props} />
-              </View>
+              </TourAnchor>
             ),
             tabBarIcon: ({ color, focused }) => (
               <Ionicons color={color} name={focused ? 'globe' : 'globe-outline'} size={21} />
@@ -144,9 +145,9 @@ export default function TabLayout() {
           options={{
             title: 'Settings',
             tabBarButton: (props) => (
-              <View collapsable={false} nativeID="tour-settings-tab" style={{ flex: 1 }}>
+              <TourAnchor id="settings-tab" style={{ flex: 1 }}>
                 <HapticTab {...props} />
-              </View>
+              </TourAnchor>
             ),
             tabBarIcon: ({ color, focused }) => (
               <Ionicons

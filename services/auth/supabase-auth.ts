@@ -93,14 +93,9 @@ export const supabaseAuth: AuthAdapter = {
     const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
     if (!error && data) return mapRow(data as Record<string, unknown>);
 
-    const email = userData.user?.email ?? '';
-    const bootstrap = {
-      id: userId,
-      username: email.split('@')[0] || null,
-      updated_at: new Date().toISOString(),
-    };
-    const { error: upsertError } = await supabase.from('profiles').upsert(bootstrap, { onConflict: 'id' });
-    if (upsertError) return null;
+    const { data: ensured } = await supabase.rpc('ensure_own_profile');
+    if (ensured) return mapRow(ensured as Record<string, unknown>);
+
     const { data: created } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
     return created ? mapRow(created as Record<string, unknown>) : null;
   },
@@ -109,7 +104,6 @@ export const supabaseAuth: AuthAdapter = {
     const supabase = getSupabase();
     if (!supabase) return { ok: false, message: 'Supabase is not configured.' };
     const row: Record<string, unknown> = {
-      id: userId,
       updated_at: new Date().toISOString(),
     };
     if (patch.username !== undefined) row.username = patch.username;
@@ -121,8 +115,39 @@ export const supabaseAuth: AuthAdapter = {
     if (patch.legalAcceptedAt !== undefined) row.legal_accepted_at = patch.legalAcceptedAt;
     if (patch.legalVersion !== undefined) row.legal_version = patch.legalVersion;
     if (patch.appearanceId !== undefined) row.appearance_id = patch.appearanceId;
-    const { error } = await supabase.from('profiles').upsert(row, { onConflict: 'id' });
-    if (error) return { ok: false, message: error.message };
+
+    await supabase.rpc('ensure_own_profile');
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(row)
+      .eq('id', userId)
+      .select('id')
+      .maybeSingle();
+
+    if (error) {
+      const { appearance_id: _appearance, ...withoutAppearance } = row;
+      const retry = await supabase.from('profiles').update(withoutAppearance).eq('id', userId).select('id').maybeSingle();
+      if (retry.error) return { ok: false, message: retry.error.message };
+      if (retry.data) return { ok: true };
+    } else if (data) {
+      return { ok: true };
+    }
+
+    const insertRow: Record<string, unknown> = { id: userId, ...row };
+    const inserted = await supabase.from('profiles').insert(insertRow).select('id').maybeSingle();
+    if (inserted.error) {
+      const { appearance_id: _appearance, ...withoutAppearance } = insertRow;
+      const retryInsert = await supabase.from('profiles').insert(withoutAppearance).select('id').maybeSingle();
+      if (retryInsert.error) return { ok: false, message: retryInsert.error.message };
+      if (!retryInsert.data) {
+        return { ok: false, message: 'Could not save your profile. Try Accept and continue again.' };
+      }
+      return { ok: true };
+    }
+    if (!inserted.data) {
+      return { ok: false, message: 'Could not save your profile. Try Accept and continue again.' };
+    }
     return { ok: true };
   },
 };

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ProfileMenu } from '@/components/profile-menu';
+import { tourDomProps } from '@/components/tour-anchor';
 import { WebSearchPalette } from '@/components/web-search-palette';
 import { palette } from '@/constants/dropdex';
 import { useWebLayout } from '@/hooks/use-web-layout';
@@ -113,9 +114,9 @@ export function WebTopNav() {
                 <Pressable
                   key={link.key}
                   accessibilityRole="link"
-                  nativeID={`tour-${link.key}`}
                   onPress={() => router.push(link.href)}
-                  style={[styles.link, active && styles.linkActive]}>
+                  style={[styles.link, active && styles.linkActive]}
+                  {...tourDomProps(link.key)}>
                   <Text style={[styles.linkText, active && styles.linkTextActive]}>{link.label}</Text>
                 </Pressable>
               );

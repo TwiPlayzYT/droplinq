@@ -234,7 +234,8 @@ create policy "verified_events_read" on public.stock_events
   using (verification_status in ('verified', 'detected'));
 
 create policy "own_profile_select" on public.profiles for select using (auth.uid() = id);
-create policy "own_profile_update" on public.profiles for update using (auth.uid() = id);
+create policy "own_profile_insert" on public.profiles for insert with check (auth.uid() = id);
+create policy "own_profile_update" on public.profiles for update using (auth.uid() = id) with check (auth.uid() = id);
 
 create policy "own_watchlists" on public.watchlists
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { BrandHeader, Screen } from '@/components/dropdex-ui';
+import { TourAnchor } from '@/components/tour-anchor';
 import {
   SettingsGroup,
   SettingsLinkRow,
@@ -69,7 +70,8 @@ export default function SettingsScreen() {
     <Screen>
       <BrandHeader eyebrow="Settings" />
 
-      <View nativeID="tour-settings" style={styles.profileCard}>
+      <TourAnchor id="settings">
+      <View style={styles.profileCard}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initialsFrom(displayName)}</Text>
         </View>
@@ -80,18 +82,21 @@ export default function SettingsScreen() {
           <Text style={styles.plan}>{plan}</Text>
         </View>
       </View>
+      </TourAnchor>
 
       <SettingsGroup title="Alerts">
         <SettingsNavRow
           caption={pushCaption}
           onPress={() => router.push('/setup/notifications')}
           title="Home Screen & lock-screen"
+          tourId="settings-homescreen"
           value={webPushState === 'subscribed' ? 'On' : 'Set up'}
         />
         <SettingsToggleRow
           caption="Tone while DropLinq is open. Does not replace lock-screen push."
           onChange={(value) => updateAlert('sound', value)}
           title="Sound"
+          tourId="settings-sound"
           value={alerts.sound}
         />
         <SettingsToggleRow
@@ -137,7 +142,7 @@ export default function SettingsScreen() {
 
       <SettingsGroup title="General">
         <SettingsNavRow
-          caption={tourDone ? 'Replay the 10-step walkthrough.' : 'Learn the main tabs.'}
+          caption={tourDone ? 'Replay the walkthrough of Home, Stock, Filter, and Settings.' : 'Learn the main features.'}
           last
           onPress={() => {
             requestTutorialRestart();

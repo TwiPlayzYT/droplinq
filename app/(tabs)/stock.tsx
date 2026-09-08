@@ -24,6 +24,7 @@ import {
   Panel,
   Screen,
 } from '@/components/dropdex-ui';
+import { TourAnchor } from '@/components/tour-anchor';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -633,6 +634,7 @@ export default function StockScreen() {
     <Screen wide onRefresh={onRefresh} refreshing={refreshing}>
       <BrandHeader eyebrow={regionConfig.label} />
 
+      <TourAnchor id="stock-catalog">
       <Pressable
         unstable_pressDelay={0}
         accessibilityHint="Opens Filter tab"
@@ -657,6 +659,7 @@ export default function StockScreen() {
           <Ionicons color={palette.cardMuted} name="options-outline" size={20} />
         </View>
       </Pressable>
+      </TourAnchor>
 
       {catalogFailed && coverageProducts.length === 0 ? (
         <Pressable
