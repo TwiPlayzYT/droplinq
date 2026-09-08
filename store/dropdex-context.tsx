@@ -23,8 +23,7 @@ import { isGuestUserId } from '@/services/auth/guest-auth';
 import { authAdapter } from '@/services/auth';
 import {
   emitTourAction,
-  isTutorialPowerHold,
-  setTutorialPowerHold,
+  isTutorialSessionActive,
 } from '@/services/tour-session';
 import { useAuth } from '@/store/auth-context';
 import { seededEtbs } from '@/data/historical-etbs';
@@ -254,9 +253,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
             ...initialState,
             ...parsed,
             installationId,
-            monitoring: current
-              ? parsed.monitoring === true
-              : false,
+            monitoring: parsed.monitoring === true,
             region: regions.some((item) => item.id === parsed.region)
               ? (parsed.region as RegionId)
               : defaultRegionId,
@@ -302,7 +299,6 @@ export function DropDexProvider({ children }: PropsWithChildren) {
 
         if (!cancelled) {
           loadedUserKeyRef.current = userKey;
-          if (isTutorialPowerHold()) next.monitoring = false;
           setState(next);
         }
         await AsyncStorage.removeItem('@dropdex/live-snapshot/v1');
@@ -816,15 +812,10 @@ export function DropDexProvider({ children }: PropsWithChildren) {
   }, [activeAlert]);
 
   const setMonitoring = useCallback((monitoring: boolean) => {
-    if (isTutorialPowerHold()) {
-      if (!monitoring) {
-        setState((previous) => ({ ...previous, monitoring: false }));
-        return;
-      }
-      setTutorialPowerHold(false);
-      emitTourAction('home-power');
+    if (monitoring) {
+      void unlockAlertAudio();
+      if (isTutorialSessionActive()) emitTourAction('home-power');
     }
-    if (monitoring) void unlockAlertAudio();
     setState((previous) => ({ ...previous, monitoring }));
   }, []);
 

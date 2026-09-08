@@ -3,7 +3,6 @@ import type { TutorialStepId } from '@/constants/tutorial';
 const actionListeners = new Set<(id: string) => void>();
 const stepListeners = new Set<(id: TutorialStepId | null) => void>();
 
-let powerHoldOff = false;
 let tutorialActive = false;
 
 export function emitTourAction(id: string) {
@@ -28,17 +27,8 @@ export function subscribeTutorialStep(listener: (id: TutorialStepId | null) => v
   };
 }
 
-export function setTutorialPowerHold(hold: boolean) {
-  powerHoldOff = hold;
-}
-
-export function isTutorialPowerHold() {
-  return powerHoldOff;
-}
-
 export function setTutorialSessionActive(value: boolean) {
   tutorialActive = value;
-  if (!value) powerHoldOff = false;
 }
 
 export function isTutorialSessionActive() {

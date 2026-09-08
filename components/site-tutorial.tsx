@@ -28,7 +28,6 @@ import {
 import { useWebLayout } from '@/hooks/use-web-layout';
 import {
   notifyTutorialStep,
-  setTutorialPowerHold,
   setTutorialSessionActive,
   subscribeTourAction,
 } from '@/services/tour-session';
@@ -175,7 +174,7 @@ function measureNative(step: TutorialStep, onHole: (hole: Hole | null) => void) 
 
 export function SiteTutorial() {
   const { profile, profileReady, session } = useAuth();
-  const { hydrated, setMonitoring } = useDropDex();
+  const { hydrated, monitoring } = useDropDex();
   const { isDesktopWeb } = useWebLayout();
   const { height, width } = useWindowDimensions();
   const router = useRouter();
@@ -194,8 +193,6 @@ export function SiteTutorial() {
 
   const beginTour = () => {
     setTutorialSessionActive(true);
-    setTutorialPowerHold(true);
-    setMonitoring(false);
     completingRef.current = false;
     setStepIndex(0);
     setHole(null);
@@ -204,7 +201,6 @@ export function SiteTutorial() {
 
   const persist = (value: 'done' | 'skipped') => {
     setTutorialSessionActive(false);
-    setTutorialPowerHold(false);
     notifyTutorialStep(null);
     void AsyncStorage.setItem(TUTORIAL_STORAGE_KEY, value);
     setStatus('done');
@@ -212,8 +208,6 @@ export function SiteTutorial() {
 
   const go = (next: number) => {
     if (next < 0) {
-      setTutorialPowerHold(true);
-      setMonitoring(false);
       setStepIndex(0);
       return;
     }
@@ -274,11 +268,7 @@ export function SiteTutorial() {
     }
     setTutorialSessionActive(true);
     notifyTutorialStep(step.id);
-    if (step.id === 'home-power') {
-      setTutorialPowerHold(true);
-      setMonitoring(false);
-    }
-  }, [setMonitoring, status, step]);
+  }, [status, step]);
 
   useEffect(() => {
     if (status !== 'active' || !step) return;
@@ -483,7 +473,11 @@ export function SiteTutorial() {
         )}
         <Text style={styles.tipTitle}>{step.title}</Text>
         <Text style={styles.tipBody}>{step.body}</Text>
-        <Text style={styles.hint}>{step.hint}</Text>
+        <Text style={styles.hint}>
+          {step.id === 'home-power' && monitoring
+            ? 'Alerts are already ON — tap Next to continue'
+            : step.hint}
+        </Text>
         <View style={styles.tipFooter}>
           <Pressable onPress={beginTour}>
             <Text style={styles.restart}>Restart</Text>
@@ -498,8 +492,10 @@ export function SiteTutorial() {
               style={[styles.smallBtn, stepIndex === 0 && styles.smallBtnDisabled]}>
               <Text style={styles.smallBtnText}>Back</Text>
             </Pressable>
-            <Pressable onPress={() => persist('skipped')} style={styles.smallBtn}>
-              <Text style={styles.smallBtnText}>Skip</Text>
+            <Pressable onPress={() => go(stepIndex + 1)} style={styles.doneBtn}>
+              <Text style={styles.doneText}>
+                {stepIndex === TUTORIAL_STEPS.length - 1 ? 'Done' : 'Next'}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -691,6 +687,17 @@ const styles = StyleSheet.create({
     color: '#F7F5F2',
     fontSize: 13,
     fontWeight: '700',
+  },
+  doneBtn: {
+    backgroundColor: '#F4F4F5',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  doneText: {
+    color: '#0C0C0E',
+    fontSize: 13,
+    fontWeight: '800',
   },
   pressed: { opacity: 0.86 },
 });

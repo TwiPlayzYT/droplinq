@@ -43,7 +43,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     id: 'home-power',
     title: 'This starts DropLinq',
     body: 'The big button arms alerts. Off means DropLinq is idle. Tap it to ON and we watch your Pokémon Center region for matching products. Leave it off until you are ready.',
-    hint: 'Tap the button to turn alerts ON',
+    hint: 'Tap the button to turn alerts ON, or tap Next',
     route: '/(tabs)',
     anchors: ['home-power'],
     shape: 'circle',
