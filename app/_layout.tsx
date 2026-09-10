@@ -24,7 +24,7 @@ import { AuthProvider, hasAcceptedCurrentLegal, useAuth } from '@/store/auth-con
 import { DropDexProvider } from '@/store/dropdex-context';
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  anchor: '(site)',
 };
 
 function AuthGate({ children }: { children: ReactNode }) {
@@ -34,18 +34,37 @@ function AuthGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!ready || !profileReady) return;
-    const root = segments[0];
-    const inAuth = root === '(auth)' || root === 'auth';
+    const root = String(segments[0] ?? '');
+    const inAuth =
+      root === '(auth)' ||
+      root === 'auth' ||
+      root === 'start' ||
+      root === 'sign-in' ||
+      root === 'sign-up';
     const inLegal = root === '(legal)' || root === 'legal';
     const inPublicLegal = root === 'legal';
     const inOnboarding = root === '(onboarding)';
+    const inSite = root === '(site)' || root === 'pro' || root === 'help' || root === '';
     const legalOk = hasAcceptedCurrentLegal(profile);
 
-    if (!session && !inAuth && !inPublicLegal) {
-      router.replace('/(auth)');
+    if (!session) {
+      if (inAuth || inPublicLegal || inSite) return;
+      if (
+        root === '(tabs)' ||
+        root === 'setup' ||
+        root === 'alerts' ||
+        root === 'product' ||
+        root === 'filter' ||
+        root === 'settings' ||
+        root === 'stock' ||
+        root === 'region'
+      ) {
+        router.replace('/start' as never);
+        return;
+      }
+      router.replace('/' as never);
       return;
     }
-    if (!session) return;
 
     if (!legalOk && !inLegal) {
       router.replace('/(legal)/accept');
@@ -105,6 +124,7 @@ function AppExperience() {
             contentStyle: { backgroundColor: palette.black },
             headerShown: false,
           }}>
+          <Stack.Screen name="(site)" />
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(legal)" />
           <Stack.Screen name="legal/terms" />
@@ -115,6 +135,7 @@ function AppExperience() {
           <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
           <Stack.Screen name="auth/callback" options={{ animation: 'none' }} />
           <Stack.Screen name="setup/notifications" options={{ animation: 'none' }} />
+          <Stack.Screen name="alerts/history" options={{ animation: 'none' }} />
           <Stack.Screen
             name="product/[id]"
             options={{

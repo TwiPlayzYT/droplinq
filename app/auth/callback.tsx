@@ -20,7 +20,7 @@ export default function AuthCallbackScreen() {
     const finish = async (url: string | null) => {
       const supabase = getSupabase();
       if (!supabase) {
-        router.replace('/(auth)');
+        router.replace('/start' as never);
         return;
       }
 
@@ -31,20 +31,20 @@ export default function AuthCallbackScreen() {
       }
 
       if (!url || !active) {
-        router.replace('/(auth)');
+        router.replace('/start' as never);
         return;
       }
 
       const { params, errorCode } = QueryParams.getQueryParams(url);
       if (errorCode) {
-        router.replace('/(auth)');
+        router.replace('/start' as never);
         return;
       }
 
       if (params.code) {
         const { error } = await supabase.auth.exchangeCodeForSession(params.code);
         if (error) {
-          router.replace('/(auth)');
+          router.replace('/start' as never);
           return;
         }
       } else if (params.access_token && params.refresh_token) {
@@ -53,7 +53,7 @@ export default function AuthCallbackScreen() {
           refresh_token: params.refresh_token,
         });
         if (error) {
-          router.replace('/(auth)');
+          router.replace('/start' as never);
           return;
         }
       }

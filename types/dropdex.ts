@@ -34,6 +34,14 @@ export type AlertPreferences = {
   speech: boolean;
   fullScreen: boolean;
   dropMode: boolean;
+  /** Suppress sound/vibration/speech/overlay overnight (push can still deliver). */
+  quietHoursEnabled: boolean;
+  /** Local hour 0–23 inclusive start. */
+  quietHoursStart: number;
+  /** Local hour 0–23 exclusive end (wraps past midnight). */
+  quietHoursEnd: number;
+  /** Product ids muted from all alert delivery. */
+  mutedProductIds: string[];
 };
 
 export type DropAlert = {

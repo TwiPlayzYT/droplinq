@@ -169,7 +169,7 @@ export default function SignInScreen() {
         accessibilityLabel="Go to create account"
         accessibilityRole="button"
         unstable_pressDelay={0}
-        onPress={() => router.replace('/(auth)')}
+        onPress={() => router.replace('/start' as never)}
         style={({ pressed }) => [authStyles.footerBox, pressed && authStyles.pressed]}>
         <Ionicons color={palette.whiteDim} name="information-circle-outline" size={20} />
         <View style={authStyles.footerCopy}>

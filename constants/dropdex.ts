@@ -47,6 +47,10 @@ export const defaultAlertPreferences: AlertPreferences = {
   speech: false,
   fullScreen: true,
   dropMode: false,
+  quietHoursEnabled: false,
+  quietHoursStart: 23,
+  quietHoursEnd: 7,
+  mutedProductIds: [],
 };
 
 /** Used only by the Home/Alerts Test button — never treated as a real drop. */

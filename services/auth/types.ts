@@ -10,6 +10,10 @@ export type AuthProfile = {
   alertsActive: boolean;
   selectedRegionId: string;
   subscriptionTier: 'FREE' | 'PRO' | 'PRO_PLUS';
+  /** UTC YYYY-MM-DD of first real drop alert; null = still in first-drop trial. */
+  firstDropDay?: string | null;
+  subscriptionStatus?: 'trialing' | 'active' | 'past_due' | 'canceled' | 'none' | null;
+  billingInterval?: 'monthly' | 'annual' | null;
   legalAcceptedAt: string | null;
   legalVersion: string | null;
   appearanceId?: string | null;

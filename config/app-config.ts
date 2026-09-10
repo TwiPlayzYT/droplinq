@@ -44,6 +44,9 @@ export const subscriptionLimits: Record<
     dropMode: boolean;
     extraRegions: boolean;
     extraRetailers: boolean;
+    alertHistoryLimit: number;
+    quietHours: boolean;
+    productMute: boolean;
   }
 > = {
   FREE: {
@@ -51,18 +54,27 @@ export const subscriptionLimits: Record<
     dropMode: false,
     extraRegions: false,
     extraRetailers: false,
+    alertHistoryLimit: 10,
+    quietHours: false,
+    productMute: false,
   },
   PRO: {
     watchlistLimit: null,
     dropMode: true,
-    extraRegions: false,
+    extraRegions: true,
     extraRetailers: true,
+    alertHistoryLimit: 100,
+    quietHours: true,
+    productMute: true,
   },
   PRO_PLUS: {
     watchlistLimit: null,
     dropMode: true,
     extraRegions: true,
     extraRetailers: true,
+    alertHistoryLimit: 100,
+    quietHours: true,
+    productMute: true,
   },
 };
 

@@ -19,6 +19,7 @@ import { CatalogStockEvent } from '@/types/catalog';
 import { loadCoveragePreferences, syncCoveragePreferences } from '@/services/filters/coverage-prefs';
 import { loadCloudAlertPreferences, syncCloudAlertPreferences } from '@/services/user-prefs';
 import { canAddToWatchlist } from '@/services/subscriptions/tiers';
+import { resolveEntitlements } from '@/services/subscriptions/entitlements';
 import { isGuestUserId } from '@/services/auth/guest-auth';
 import { authAdapter } from '@/services/auth';
 import {
@@ -26,6 +27,7 @@ import {
   isTutorialSessionActive,
 } from '@/services/tour-session';
 import { useAuth } from '@/store/auth-context';
+import { applyQuietHoursDelivery, isProductMuted } from '@/lib/alert-quiet';
 import { seededEtbs } from '@/data/historical-etbs';
 import {
   defaultRegionId,
@@ -139,6 +141,8 @@ type DropDexContextValue = PersistedState & {
   ) => { ok: true } | { ok: false; code: 'limit' | 'duplicate'; message: string };
   removeFromWatchlist: (productId: string) => void;
   isWatched: (productId: string) => boolean;
+  toggleProductMute: (productId: string) => void;
+  isProductMuted: (productId: string) => boolean;
 };
 
 const initialState: PersistedState = {
@@ -168,7 +172,7 @@ const sanitizeHistory = (history: DropAlert[] = []) =>
   history.filter((alert) => !isSyntheticProductId(alert.product.id));
 
 export function DropDexProvider({ children }: PropsWithChildren) {
-  const { session, profile, profileReady } = useAuth();
+  const { session, profile, profileReady, markFirstDropDay } = useAuth();
   const [state, setState] = useState<PersistedState>(initialState);
   const [hydrated, setHydrated] = useState(false);
   const [syncState, setSyncState] = useState<SyncState>('local');
@@ -258,7 +262,11 @@ export function DropDexProvider({ children }: PropsWithChildren) {
               ? (parsed.region as RegionId)
               : defaultRegionId,
             filters: { ...defaultFilters, ...migrateLegacyFilters(parsed.filters) },
-            alerts: { ...defaultAlertPreferences, ...parsed.alerts },
+            alerts: {
+              ...defaultAlertPreferences,
+              ...parsed.alerts,
+              mutedProductIds: parsed.alerts?.mutedProductIds ?? [],
+            },
             alertHistory: sanitizeHistory(parsed.alertHistory),
             recentVisits: Array.isArray(parsed.recentVisits) ? parsed.recentVisits : [],
             watchlist: Array.isArray(parsed.watchlist) ? parsed.watchlist : [],
@@ -381,19 +389,27 @@ export function DropDexProvider({ children }: PropsWithChildren) {
     if (!isSynthetic) {
       setState((previous) => ({
         ...previous,
-        alertHistory: sanitizeHistory([alert, ...previous.alertHistory]).slice(0, 30),
+        alertHistory: sanitizeHistory([alert, ...previous.alertHistory]).slice(0, 100),
       }));
+      void markFirstDropDay(alert.createdAt);
     }
 
-    const dropMode = Boolean(current.alerts.dropMode);
-    if (current.alerts.fullScreen || forceOverlay || dropMode) setActiveAlert(alert);
+    if (!isSynthetic && isProductMuted(current.alerts, product.id)) {
+      return;
+    }
 
-    let deliverySettings = current.alerts;
+    let deliverySettings = applyQuietHoursDelivery(current.alerts);
+    const dropMode = Boolean(deliverySettings.dropMode);
+    const showOverlay =
+      forceOverlay || Boolean(deliverySettings.fullScreen || dropMode);
+
+    if (showOverlay) setActiveAlert(alert);
+
     if (alreadyNotified) {
-      deliverySettings = { ...current.alerts, push: false, sound: false, vibration: false };
+      deliverySettings = { ...deliverySettings, push: false, sound: false, vibration: false };
     } else if (dropMode) {
       deliverySettings = {
-        ...current.alerts,
+        ...deliverySettings,
         sound: true,
         vibration: true,
         speech: true,
@@ -402,7 +418,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       };
     }
     deliverProductAlert(product, deliverySettings).catch(() => undefined);
-  }, []);
+  }, [markFirstDropDay]);
 
   useEffect(
     () => subscribeToIncomingProductAlerts((product) => processProduct(product, true, true)),
@@ -1174,11 +1190,12 @@ export function DropDexProvider({ children }: PropsWithChildren) {
           message: 'Already on your watchlist.',
         };
       }
-      if (!canAddToWatchlist('FREE', current.length)) {
+      const entitlements = resolveEntitlements(profile);
+      if (!canAddToWatchlist(entitlements.effectiveTier, current.length)) {
         return {
           ok: false as const,
           code: 'limit' as const,
-          message: 'Free plans can watch 3 products. Remove one or upgrade.',
+          message: 'Free plans can watch 3 products. Remove one or go Pro.',
         };
       }
 
@@ -1197,7 +1214,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       showFeedback('success', 'Added to Watchlist', product.title);
       return { ok: true as const };
     },
-    [showFeedback],
+    [profile, showFeedback],
   );
 
   const removeFromWatchlist = useCallback(
@@ -1224,6 +1241,24 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       }
     },
     [showFeedback],
+  );
+
+  const toggleProductMute = useCallback((productId: string) => {
+    setState((previous) => {
+      const muted = previous.alerts.mutedProductIds.includes(productId);
+      const mutedProductIds = muted
+        ? previous.alerts.mutedProductIds.filter((id) => id !== productId)
+        : [...previous.alerts.mutedProductIds, productId];
+      return {
+        ...previous,
+        alerts: { ...previous.alerts, mutedProductIds },
+      };
+    });
+  }, []);
+
+  const isProductMutedFn = useCallback(
+    (productId: string) => stateRef.current.alerts.mutedProductIds.includes(productId),
+    [],
   );
 
   const value = useMemo<DropDexContextValue>(
@@ -1262,6 +1297,8 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       addToWatchlist,
       removeFromWatchlist,
       isWatched,
+      toggleProductMute,
+      isProductMuted: isProductMutedFn,
     }),
     [
       acknowledgeAlert,
@@ -1274,6 +1311,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       sendTestLockScreenPush,
       feedback,
       hydrated,
+      isProductMutedFn,
       isWatched,
       liveProducts,
       stockEvents,
@@ -1292,6 +1330,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       setRegion,
       state,
       syncState,
+      toggleProductMute,
       triggerTestAlert,
       updateAlertPreferences,
       updateFilters,

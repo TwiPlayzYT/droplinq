@@ -36,6 +36,14 @@ export async function loadCloudAlertPreferences(userId: string): Promise<CloudAl
       speech: Boolean(row.speech_enabled),
       fullScreen: row.full_screen_enabled !== false,
       dropMode: Boolean(row.drop_mode_enabled),
+      quietHoursEnabled: Boolean(row.quiet_hours_enabled),
+      quietHoursStart:
+        typeof row.quiet_hours_start === 'number' ? row.quiet_hours_start : defaultAlertPreferences.quietHoursStart,
+      quietHoursEnd:
+        typeof row.quiet_hours_end === 'number' ? row.quiet_hours_end : defaultAlertPreferences.quietHoursEnd,
+      mutedProductIds: Array.isArray(row.muted_product_ids)
+        ? (row.muted_product_ids as string[])
+        : [],
     },
     includeNewReleases: row.new_release_alerts !== false,
     includeRestocks: row.restock_alerts !== false,
@@ -68,17 +76,35 @@ export async function syncCloudAlertPreferences(
     vibration_enabled: input.alerts.vibration,
     speech_enabled: input.alerts.speech,
     full_screen_enabled: input.alerts.fullScreen,
+    quiet_hours_enabled: input.alerts.quietHoursEnabled,
+    quiet_hours_start: input.alerts.quietHoursStart,
+    quiet_hours_end: input.alerts.quietHoursEnd,
+    muted_product_ids: input.alerts.mutedProductIds,
     updated_at: new Date().toISOString(),
   };
   if (input.appearanceId) row.appearance_id = input.appearanceId;
 
   const { error } = await supabase.from('alert_preferences').upsert(row, { onConflict: 'user_id' });
   if (error) {
-    const { vibration_enabled, speech_enabled, full_screen_enabled, appearance_id, ...legacy } = row;
+    const {
+      vibration_enabled,
+      speech_enabled,
+      full_screen_enabled,
+      appearance_id,
+      quiet_hours_enabled,
+      quiet_hours_start,
+      quiet_hours_end,
+      muted_product_ids,
+      ...legacy
+    } = row;
     await supabase.from('alert_preferences').upsert(legacy, { onConflict: 'user_id' });
   }
 }
 
 export function withDefaultAlerts(alerts?: Partial<AlertPreferences>): AlertPreferences {
-  return { ...defaultAlertPreferences, ...alerts };
+  return {
+    ...defaultAlertPreferences,
+    ...alerts,
+    mutedProductIds: alerts?.mutedProductIds ?? defaultAlertPreferences.mutedProductIds,
+  };
 }

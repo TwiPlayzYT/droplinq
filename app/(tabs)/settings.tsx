@@ -14,15 +14,25 @@ import {
   SettingsToggleRow,
 } from '@/components/settings-row';
 import { brand } from '@/config/app-config';
+import {
+  BILLING_ENFORCEMENT_ENABLED,
+  formatCad,
+  PRO_ANNUAL_MONTHLY_CAD,
+  PRO_MONTHLY_CAD,
+  trialCopy,
+} from '@/constants/billing';
 import { palette } from '@/constants/dropdex';
 import { legalHref } from '@/constants/legal';
 import { TUTORIAL_STORAGE_KEY } from '@/constants/tutorial';
 import { coverageModeCopy } from '@/data/pokemon-center-filters';
+import { formatHourLabel } from '@/lib/alert-quiet';
 import { displayNameFrom, handleFrom } from '@/lib/profile-identity';
+import { resolveEntitlements } from '@/services/subscriptions/entitlements';
 import { useAuth } from '@/store/auth-context';
 import { emitTourAction, isTutorialSessionActive } from '@/services/tour-session';
 import { useDropDex } from '@/store/dropdex-context';
 import { requestTutorialRestart } from '@/components/site-tutorial';
+import type { BillingInterval } from '@/constants/billing';
 
 function initialsFrom(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -31,15 +41,24 @@ function initialsFrom(name: string) {
 }
 
 export default function SettingsScreen() {
-  const { alerts, filters, updateAlertPreferences, webPushState } = useDropDex();
-  const { profile, signOut, updateIdentity } = useAuth();
+  const { alerts, filters, updateAlertPreferences, webPushState, alertHistory } = useDropDex();
+  const { profile, signOut, updateIdentity, startProCheckout } = useAuth();
   const router = useRouter();
-  const plan = profile?.subscriptionTier ?? 'FREE';
+  const entitlements = useMemo(() => resolveEntitlements(profile), [profile]);
+  const planLabel =
+    entitlements.status === 'active'
+      ? 'PRO'
+      : entitlements.trialActive
+        ? 'TRIAL'
+        : profile?.subscriptionTier ?? 'FREE';
   const coverage = coverageModeCopy[filters.coverageMode];
   const [tourDone, setTourDone] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editBusy, setEditBusy] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>('annual');
+  const [billingMessage, setBillingMessage] = useState<string | null>(null);
+  const [billingBusy, setBillingBusy] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(TUTORIAL_STORAGE_KEY)
@@ -59,6 +78,20 @@ export default function SettingsScreen() {
 
   const updateAlert = (key: keyof typeof alerts, value: boolean) => {
     updateAlertPreferences({ ...alerts, [key]: value });
+  };
+
+  const shiftQuietHour = (which: 'start' | 'end', delta: number) => {
+    const key = which === 'start' ? 'quietHoursStart' : 'quietHoursEnd';
+    const next = (((alerts[key] + delta) % 24) + 24) % 24;
+    updateAlertPreferences({ ...alerts, [key]: next });
+  };
+
+  const onUpgrade = async () => {
+    setBillingBusy(true);
+    setBillingMessage(null);
+    const result = await startProCheckout(billingInterval);
+    setBillingBusy(false);
+    setBillingMessage(result.ok ? 'Pro activated on this account.' : result.message);
   };
 
   return (
@@ -87,7 +120,7 @@ export default function SettingsScreen() {
             <Ionicons color={palette.red} name="pencil-outline" size={14} />
           </View>
           {profile?.email ? <Text style={styles.profileEmail}>{profile.email}</Text> : null}
-          <Text style={styles.plan}>{plan}</Text>
+          <Text style={styles.plan}>{planLabel}</Text>
         </View>
       </View>
       </Pressable>
@@ -122,6 +155,54 @@ export default function SettingsScreen() {
         visible={editOpen}
       />
 
+      <SettingsGroup title="DropLinq Pro">
+        <View style={styles.proCard}>
+          <Text style={styles.proTitle}>{trialCopy.headline}</Text>
+          <Text style={styles.proBody}>{trialCopy.body}</Text>
+          <Text style={styles.proPrice}>
+            {formatCad(PRO_MONTHLY_CAD)}/mo · or {formatCad(PRO_ANNUAL_MONTHLY_CAD)}/mo billed yearly
+          </Text>
+          {entitlements.firstDropDay ? (
+            <Text style={styles.proMeta}>First drop day recorded · {entitlements.firstDropDay}</Text>
+          ) : (
+            <Text style={styles.proMeta}>Trial active · waiting for your first real drop day</Text>
+          )}
+          <View style={styles.billingToggle}>
+            <Pressable
+              onPress={() => setBillingInterval('annual')}
+              style={[styles.billChip, billingInterval === 'annual' && styles.billChipOn]}>
+              <Text style={[styles.billChipText, billingInterval === 'annual' && styles.billChipTextOn]}>
+                Annual
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setBillingInterval('monthly')}
+              style={[styles.billChip, billingInterval === 'monthly' && styles.billChipOn]}>
+              <Text
+                style={[styles.billChipText, billingInterval === 'monthly' && styles.billChipTextOn]}>
+                Monthly
+              </Text>
+            </Pressable>
+          </View>
+          <Pressable disabled={billingBusy} onPress={() => void onUpgrade()} style={styles.proBtn}>
+            <Text style={styles.proBtnText}>
+              {billingBusy
+                ? 'Working…'
+                : entitlements.status === 'active'
+                  ? 'Manage Pro'
+                  : 'Upgrade to Pro'}
+            </Text>
+          </Pressable>
+          {!BILLING_ENFORCEMENT_ENABLED ? (
+            <Text style={styles.proHint}>
+              Payments are not live yet. This button is wired for launch day — you will not be charged
+              until we flip billing on.
+            </Text>
+          ) : null}
+          {billingMessage ? <Text style={styles.proHint}>{billingMessage}</Text> : null}
+        </View>
+      </SettingsGroup>
+
       <SettingsGroup title="Alerts">
         <SettingsNavRow
           caption={pushCaption}
@@ -129,6 +210,12 @@ export default function SettingsScreen() {
           title="Home Screen & lock-screen"
           tourId="settings-homescreen"
           value={webPushState === 'subscribed' ? 'On' : 'Set up'}
+        />
+        <SettingsNavRow
+          caption={`${alertHistory.length} recent · mute individual products`}
+          onPress={() => router.push('/alerts/history' as never)}
+          title="Alert history"
+          value={alertHistory.length ? 'View' : 'Empty'}
         />
         <SettingsToggleRow
           caption="Tone while DropLinq is open. Does not replace lock-screen push."
@@ -157,11 +244,30 @@ export default function SettingsScreen() {
         />
         <SettingsToggleRow
           caption="Forces overlay, sound, speech, and vibration together while the app is open."
-          last
           onChange={(value) => updateAlert('dropMode', value)}
           title="Drop Mode"
           value={alerts.dropMode ?? false}
         />
+        <SettingsToggleRow
+          caption={`Hush sound/overlay from ${formatHourLabel(alerts.quietHoursStart)} to ${formatHourLabel(alerts.quietHoursEnd)}. Lock-screen push can still arrive.`}
+          last={!alerts.quietHoursEnabled}
+          onChange={(value) => updateAlert('quietHoursEnabled', value)}
+          title="Quiet hours"
+          value={alerts.quietHoursEnabled}
+        />
+        {alerts.quietHoursEnabled ? (
+          <View style={styles.quietRow}>
+            <Pressable onPress={() => shiftQuietHour('start', -1)} style={styles.quietChip}>
+              <Text style={styles.quietChipText}>Start −</Text>
+            </Pressable>
+            <Text style={styles.quietLabel}>
+              {formatHourLabel(alerts.quietHoursStart)} → {formatHourLabel(alerts.quietHoursEnd)}
+            </Text>
+            <Pressable onPress={() => shiftQuietHour('end', 1)} style={styles.quietChip}>
+              <Text style={styles.quietChipText}>End +</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </SettingsGroup>
 
       <SettingsGroup title="Coverage">
@@ -179,6 +285,16 @@ export default function SettingsScreen() {
       </SettingsGroup>
 
       <SettingsGroup title="General">
+        <SettingsNavRow
+          caption="Marketing site, PRO, and Help — same idea as Collectr’s public pages."
+          onPress={() => router.push('/' as never)}
+          title="About DropLinq"
+        />
+        <SettingsNavRow
+          caption="FAQ · support email To be decided"
+          onPress={() => router.push('/help' as never)}
+          title="Help center"
+        />
         <SettingsNavRow
           caption={tourDone ? 'Replay the walkthrough of Home, Stock, Filter, and Settings.' : 'Learn the main features.'}
           last
@@ -206,7 +322,7 @@ export default function SettingsScreen() {
 
       <SettingsGroup title="Account">
         <SettingsNavRow
-          caption={`${brand.legalName} · ${brand.jurisdiction}. ${brand.contactEmail}`}
+          caption="Support inbox · To be decided (placeholder still routes to hello@droplinq.app)"
           onPress={() => void Linking.openURL(`mailto:${brand.contactEmail}`)}
           title="Email support"
         />
@@ -300,6 +416,106 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1.2,
     marginTop: 8,
+  },
+  proCard: {
+    backgroundColor: palette.card,
+    borderColor: palette.redDark,
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 10,
+    padding: 16,
+  },
+  proTitle: {
+    color: palette.cardInk,
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  proBody: {
+    color: palette.cardMuted,
+    fontSize: 13,
+    fontWeight: '500',
+    lineHeight: 19,
+  },
+  proPrice: {
+    color: palette.redLight,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  proMeta: {
+    color: palette.cardMuted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  billingToggle: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  billChip: {
+    backgroundColor: palette.control,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  billChipOn: {
+    backgroundColor: palette.red,
+  },
+  billChipText: {
+    color: palette.cardMuted,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  billChipTextOn: {
+    color: '#fff',
+  },
+  proBtn: {
+    backgroundColor: palette.red,
+    borderRadius: 999,
+    paddingVertical: 12,
+  },
+  proBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  proHint: {
+    color: palette.cardMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
+  },
+  quietRow: {
+    alignItems: 'center',
+    backgroundColor: palette.card,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    borderColor: palette.cardBorder,
+    borderTopWidth: 0,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+    marginTop: -2,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  quietChip: {
+    backgroundColor: palette.control,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  quietChipText: {
+    color: palette.cardInk,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  quietLabel: {
+    color: palette.cardMuted,
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   testHint: {
     alignItems: 'flex-start',

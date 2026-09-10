@@ -69,6 +69,14 @@ export default function SignUpScreen() {
 
   return (
     <AuthShell tagline="Monitor · Alert · Check">
+      <Pressable
+        accessibilityLabel="Back to DropLinq marketing site"
+        onPress={() => router.push('/' as never)}
+        style={{ marginBottom: 14 }}>
+        <Text style={{ color: palette.whiteShadow, fontSize: 13, fontWeight: '700' }}>
+          ← Back to DropLinq
+        </Text>
+      </Pressable>
       <Text style={authStyles.sectionLabel}>Recommended</Text>
 
       {!emailMode ? (
@@ -200,7 +208,7 @@ export default function SignUpScreen() {
         accessibilityLabel="Go to sign in"
         accessibilityRole="button"
         unstable_pressDelay={0}
-        onPress={() => router.push('/(auth)/sign-in')}
+        onPress={() => router.push('/sign-in' as never)}
         style={({ pressed }) => [authStyles.footerBox, pressed && authStyles.pressed]}>
         <Ionicons color={palette.whiteDim} name="information-circle-outline" size={20} />
         <View style={authStyles.footerCopy}>

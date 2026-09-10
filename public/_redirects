@@ -1,4 +1,15 @@
-# Render / Netlify: OAuth return must hit the app, not a missing static file.
+# SPA deep links → Expo web shell
 /auth/callback  /index.html  200
 /auth/callback/ /index.html  200
 /setup/*        /index.html  200
+/pro            /index.html  200
+/pro/           /index.html  200
+/help           /index.html  200
+/help/          /index.html  200
+/start          /index.html  200
+/start/         /index.html  200
+/sign-in        /index.html  200
+/sign-in/       /index.html  200
+/alerts/*       /index.html  200
+/product/*      /index.html  200
+/*              /index.html  200
