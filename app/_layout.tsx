@@ -44,7 +44,8 @@ function AuthGate({ children }: { children: ReactNode }) {
     const inLegal = root === '(legal)' || root === 'legal';
     const inPublicLegal = root === 'legal';
     const inOnboarding = root === '(onboarding)';
-    const inSite = root === '(site)' || root === 'pro' || root === 'help' || root === '';
+    const inSite =
+      root === '(site)' || root === 'pro' || root === 'help' || root === '' || root === 'app';
     const legalOk = hasAcceptedCurrentLegal(profile);
 
     if (!session) {
@@ -70,7 +71,7 @@ function AuthGate({ children }: { children: ReactNode }) {
       router.replace('/(legal)/accept');
       return;
     }
-    if (legalOk && !profile?.onboardingCompleted && !inOnboarding && !inLegal) {
+    if (legalOk && !profile?.onboardingCompleted && !inOnboarding && !inLegal && root !== '(site)' && root !== 'pro' && root !== 'help' && root !== '') {
       router.replace('/(onboarding)');
       return;
     }
@@ -79,7 +80,7 @@ function AuthGate({ children }: { children: ReactNode }) {
       profile?.onboardingCompleted &&
       (inAuth || inOnboarding || (root === '(legal)' && segments[1] === 'accept') || segments[1] === 'device')
     ) {
-      router.replace('/(tabs)');
+      router.replace('/app' as never);
     }
   }, [profile, profileReady, ready, router, segments, session]);
 
@@ -125,6 +126,7 @@ function AppExperience() {
             headerShown: false,
           }}>
           <Stack.Screen name="(site)" />
+          <Stack.Screen name="app/index" options={{ animation: 'none' }} />
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(legal)" />
           <Stack.Screen name="legal/terms" />

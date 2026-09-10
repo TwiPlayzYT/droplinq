@@ -15,7 +15,6 @@ import {
 } from '@/components/settings-row';
 import { brand } from '@/config/app-config';
 import {
-  BILLING_ENFORCEMENT_ENABLED,
   formatCad,
   PRO_ANNUAL_MONTHLY_CAD,
   PRO_MONTHLY_CAD,
@@ -189,16 +188,10 @@ export default function SettingsScreen() {
               {billingBusy
                 ? 'Working…'
                 : entitlements.status === 'active'
-                  ? 'Manage Pro'
+                  ? 'Pro active'
                   : 'Upgrade to Pro'}
             </Text>
           </Pressable>
-          {!BILLING_ENFORCEMENT_ENABLED ? (
-            <Text style={styles.proHint}>
-              Payments are not live yet. This button is wired for launch day — you will not be charged
-              until we flip billing on.
-            </Text>
-          ) : null}
           {billingMessage ? <Text style={styles.proHint}>{billingMessage}</Text> : null}
         </View>
       </SettingsGroup>

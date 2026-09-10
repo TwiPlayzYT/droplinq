@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import Head from 'expo-router/head';
-import { Redirect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { MarketingPhoneStack } from '@/components/marketing/phone-mocks';
@@ -47,7 +47,7 @@ const featureCards = [
 
 export default function MarketingHome() {
   const router = useRouter();
-  const { ready, profileReady, session, profile } = useAuth();
+  const { ready, profileReady, session } = useAuth();
   const { width } = useWindowDimensions();
   const desktop = width >= 960;
 
@@ -55,11 +55,7 @@ export default function MarketingHome() {
     return <AppBootScreen />;
   }
 
-  // Logged-in users opening `/` go straight into the app (Collectr-style Open App).
-  if (session && profile?.onboardingCompleted) {
-    return <Redirect href="/(tabs)" />;
-  }
-
+  // Always show the marketing site at `/` (Collectr-style). Open App enters the product.
   const goApp = () => router.push(openAppPath(session) as never);
 
   return (

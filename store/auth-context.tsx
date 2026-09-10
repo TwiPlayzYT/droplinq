@@ -11,7 +11,7 @@ import React, {
 import { Session } from '@supabase/supabase-js';
 
 import { LEGAL_VERSION } from '@/constants/legal';
-import { BILLING_ENFORCEMENT_ENABLED, dropDayKey } from '@/constants/billing';
+import { dropDayKey } from '@/constants/billing';
 import { authAdapter } from '@/services/auth';
 import { AuthProfile, AuthResult, OAuthProvider } from '@/services/auth/types';
 
@@ -50,13 +50,10 @@ type AuthContextValue = {
   /** Records first real drop-alert day (trial boundary). Safe to call repeatedly. */
   markFirstDropDay: (isoTimestamp?: string) => Promise<AuthResult>;
   /**
-   * Future checkout entry. While billing enforcement is off this only explains
-   * that payments are not live yet (unless you pass dryRunActivate for local testing).
+   * Activates Pro on the profile (monthly or annual).
+   * Card billing provider can replace this later; status is stored now.
    */
-  startProCheckout: (
-    interval: 'monthly' | 'annual',
-    options?: { dryRunActivate?: boolean },
-  ) => Promise<AuthResult>;
+  startProCheckout: (interval: 'monthly' | 'annual') => Promise<AuthResult>;
   refreshProfile: () => Promise<void>;
 };
 
@@ -178,22 +175,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
         if (result.ok) await loadProfile(session.user.id);
         return result;
       },
-      startProCheckout: async (interval, options) => {
+      startProCheckout: async (interval) => {
         if (!session?.user.id) return { ok: false, message: 'Not signed in.' };
-        if (!BILLING_ENFORCEMENT_ENABLED && !options?.dryRunActivate) {
-          return {
-            ok: false,
-            message:
-              'Pro checkout is built but not live yet. Pricing is ready — we will turn payments on when DropLinq is advertised.',
-          };
-        }
         const result = await authAdapter.saveProfile(session.user.id, {
           subscriptionTier: 'PRO',
           subscriptionStatus: 'active',
           billingInterval: interval,
         });
         if (result.ok) await loadProfile(session.user.id);
-        return result;
+        return result.ok
+          ? { ok: true }
+          : result;
       },
       refreshProfile: async () => {
         if (session?.user.id) await loadProfile(session.user.id);

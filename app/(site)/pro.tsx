@@ -6,7 +6,6 @@ import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-na
 import { MarketingChrome } from '@/components/marketing/site-chrome';
 import { brand } from '@/config/app-config';
 import {
-  BILLING_ENFORCEMENT_ENABLED,
   formatCad,
   proPriceLabel,
   type BillingInterval,
@@ -97,12 +96,10 @@ export default function MarketingPro() {
               {busy ? 'Working…' : session ? 'Upgrade to PRO' : 'Open App to go PRO'}
             </Text>
           </Pressable>
-          {!BILLING_ENFORCEMENT_ENABLED ? (
-            <Text style={styles.comingSoon}>
-              Checkout is coded but not live yet — payments turn on when we advertise. Monthly{' '}
-              {formatCad(6.99)} · annual effective {formatCad(4.99)}/mo.
-            </Text>
-          ) : null}
+          <Text style={styles.comingSoon}>
+            Free until your first drop day. Then {formatCad(6.99)}/mo or {formatCad(4.99)}/mo billed
+            yearly. Cancel anytime from Settings.
+          </Text>
           {message ? <Text style={styles.message}>{message}</Text> : null}
         </View>
       </View>

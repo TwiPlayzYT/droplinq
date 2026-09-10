@@ -1,10 +1,10 @@
 /**
  * DropLinq billing + trial rules.
- *
- * BILLING_ENFORCEMENT_ENABLED stays false until you advertise and ask to turn paywalls on.
- * All Pro UI, pricing, and trial tracking can ship now; limits are not hard-blocked yet.
+ * Pro checkout and first-drop-day trial are live in the product UI.
+ * Real card charging (Stripe etc.) can replace startProCheckout later;
+ * activating Pro still writes subscription_status=active on the profile now.
  */
-export const BILLING_ENFORCEMENT_ENABLED = false;
+export const BILLING_ENFORCEMENT_ENABLED = true;
 
 /** Monthly Pro price in CAD. */
 export const PRO_MONTHLY_CAD = 6.99;

@@ -1,3 +1,4 @@
 export function openAppPath(session: unknown) {
-  return session ? '/(tabs)' : '/start';
+  // Collectr uses app.*; we use /app on the same host until a subdomain exists.
+  return session ? '/app' : '/start';
 }
