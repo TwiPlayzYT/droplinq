@@ -4,16 +4,23 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { BrandHeader, ChoiceChip, MetalButton, Panel, Screen } from '@/components/dropdex-ui';
 import { ConsentCheckbox } from '@/components/consent-checkbox';
+import {
+  PRO_ANNUAL_MONTHLY_CAD,
+  PRO_MONTHLY_CAD,
+  formatCad,
+  trialCopy,
+} from '@/constants/billing';
 import { palette } from '@/constants/dropdex';
 import { coverageModeCopy } from '@/data/pokemon-center-filters';
 import { regions } from '@/data/regions';
 import { getExpoPushToken } from '@/services/notification-service';
 import { syncPushToken } from '@/services/notifications/push-token';
+import { tierCopy } from '@/services/subscriptions/tiers';
 import { useAuth } from '@/store/auth-context';
 import { useDropDex } from '@/store/dropdex-context';
 import { CoverageMode, RegionId } from '@/types/dropdex';
 
-const steps = ['Age', 'Region', 'TCG', 'Coverage'] as const;
+const steps = ['Age', 'Region', 'TCG', 'Coverage', 'Pro'] as const;
 const coverageModes: CoverageMode[] = ['POPULAR', 'ALL_TCG', 'CUSTOM'];
 
 export default function OnboardingScreen() {
@@ -124,6 +131,25 @@ export default function OnboardingScreen() {
             <Text style={styles.copy}>{coverageModeCopy[coverageMode].description}</Text>
           </>
         ) : null}
+        {step === 4 ? (
+          <>
+            <Text style={styles.proHeadline}>{trialCopy.headline}</Text>
+            <Text style={styles.copy}>{trialCopy.body}</Text>
+            <Text style={styles.proPrice}>
+              After that: {formatCad(PRO_MONTHLY_CAD)}/mo · or {formatCad(PRO_ANNUAL_MONTHLY_CAD)}
+              /mo billed yearly
+            </Text>
+            <Text style={styles.proSub}>Pro keeps monitoring going:</Text>
+            {tierCopy.PRO.features.map((feature) => (
+              <Text key={feature} style={styles.featureLine}>
+                · {feature}
+              </Text>
+            ))}
+            <Text style={styles.copy}>
+              You can upgrade anytime from Settings. Cancel whenever you want.
+            </Text>
+          </>
+        ) : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <MetalButton
           icon="arrow-forward"
@@ -149,6 +175,32 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 20,
     marginBottom: 14,
+  },
+  proHeadline: {
+    color: palette.white,
+    fontSize: 20,
+    fontWeight: '900',
+    lineHeight: 26,
+    marginBottom: 10,
+  },
+  proPrice: {
+    color: palette.white,
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 12,
+  },
+  proSub: {
+    color: palette.white,
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  featureLine: {
+    color: palette.whiteDim,
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 20,
+    marginBottom: 4,
   },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
   input: {

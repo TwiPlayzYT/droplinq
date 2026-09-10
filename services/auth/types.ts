@@ -31,7 +31,7 @@ export interface AuthAdapter {
   signIn(email: string, password: string): Promise<AuthResult>;
   signUp(email: string, password: string): Promise<AuthResult>;
   signInWithProvider(provider: OAuthProvider): Promise<AuthResult>;
-  signInAsGuest(): Promise<AuthResult>;
+  signInAsGuest(options?: { freshSetup?: boolean }): Promise<AuthResult>;
   signOut(): Promise<void>;
   requestPasswordReset(email: string): Promise<AuthResult>;
   loadProfile(userId: string): Promise<AuthProfile | null>;

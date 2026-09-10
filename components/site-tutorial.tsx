@@ -492,10 +492,13 @@ export function SiteTutorial() {
               style={[styles.smallBtn, stepIndex === 0 && styles.smallBtnDisabled]}>
               <Text style={styles.smallBtnText}>Back</Text>
             </Pressable>
-            <Pressable onPress={() => go(stepIndex + 1)} style={styles.doneBtn}>
-              <Text style={styles.doneText}>
+            <Pressable onPress={() => go(stepIndex + 1)} style={styles.smallBtn}>
+              <Text style={styles.smallBtnText}>
                 {stepIndex === TUTORIAL_STEPS.length - 1 ? 'Done' : 'Next'}
               </Text>
+            </Pressable>
+            <Pressable onPress={() => persist('done')} style={styles.doneBtn}>
+              <Text style={styles.doneText}>Finish</Text>
             </Pressable>
           </View>
         </View>

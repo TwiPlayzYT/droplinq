@@ -54,8 +54,8 @@ export const supabaseAuth: AuthAdapter = {
     return oauthSignIn(provider);
   },
 
-  async signInAsGuest() {
-    return createGuestSession();
+  async signInAsGuest(options?: { freshSetup?: boolean }) {
+    return createGuestSession(options);
   },
 
   async signOut() {

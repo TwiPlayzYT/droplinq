@@ -9,7 +9,8 @@ import { ConsentCheckbox } from '@/components/consent-checkbox';
 import { LEGAL_VERSION, legalHref } from '@/constants/legal';
 import { palette } from '@/constants/dropdex';
 import { useWebLayout } from '@/hooks/use-web-layout';
-import { useAuth } from '@/store/auth-context';
+import { useAuth, postAuthPath } from '@/store/auth-context';
+import { authAdapter } from '@/services/auth';
 
 export default function LegalAcceptScreen() {
   const { acceptLegal } = useAuth();
@@ -27,10 +28,15 @@ export default function LegalAcceptScreen() {
     setBusy(true);
     setError(null);
     const result = await acceptLegal();
-    setBusy(false);
     if (!result.ok) {
+      setBusy(false);
       setError(result.message);
+      return;
     }
+    const { session: next } = await authAdapter.getSession();
+    const nextProfile = next?.user.id ? await authAdapter.loadProfile(next.user.id) : null;
+    setBusy(false);
+    router.replace(postAuthPath(nextProfile) as never);
   };
 
   if (isWeb) {

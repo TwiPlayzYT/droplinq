@@ -12,6 +12,7 @@ import { CookieConsentBanner } from '@/components/cookie-consent-banner';
 import { DevicePromptModal } from '@/components/device-prompt-modal';
 import { DropAlertModal } from '@/components/drop-alert-modal';
 import { OpenProductChooser } from '@/components/open-product-chooser';
+import { ProUpgradeModal } from '@/components/pro-upgrade-modal';
 import { SiteTutorial } from '@/components/site-tutorial';
 import { UserAppearanceSync } from '@/components/user-appearance-sync';
 import { AppBootScreen, GlobalUXFeedback } from '@/components/ux-feedback';
@@ -27,7 +28,7 @@ export const unstable_settings = {
   anchor: '(site)',
 };
 
-/** Public Collectr-style pages — never redirect these into signup/setup. */
+/** Public Collectr-style pages. */
 function isMarketingPath(pathname: string) {
   const path = (pathname || '/').split('?')[0].replace(/\/+$/, '') || '/';
   return path === '/' || path === '/pro' || path === '/help';
@@ -42,9 +43,6 @@ function AuthGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!ready || !profileReady) return;
 
-    // Homepage / PRO / Help always stay public — even with a leftover guest/session.
-    if (isMarketingPath(pathname)) return;
-
     const root = String(segments[0] ?? '');
     const inAuth =
       root === '(auth)' ||
@@ -57,6 +55,23 @@ function AuthGate({ children }: { children: ReactNode }) {
     const inOnboarding = root === '(onboarding)' || root === 'setup';
     const inAppEntry = root === 'app';
     const legalOk = hasAcceptedCurrentLegal(profile);
+    const onMarketing = isMarketingPath(pathname);
+
+    // Mid-onboarding users who land on marketing must finish product setup first.
+    if (session && onMarketing) {
+      if (!legalOk) {
+        router.replace('/(legal)/accept');
+        return;
+      }
+      if (!profile?.onboardingCompleted) {
+        router.replace('/setup' as never);
+        return;
+      }
+      // Fully set up — marketing stays browsable.
+      return;
+    }
+
+    if (onMarketing) return;
 
     if (!session) {
       if (inAuth || inPublicLegal) return;
@@ -153,6 +168,7 @@ function AppExperience() {
           />
         </Stack>
         <DevicePromptModal />
+        <ProUpgradeModal />
         <SiteTutorial />
         <DropAlertModal />
         <OpenProductChooser />

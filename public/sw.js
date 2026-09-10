@@ -1,4 +1,4 @@
-const CACHE_NAME = 'droplinq-shell-v7';
+const CACHE_NAME = 'droplinq-shell-v8';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/droplinq-icon.svg'];
 
 self.addEventListener('install', (event) => {

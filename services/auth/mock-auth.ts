@@ -121,8 +121,8 @@ export const mockAuth: AuthAdapter = {
     return { ok: true };
   },
 
-  async signInAsGuest() {
-    return createGuestSession();
+  async signInAsGuest(options?: { freshSetup?: boolean }) {
+    return createGuestSession(options);
   },
 
   async signOut() {

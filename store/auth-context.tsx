@@ -37,7 +37,7 @@ type AuthContextValue = {
   signIn: (email: string, password: string) => Promise<AuthResult>;
   signUp: (email: string, password: string) => Promise<AuthResult>;
   signInWithProvider: (provider: OAuthProvider) => Promise<AuthResult>;
-  signInAsGuest: () => Promise<AuthResult>;
+  signInAsGuest: (options?: { freshSetup?: boolean }) => Promise<AuthResult>;
   signOut: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<AuthResult>;
   acceptLegal: () => Promise<AuthResult>;
@@ -66,6 +66,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [profile, setProfile] = useState<AuthProfile | null>(null);
   const profileRef = useRef(profile);
   profileRef.current = profile;
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
 
   const loadProfile = useCallback(async (userId: string) => {
     const next = await authAdapter.loadProfile(userId);
@@ -77,6 +79,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const applySession = useCallback(
     async (next: Session | null) => {
       setSession(next);
+      sessionRef.current = next;
       if (!next?.user.id) {
         setProfile(null);
         profileRef.current = null;
@@ -132,63 +135,67 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signUp: async (email, password) => afterAuth(await authAdapter.signUp(email, password)),
       signInWithProvider: async (provider) =>
         afterAuth(await authAdapter.signInWithProvider(provider)),
-      signInAsGuest: async () => afterAuth(await authAdapter.signInAsGuest()),
+      signInAsGuest: async (options) => afterAuth(await authAdapter.signInAsGuest(options)),
       signOut: () => authAdapter.signOut(),
       requestPasswordReset: (email) => authAdapter.requestPasswordReset(email),
       acceptLegal: async () => {
-        if (!session?.user.id) return { ok: false, message: 'Not signed in.' };
-        const result = await authAdapter.saveProfile(session.user.id, {
+        const userId = sessionRef.current?.user.id;
+        if (!userId) return { ok: false, message: 'Not signed in.' };
+        const result = await authAdapter.saveProfile(userId, {
           legalAcceptedAt: new Date().toISOString(),
           legalVersion: LEGAL_VERSION,
         });
-        if (result.ok) await loadProfile(session.user.id);
+        if (result.ok) await loadProfile(userId);
         return result;
       },
       completeOnboarding: async (input) => {
-        if (!session?.user.id) return { ok: false, message: 'Not signed in.' };
-        const result = await authAdapter.saveProfile(session.user.id, {
+        const userId = sessionRef.current?.user.id;
+        if (!userId) return { ok: false, message: 'Not signed in.' };
+        const result = await authAdapter.saveProfile(userId, {
           ...(input.dateOfBirth !== undefined ? { dateOfBirth: input.dateOfBirth } : null),
           selectedRegionId: input.regionId,
           username: input.username,
           onboardingCompleted: true,
         });
-        if (result.ok) await loadProfile(session.user.id);
+        if (result.ok) await loadProfile(userId);
         return result;
       },
       updateIdentity: async (input) => {
-        if (!session?.user.id) return { ok: false, message: 'Not signed in.' };
-        const result = await authAdapter.saveProfile(session.user.id, {
+        const userId = sessionRef.current?.user.id;
+        if (!userId) return { ok: false, message: 'Not signed in.' };
+        const result = await authAdapter.saveProfile(userId, {
           displayName: input.displayName,
           username: input.handle,
         });
-        if (result.ok) await loadProfile(session.user.id);
+        if (result.ok) await loadProfile(userId);
         return result;
       },
       markFirstDropDay: async (isoTimestamp) => {
-        if (!session?.user.id) return { ok: false, message: 'Not signed in.' };
+        const userId = sessionRef.current?.user.id;
+        if (!userId) return { ok: false, message: 'Not signed in.' };
         if (profileRef.current?.firstDropDay) return { ok: true };
         const day = dropDayKey(isoTimestamp ?? new Date().toISOString());
-        const result = await authAdapter.saveProfile(session.user.id, {
+        const result = await authAdapter.saveProfile(userId, {
           firstDropDay: day,
           subscriptionStatus: profileRef.current?.subscriptionStatus ?? 'trialing',
         });
-        if (result.ok) await loadProfile(session.user.id);
+        if (result.ok) await loadProfile(userId);
         return result;
       },
       startProCheckout: async (interval) => {
-        if (!session?.user.id) return { ok: false, message: 'Not signed in.' };
-        const result = await authAdapter.saveProfile(session.user.id, {
+        const userId = sessionRef.current?.user.id;
+        if (!userId) return { ok: false, message: 'Not signed in.' };
+        const result = await authAdapter.saveProfile(userId, {
           subscriptionTier: 'PRO',
           subscriptionStatus: 'active',
           billingInterval: interval,
         });
-        if (result.ok) await loadProfile(session.user.id);
-        return result.ok
-          ? { ok: true }
-          : result;
+        if (result.ok) await loadProfile(userId);
+        return result.ok ? { ok: true } : result;
       },
       refreshProfile: async () => {
-        if (session?.user.id) await loadProfile(session.user.id);
+        const userId = sessionRef.current?.user.id;
+        if (userId) await loadProfile(userId);
       },
     }),
     [afterAuth, loadProfile, profile, profileReady, ready, session],

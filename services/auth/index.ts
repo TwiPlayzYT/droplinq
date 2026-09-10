@@ -34,8 +34,8 @@ export const authAdapter: AuthAdapter = {
   signUp: (email, password) => base.signUp(email, password),
   signInWithProvider: (provider: OAuthProvider) => base.signInWithProvider(provider),
 
-  async signInAsGuest() {
-    return signInAsGuest();
+  async signInAsGuest(options?: { freshSetup?: boolean }) {
+    return signInAsGuest(options);
   },
 
   async signOut() {

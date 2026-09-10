@@ -35,7 +35,7 @@ function defaultGuestProfile(): AuthProfile {
     username: 'guest',
     displayName: 'Guest',
     dateOfBirth: null,
-    onboardingCompleted: true,
+    onboardingCompleted: false,
     alertsActive: true,
     selectedRegionId: 'ca',
     subscriptionTier: 'FREE',
@@ -91,11 +91,17 @@ export async function saveGuestProfile(patch: Partial<AuthProfile>): Promise<Aut
   return { ok: true };
 }
 
-export async function signInAsGuest(): Promise<AuthResult> {
+export async function signInAsGuest(options?: { freshSetup?: boolean }): Promise<AuthResult> {
   const session = guestSession();
-  const profile = (await loadGuestProfile()) ?? defaultGuestProfile();
+  const existing = await loadGuestProfile();
+  const profile = existing ?? defaultGuestProfile();
+  // New guests (or forced fresh setup) must walk through region / Pro / coverage.
+  const next =
+    options?.freshSetup || !existing
+      ? { ...defaultGuestProfile(), ...profile, onboardingCompleted: false }
+      : profile;
   await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+  await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(next));
   listeners.forEach((listener) => listener(session));
   return { ok: true };
 }

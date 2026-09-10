@@ -6,12 +6,13 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { AuthShell, authStyles } from '@/components/auth-shell';
 import { ConsentCheckbox } from '@/components/consent-checkbox';
 import { palette } from '@/constants/dropdex';
+import { authAdapter } from '@/services/auth';
 import { oauthRedirectHint } from '@/services/auth/oauth';
 import { OAuthProvider } from '@/services/auth/types';
-import { useAuth } from '@/store/auth-context';
+import { postAuthPath, useAuth } from '@/store/auth-context';
 
 export default function SignUpScreen() {
-  const { signUp, signInWithProvider, signInAsGuest } = useAuth();
+  const { signUp, signInWithProvider, signInAsGuest, acceptLegal } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,19 +29,36 @@ export default function SignUpScreen() {
     return false;
   };
 
+  /** After start-page consent: accept legal and go to setup/home — never marketing. */
+  const finishStartAuth = async () => {
+    const legal = await acceptLegal();
+    if (!legal.ok) {
+      setMessage(legal.message);
+      router.replace('/(legal)/accept' as never);
+      return;
+    }
+    const { session: next } = await authAdapter.getSession();
+    const nextProfile = next?.user.id ? await authAdapter.loadProfile(next.user.id) : null;
+    router.replace(postAuthPath(nextProfile) as never);
+  };
+
   const submit = async () => {
     if (!requireConsent()) return;
     setBusy(true);
     setMessage(null);
     const result = await signUp(email.trim(), password);
-    setBusy(false);
     if (!result.ok) {
+      setBusy(false);
       setMessage(result.message);
       return;
     }
     if (result.pendingEmailConfirm) {
+      setBusy(false);
       setMessage('Check your email to confirm this account, then sign in. Your profile will be waiting.');
+      return;
     }
+    await finishStartAuth();
+    setBusy(false);
   };
 
   const oauth = async (provider: OAuthProvider) => {
@@ -51,6 +69,10 @@ export default function SignUpScreen() {
     setOauthBusy(null);
     if (!result.ok && result.message !== 'Sign-in cancelled.') {
       setMessage(`${result.message}\n\nRedirect used:\n${oauthRedirectHint()}`);
+      return;
+    }
+    if (result.ok) {
+      await finishStartAuth();
     }
   };
 
@@ -58,11 +80,21 @@ export default function SignUpScreen() {
     if (!requireConsent()) return;
     setGuestBusy(true);
     setMessage(null);
-    const result = await signInAsGuest();
-    setGuestBusy(false);
+    const result = await signInAsGuest({ freshSetup: true });
     if (!result.ok) {
+      setGuestBusy(false);
       setMessage(result.message);
+      return;
     }
+    const legal = await acceptLegal();
+    setGuestBusy(false);
+    if (!legal.ok) {
+      setMessage(legal.message);
+      router.replace('/(legal)/accept' as never);
+      return;
+    }
+    // Fresh guests always land in setup — never marketing `/`.
+    router.replace('/setup' as never);
   };
 
   const locked = busy || !!oauthBusy || guestBusy;
