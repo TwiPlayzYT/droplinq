@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -21,6 +22,10 @@ import {
   type BillingInterval,
 } from '@/constants/billing';
 import { palette } from '@/constants/dropdex';
+import {
+  TUTORIAL_STORAGE_KEY,
+  subscribeTutorialSettled,
+} from '@/constants/tutorial';
 import { tierCopy } from '@/services/subscriptions/tiers';
 import { resolveEntitlements } from '@/services/subscriptions/entitlements';
 import { hasAcceptedCurrentLegal, useAuth } from '@/store/auth-context';
@@ -58,6 +63,8 @@ export function ProUpgradeModal() {
   const [interval, setInterval] = useState<BillingInterval>('annual');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  /** False while tutorial will ask / is running; true once done or skipped. */
+  const [tutorialSettled, setTutorialSettled] = useState(false);
 
   const legalOk = hasAcceptedCurrentLegal(profile);
   const onboarded = Boolean(profile?.onboardingCompleted);
@@ -67,11 +74,31 @@ export function ProUpgradeModal() {
   const price = proPriceLabel(interval);
 
   useEffect(() => {
+    let cancelled = false;
+    AsyncStorage.getItem(TUTORIAL_STORAGE_KEY)
+      .then((value) => {
+        if (cancelled) return;
+        if (value === 'done' || value === 'skipped') setTutorialSettled(true);
+      })
+      .catch(() => {
+        /* keep waiting for SiteTutorial persist notify */
+      });
+    const unsub = subscribeTutorialSettled(() => {
+      if (!cancelled) setTutorialSettled(true);
+    });
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, []);
+
+  useEffect(() => {
     if (!profileReady || !session || !legalOk || !onboarded || !onProduct) return;
+    if (!tutorialSettled) return;
     if (sessionOfferShown) return;
     sessionOfferShown = true;
     setVisible(true);
-  }, [legalOk, onboarded, onProduct, profileReady, session]);
+  }, [legalOk, onboarded, onProduct, profileReady, session, tutorialSettled]);
 
   const dismiss = () => {
     setVisible(false);

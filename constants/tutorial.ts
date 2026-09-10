@@ -1,4 +1,28 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 export const TUTORIAL_STORAGE_KEY = 'droplinq.tutorial.v3';
+
+export type TutorialPersistValue = 'done' | 'skipped';
+
+const settledListeners = new Set<(value: TutorialPersistValue) => void>();
+
+/** Clears tutorial progress so the ask shows again after setup. */
+export async function clearTutorialStorage() {
+  await AsyncStorage.removeItem(TUTORIAL_STORAGE_KEY);
+}
+
+export function subscribeTutorialSettled(listener: (value: TutorialPersistValue) => void) {
+  settledListeners.add(listener);
+  return () => {
+    settledListeners.delete(listener);
+  };
+}
+
+/** Persist Finish / Not now and notify listeners (e.g. Pro upgrade gate). */
+export function persistTutorialStatus(value: TutorialPersistValue) {
+  void AsyncStorage.setItem(TUTORIAL_STORAGE_KEY, value);
+  settledListeners.forEach((listener) => listener(value));
+}
 
 export type TutorialStepId =
   | 'home-power'

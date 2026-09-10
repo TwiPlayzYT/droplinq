@@ -12,6 +12,7 @@ import { Session } from '@supabase/supabase-js';
 
 import { LEGAL_VERSION } from '@/constants/legal';
 import { dropDayKey } from '@/constants/billing';
+import { clearTutorialStorage } from '@/constants/tutorial';
 import { authAdapter } from '@/services/auth';
 import { AuthProfile, AuthResult, OAuthProvider } from '@/services/auth/types';
 
@@ -157,7 +158,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
           username: input.username,
           onboardingCompleted: true,
         });
-        if (result.ok) await loadProfile(userId);
+        if (result.ok) {
+          // Re-ask the site tutorial after every successful setup flip-through.
+          await clearTutorialStorage();
+          await loadProfile(userId);
+        }
         return result;
       },
       updateIdentity: async (input) => {

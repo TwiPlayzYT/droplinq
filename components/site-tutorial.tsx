@@ -18,6 +18,8 @@ import { palette } from '@/constants/dropdex';
 import {
   TUTORIAL_STEPS,
   TUTORIAL_STORAGE_KEY,
+  clearTutorialStorage,
+  persistTutorialStatus,
   type TutorialStep,
 } from '@/constants/tutorial';
 import {
@@ -48,7 +50,7 @@ type Hole = {
 const restartListeners = new Set<() => void>();
 
 export function requestTutorialRestart() {
-  void AsyncStorage.removeItem(TUTORIAL_STORAGE_KEY);
+  void clearTutorialStorage();
   restartListeners.forEach((listener) => listener());
 }
 
@@ -202,7 +204,7 @@ export function SiteTutorial() {
   const persist = (value: 'done' | 'skipped') => {
     setTutorialSessionActive(false);
     notifyTutorialStep(null);
-    void AsyncStorage.setItem(TUTORIAL_STORAGE_KEY, value);
+    persistTutorialStatus(value);
     setStatus('done');
   };
 
@@ -244,10 +246,8 @@ export function SiteTutorial() {
       .then((value) => {
         if (cancelled) return;
         if (value === 'done' || value === 'skipped') {
-          setStatus('done');
-          return;
-        }
-        if (profile?.email === 'guest@droplinq.local') {
+          // Already settled — notify Pro gate (and any other listeners) for this session.
+          persistTutorialStatus(value);
           setStatus('done');
           return;
         }
@@ -259,7 +259,7 @@ export function SiteTutorial() {
     return () => {
       cancelled = true;
     };
-  }, [deviceReady, mayRun, profile?.email]);
+  }, [deviceReady, mayRun]);
 
   useEffect(() => {
     if (status !== 'active' || !step) {
