@@ -10,7 +10,7 @@ import { palette } from '@/constants/dropdex';
 import { useWebLayout } from '@/hooks/use-web-layout';
 
 const LINKS = [
-  { href: '/(tabs)', match: ['/', '/(tabs)', '/(tabs)/'], label: 'Home', key: 'home' },
+  { href: '/home', match: ['/home', '/(tabs)/home', '/(tabs)'], label: 'Home', key: 'home' },
   { href: '/(tabs)/stock', match: ['/stock', '/(tabs)/stock'], label: 'Stock', key: 'stock' },
   { href: '/(tabs)/filter', match: ['/filter', '/(tabs)/filter'], label: 'Filter', key: 'filter' },
   { href: '/(tabs)/region', match: ['/region', '/(tabs)/region'], label: 'Region', key: 'region' },
@@ -72,7 +72,7 @@ export function WebTopNav() {
         <View style={styles.mobileBar}>
           <Pressable
             accessibilityRole="link"
-            onPress={() => router.push('/(tabs)')}
+            onPress={() => router.push('/home' as never)}
             style={styles.mobileBrand}>
             <Text style={styles.mobileBrandText}>DROPLINQ</Text>
           </Pressable>
@@ -101,7 +101,7 @@ export function WebTopNav() {
         <View style={styles.inner}>
           <Pressable
             accessibilityRole="link"
-            onPress={() => router.push('/(tabs)')}
+            onPress={() => router.push('/home' as never)}
             style={styles.brandBlock}>
             <Text style={styles.brand}>DROPLINQ</Text>
             <Text style={styles.tagline}>MONITOR · ALERT · CHECK</Text>
@@ -114,7 +114,7 @@ export function WebTopNav() {
                 <Pressable
                   key={link.key}
                   accessibilityRole="link"
-                  onPress={() => router.push(link.href)}
+                  onPress={() => router.push(link.href as never)}
                   style={[styles.link, active && styles.linkActive]}
                   {...tourDomProps(link.key)}>
                   <Text style={[styles.linkText, active && styles.linkTextActive]}>{link.label}</Text>

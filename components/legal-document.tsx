@@ -22,7 +22,7 @@ export function LegalDocumentScreen({ doc }: { doc: LegalDocId }) {
       router.back();
       return;
     }
-    router.replace((session ? '/(tabs)' : '/start') as never);
+    router.replace((session ? '/home' : '/start') as never);
   };
 
   return (

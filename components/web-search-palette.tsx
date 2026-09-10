@@ -26,7 +26,7 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { key: 'home', label: 'Go to Home', href: '/(tabs)', icon: 'home-outline' },
+  { key: 'home', label: 'Go to Home', href: '/home', icon: 'home-outline' },
   { key: 'stock', label: 'Go to Stock', href: '/(tabs)/stock', icon: 'cube-outline' },
   { key: 'filter', label: 'Go to Filter', href: '/(tabs)/filter', icon: 'options-outline' },
   { key: 'region', label: 'Go to Region', href: '/(tabs)/region', icon: 'globe-outline' },
@@ -105,8 +105,11 @@ export function WebSearchPalette({ visible, onClose }: Props) {
     (item: NavItem, newTab = false) => {
       onClose();
       if (newTab && Platform.OS === 'web' && typeof window !== 'undefined') {
-        const path = item.href.replace('/(tabs)', '').replace(/^\//, '') || '';
-        window.open(path ? `/${path}` : '/', '_blank');
+        const path =
+          item.href === '/home' || item.href === '/(tabs)/home'
+            ? 'home'
+            : item.href.replace('/(tabs)', '').replace(/^\//, '') || '';
+        window.open(path ? `/${path}` : '/home', '_blank');
         return;
       }
       router.push(item.href as never);

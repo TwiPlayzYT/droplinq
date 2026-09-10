@@ -81,7 +81,7 @@ export default function TabLayout() {
           tabBarButton: HapticTab,
         } as object}>
         <Tabs.Screen
-          name="index"
+          name="home"
           options={{
             title: 'Home',
             tabBarButton: (props) => (

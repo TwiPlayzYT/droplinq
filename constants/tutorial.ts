@@ -30,7 +30,7 @@ export type TutorialStep = {
   title: string;
   body: string;
   hint: string;
-  route: '/(tabs)' | '/(tabs)/stock' | '/(tabs)/filter' | '/(tabs)/region' | '/(tabs)/settings';
+  route: '/(tabs)/home' | '/(tabs)/stock' | '/(tabs)/filter' | '/(tabs)/region' | '/(tabs)/settings';
   anchors: string[];
   shape: TutorialShape;
   pad: number;
@@ -44,7 +44,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     title: 'This starts DropLinq',
     body: 'The big button arms alerts. Off means DropLinq is idle. Tap it to ON and we watch your Pokémon Center region for matching products. Leave it off until you are ready.',
     hint: 'Tap the button to turn alerts ON, or tap Next',
-    route: '/(tabs)',
+    route: '/(tabs)/home',
     anchors: ['home-power'],
     shape: 'circle',
     pad: 10,
@@ -56,7 +56,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     title: 'Test while you are here',
     body: 'Test plays the in-app overlay, sound, and speech so you can hear what a hit feels like. It is not a lock-screen notification — that setup is in Settings.',
     hint: 'Tap Test to fire a sample alert',
-    route: '/(tabs)',
+    route: '/(tabs)/home',
     anchors: ['home-test'],
     shape: 'pill',
     pad: 10,
@@ -152,7 +152,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     title: 'Your profile',
     body: 'Tap your avatar for the account menu. From there you can open Settings, sign out, and switch how DropLinq looks.',
     hint: 'Tap your avatar',
-    route: '/(tabs)',
+    route: '/(tabs)/home',
     anchors: ['profile'],
     shape: 'pill',
     pad: 8,
@@ -164,7 +164,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     title: 'Appearance',
     body: 'Open the profile menu, then Appearance. Dark, Light, or DropLinq Special — Dark matches the Region screen: black canvas, dark cards, red selection.',
     hint: 'Pick Dark, Light, or DropLinq Special',
-    route: '/(tabs)',
+    route: '/(tabs)/home',
     anchors: ['appearance-menu', 'profile'],
     shape: 'round',
     pad: 8,

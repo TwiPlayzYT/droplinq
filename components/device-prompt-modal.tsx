@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter, useSegments } from 'expo-router';
+import { usePathname, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -19,6 +19,11 @@ type Phase = 'device' | 'offer';
 
 const choiceWebFocus = Platform.OS === 'web' ? ({ outlineStyle: 'none', tabIndex: -1 } as object) : null;
 
+function isMarketingPath(pathname: string) {
+  const path = (pathname || '/').split('?')[0].replace(/\/+$/, '') || '/';
+  return path === '/' || path === '/pro' || path === '/help';
+}
+
 /**
  * Web-only: after sign-up and Terms acceptance, ask desktop vs mobile
  * (optional mobile notification guide).
@@ -26,6 +31,7 @@ const choiceWebFocus = Platform.OS === 'web' ? ({ outlineStyle: 'none', tabIndex
 export function DevicePromptModal() {
   const { profile, profileReady, session } = useAuth();
   const segments = useSegments();
+  const pathname = usePathname();
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -34,7 +40,14 @@ export function DevicePromptModal() {
 
   const legalOk = hasAcceptedCurrentLegal(profile);
   const onAuth = segments[0] === '(auth)';
-  const mayShow = Platform.OS === 'web' && profileReady && Boolean(session) && legalOk && !onAuth;
+  const onMarketing = isMarketingPath(pathname);
+  const mayShow =
+    Platform.OS === 'web' &&
+    profileReady &&
+    Boolean(session) &&
+    legalOk &&
+    !onAuth &&
+    !onMarketing;
 
   useEffect(() => {
     if (Platform.OS !== 'web') {

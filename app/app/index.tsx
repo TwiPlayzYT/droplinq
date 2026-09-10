@@ -15,5 +15,5 @@ export default function AppEntry() {
     return <Redirect href={'/start' as never} />;
   }
 
-  return <Redirect href="/(tabs)" />;
+  return <Redirect href={'/home' as never} />;
 }

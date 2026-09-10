@@ -54,8 +54,8 @@ export function requestTutorialRestart() {
 
 function pathMatches(pathname: string, route: TutorialStep['route']) {
   const path = pathname.replace(/\/$/, '') || '/';
-  if (route === '/(tabs)') {
-    return path === '/' || path === '/(tabs)' || path.endsWith('/index');
+  if (route === '/(tabs)/home') {
+    return path === '/home' || path === '/(tabs)/home';
   }
   const leaf = route.replace('/(tabs)', '') || '/';
   return path === leaf || path.endsWith(leaf);
@@ -273,7 +273,7 @@ export function SiteTutorial() {
   useEffect(() => {
     if (status !== 'active' || !step) return;
     if (pathMatches(pathname, step.route)) return;
-    router.push(step.route);
+    router.push(step.route as never);
   }, [pathname, router, status, step]);
 
   useEffect(() => {

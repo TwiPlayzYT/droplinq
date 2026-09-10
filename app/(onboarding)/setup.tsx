@@ -50,7 +50,7 @@ export default function OnboardingScreen() {
       setError(result.message);
       return;
     }
-    router.replace('/(tabs)');
+    router.replace('/home' as never);
   };
 
   const next = async () => {

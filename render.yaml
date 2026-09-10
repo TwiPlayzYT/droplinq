@@ -65,6 +65,18 @@ services:
         source: /sign-in/
         destination: /index.html
       - type: rewrite
+        source: /home
+        destination: /index.html
+      - type: rewrite
+        source: /home/
+        destination: /index.html
+      - type: rewrite
+        source: /setup
+        destination: /index.html
+      - type: rewrite
+        source: /setup/
+        destination: /index.html
+      - type: rewrite
         source: /app
         destination: /index.html
       - type: rewrite

@@ -24,8 +24,8 @@ export function hasAcceptedCurrentLegal(profile: AuthProfile | null | undefined)
 /** Where to send the user after auth once their profile is known. */
 export function postAuthPath(profile: AuthProfile | null | undefined) {
   if (!hasAcceptedCurrentLegal(profile)) return '/(legal)/accept';
-  if (!profile?.onboardingCompleted) return '/(onboarding)';
-  return '/(tabs)';
+  if (!profile?.onboardingCompleted) return '/setup';
+  return '/home';
 }
 
 type AuthContextValue = {

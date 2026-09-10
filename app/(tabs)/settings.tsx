@@ -293,7 +293,7 @@ export default function SettingsScreen() {
           last
           onPress={() => {
             requestTutorialRestart();
-            router.push('/(tabs)');
+            router.push('/home' as never);
           }}
           title="Website tutorial"
         />

@@ -1,5 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, usePathname, useRouter, useSegments } from 'expo-router';
 import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
 import { type ReactNode, useEffect, useMemo } from 'react';
@@ -27,13 +27,24 @@ export const unstable_settings = {
   anchor: '(site)',
 };
 
+/** Public Collectr-style pages — never redirect these into signup/setup. */
+function isMarketingPath(pathname: string) {
+  const path = (pathname || '/').split('?')[0].replace(/\/+$/, '') || '/';
+  return path === '/' || path === '/pro' || path === '/help';
+}
+
 function AuthGate({ children }: { children: ReactNode }) {
   const { ready, profileReady, session, profile } = useAuth();
   const segments = useSegments();
+  const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
     if (!ready || !profileReady) return;
+
+    // Homepage / PRO / Help always stay public — even with a leftover guest/session.
+    if (isMarketingPath(pathname)) return;
+
     const root = String(segments[0] ?? '');
     const inAuth =
       root === '(auth)' ||
@@ -43,46 +54,38 @@ function AuthGate({ children }: { children: ReactNode }) {
       root === 'sign-up';
     const inLegal = root === '(legal)' || root === 'legal';
     const inPublicLegal = root === 'legal';
-    const inOnboarding = root === '(onboarding)';
-    const inSite =
-      root === '(site)' || root === 'pro' || root === 'help' || root === '' || root === 'app';
+    const inOnboarding = root === '(onboarding)' || root === 'setup';
+    const inAppEntry = root === 'app';
     const legalOk = hasAcceptedCurrentLegal(profile);
 
     if (!session) {
-      if (inAuth || inPublicLegal || inSite) return;
-      if (
-        root === '(tabs)' ||
-        root === 'setup' ||
-        root === 'alerts' ||
-        root === 'product' ||
-        root === 'filter' ||
-        root === 'settings' ||
-        root === 'stock' ||
-        root === 'region'
-      ) {
-        router.replace('/start' as never);
-        return;
-      }
-      router.replace('/' as never);
+      if (inAuth || inPublicLegal) return;
+      // Trying to open the product without an account → signup.
+      router.replace('/start' as never);
       return;
     }
 
+    // Product routes only from here.
     if (!legalOk && !inLegal) {
       router.replace('/(legal)/accept');
       return;
     }
-    if (legalOk && !profile?.onboardingCompleted && !inOnboarding && !inLegal && root !== '(site)' && root !== 'pro' && root !== 'help' && root !== '') {
-      router.replace('/(onboarding)');
+    if (legalOk && !profile?.onboardingCompleted && !inOnboarding && !inLegal) {
+      router.replace('/setup' as never);
       return;
     }
     if (
       legalOk &&
       profile?.onboardingCompleted &&
-      (inAuth || inOnboarding || (root === '(legal)' && segments[1] === 'accept') || segments[1] === 'device')
+      (inAuth ||
+        inOnboarding ||
+        inAppEntry ||
+        (root === '(legal)' && segments[1] === 'accept') ||
+        segments[1] === 'device')
     ) {
-      router.replace('/app' as never);
+      router.replace('/home' as never);
     }
-  }, [profile, profileReady, ready, router, segments, session]);
+  }, [pathname, profile, profileReady, ready, router, segments, session]);
 
   if (!ready || (session && !profileReady)) {
     return (
