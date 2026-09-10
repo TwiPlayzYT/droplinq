@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Modal,
   Platform,
@@ -24,13 +24,14 @@ import {
 import { palette } from '@/constants/dropdex';
 import {
   TUTORIAL_STORAGE_KEY,
+  subscribeTutorialCleared,
   subscribeTutorialSettled,
 } from '@/constants/tutorial';
 import { tierCopy } from '@/services/subscriptions/tiers';
 import { resolveEntitlements } from '@/services/subscriptions/entitlements';
 import { hasAcceptedCurrentLegal, useAuth } from '@/store/auth-context';
 
-/** Once per JS session / app open — not persisted across reloads as “forever dismissed”. */
+/** Once per JS session after a successful show — reset when tutorial storage is cleared. */
 let sessionOfferShown = false;
 
 function isProductPath(pathname: string) {
@@ -73,31 +74,72 @@ export function ProUpgradeModal() {
   const alreadyPro = entitlements.status === 'active';
   const price = proPriceLabel(interval);
 
+  const offerGateRef = useRef({
+    profileReady,
+    session: Boolean(session),
+    legalOk,
+    onboarded,
+    onProduct,
+    tutorialSettled,
+  });
+  offerGateRef.current = {
+    profileReady,
+    session: Boolean(session),
+    legalOk,
+    onboarded,
+    onProduct,
+    tutorialSettled,
+  };
+
+  const tryShowOffer = () => {
+    const gate = offerGateRef.current;
+    if (!gate.profileReady || !gate.session || !gate.legalOk || !gate.onboarded || !gate.onProduct) {
+      return;
+    }
+    if (!gate.tutorialSettled) return;
+    if (sessionOfferShown) return;
+    sessionOfferShown = true;
+    setVisible(true);
+  };
+
   useEffect(() => {
     let cancelled = false;
     AsyncStorage.getItem(TUTORIAL_STORAGE_KEY)
       .then((value) => {
         if (cancelled) return;
-        if (value === 'done' || value === 'skipped') setTutorialSettled(true);
+        if (value === 'done' || value === 'skipped') {
+          setTutorialSettled(true);
+          offerGateRef.current.tutorialSettled = true;
+          tryShowOffer();
+        }
       })
       .catch(() => {
         /* keep waiting for SiteTutorial persist notify */
       });
-    const unsub = subscribeTutorialSettled(() => {
-      if (!cancelled) setTutorialSettled(true);
+    const unsubSettled = subscribeTutorialSettled(() => {
+      if (cancelled) return;
+      setTutorialSettled(true);
+      offerGateRef.current.tutorialSettled = true;
+      // Show immediately on Not now / Finish so we do not rely on a stale mount read.
+      tryShowOffer();
+    });
+    const unsubCleared = subscribeTutorialCleared(() => {
+      if (cancelled) return;
+      sessionOfferShown = false;
+      setTutorialSettled(false);
+      offerGateRef.current.tutorialSettled = false;
+      setVisible(false);
     });
     return () => {
       cancelled = true;
-      unsub();
+      unsubSettled();
+      unsubCleared();
     };
   }, []);
 
   useEffect(() => {
-    if (!profileReady || !session || !legalOk || !onboarded || !onProduct) return;
-    if (!tutorialSettled) return;
-    if (sessionOfferShown) return;
-    sessionOfferShown = true;
-    setVisible(true);
+    // Cover cases where settle already happened but product/auth gates open later.
+    tryShowOffer();
   }, [legalOk, onboarded, onProduct, profileReady, session, tutorialSettled]);
 
   const dismiss = () => {

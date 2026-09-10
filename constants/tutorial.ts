@@ -5,16 +5,26 @@ export const TUTORIAL_STORAGE_KEY = 'droplinq.tutorial.v3';
 export type TutorialPersistValue = 'done' | 'skipped';
 
 const settledListeners = new Set<(value: TutorialPersistValue) => void>();
+const clearedListeners = new Set<() => void>();
 
 /** Clears tutorial progress so the ask shows again after setup. */
 export async function clearTutorialStorage() {
   await AsyncStorage.removeItem(TUTORIAL_STORAGE_KEY);
+  clearedListeners.forEach((listener) => listener());
 }
 
 export function subscribeTutorialSettled(listener: (value: TutorialPersistValue) => void) {
   settledListeners.add(listener);
   return () => {
     settledListeners.delete(listener);
+  };
+}
+
+/** Notify when tutorial storage is cleared (e.g. post-setup re-ask). */
+export function subscribeTutorialCleared(listener: () => void) {
+  clearedListeners.add(listener);
+  return () => {
+    clearedListeners.delete(listener);
   };
 }
 
