@@ -88,8 +88,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'home-test',
     title: 'Test while you are here',
-    body: 'Test plays the in-app overlay, sound, and speech so you can hear what a hit feels like. It is not a lock-screen notification — that setup is in Settings.',
-    hint: 'Tap Test to fire a sample alert',
+    body: 'Schedule a test for Now or in a few seconds. That plays the in-app overlay (and a lock-screen push if Notifications are enabled). It is not a substitute for lock-screen setup in Settings → Notifications.',
+    hint: 'Tap Test, then choose Now',
     route: '/(tabs)/home',
     anchors: ['home-test'],
     shape: 'pill',
@@ -160,8 +160,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'homescreen',
     title: 'Lock-screen alerts',
-    body: 'On iPhone, closed-app notifications need Add to Home Screen, then Enable alerts. Open this row for the walkthrough and test push.',
-    hint: 'Tap Home Screen & lock-screen',
+    body: 'On iPhone, closed-app notifications need Add to Home Screen, then Enable alerts. Open Notifications for the walkthrough and test push.',
+    hint: 'Tap Notifications',
     route: '/(tabs)/settings',
     anchors: ['settings-homescreen'],
     shape: 'round',

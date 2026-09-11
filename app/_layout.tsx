@@ -52,7 +52,12 @@ function AuthGate({ children }: { children: ReactNode }) {
       root === 'sign-up';
     const inLegal = root === '(legal)' || root === 'legal';
     const inPublicLegal = root === 'legal';
-    const inOnboarding = root === '(onboarding)' || root === 'setup';
+    // Product onboarding lives under `(onboarding)`. `/notifications` is a normal
+    // settings screen — do not treat it (or legacy `/setup/notifications`) as onboarding.
+    const inOnboarding =
+      root === '(onboarding)' ||
+      (root === 'setup' && String(segments[1] ?? '') !== 'notifications');
+    const inNotifications = root === 'notifications';
     const inAppEntry = root === 'app';
     const legalOk = hasAcceptedCurrentLegal(profile);
     const onMarketing = isMarketingPath(pathname);
@@ -85,7 +90,13 @@ function AuthGate({ children }: { children: ReactNode }) {
       router.replace('/(legal)/accept');
       return;
     }
-    if (legalOk && !profile?.onboardingCompleted && !inOnboarding && !inLegal) {
+    if (
+      legalOk &&
+      !profile?.onboardingCompleted &&
+      !inOnboarding &&
+      !inLegal &&
+      !inNotifications
+    ) {
       router.replace('/setup' as never);
       return;
     }
@@ -154,6 +165,7 @@ function AppExperience() {
           <Stack.Screen name="(onboarding)" />
           <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
           <Stack.Screen name="auth/callback" options={{ animation: 'none' }} />
+          <Stack.Screen name="notifications/index" options={{ animation: 'none' }} />
           <Stack.Screen name="setup/notifications" options={{ animation: 'none' }} />
           <Stack.Screen name="alerts/history" options={{ animation: 'none' }} />
           <Stack.Screen

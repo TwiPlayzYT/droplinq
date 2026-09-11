@@ -144,7 +144,7 @@ export function NotificationSetupGuide({
       </Text>
       <Text style={[styles.sub, { color: bodyColor }]}>
         iPhone needs Safari → Add to Home Screen → open the icon → Enable alerts. A Home Test
-        overlay is not a lock-screen push. Closed-app delivery also needs the alert server awake.
+        overlay is not a lock-screen push. Closed-app delivery also needs the monitor Live/awake.
       </Text>
 
       {steps.map((step) => (

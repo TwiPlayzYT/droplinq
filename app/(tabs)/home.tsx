@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import ReanimatedSwipeable, {
   SwipeDirection,
   type SwipeableMethods,
@@ -24,6 +24,14 @@ import { useDropDex } from '@/store/dropdex-context';
 import { RecentVisit, WatchedItem } from '@/types/dropdex';
 
 const DELETE_WIDTH = 92;
+
+const TEST_DELAY_OPTIONS: { label: string; ms: number }[] = [
+  { label: 'Now', ms: 0 },
+  { label: '10s', ms: 10_000 },
+  { label: '30s', ms: 30_000 },
+  { label: '1 min', ms: 60_000 },
+  { label: '5 min', ms: 300_000 },
+];
 
 function DeleteAction({
   progress,
@@ -188,11 +196,13 @@ export default function HomeScreen() {
     region,
     removeFromWatchlist,
     removeRecentVisit,
+    scheduleTestAlert,
     setMonitoring,
     stockEvents,
-    triggerTestAlert,
+    webPushState,
     watchlist,
   } = useDropDex();
+  const [testPickerOpen, setTestPickerOpen] = useState(false);
   const regionConfig = getRegion(region);
   const handleOpenRecent = useCallback(
     (visit: RecentVisit) => openProductBrowser(visit.product),
@@ -265,10 +275,62 @@ export default function HomeScreen() {
     });
   }, [animatedProgress, progress]);
 
+  const showEnableBanner =
+    Platform.OS === 'web' &&
+    webPushState !== 'subscribed' &&
+    webPushState !== 'unsupported' &&
+    webPushState !== 'checking';
+
+  const pickTestDelay = (ms: number) => {
+    setTestPickerOpen(false);
+    scheduleTestAlert(ms);
+  };
+
+  const testScheduleRow = (
+    <View style={styles.scheduleBlock}>
+      {testPickerOpen ? (
+        <>
+          <Text style={styles.schedulePrompt}>When should the test fire?</Text>
+          <View style={styles.scheduleChips}>
+            {TEST_DELAY_OPTIONS.map((option) => (
+              <Pressable
+                key={option.label}
+                accessibilityLabel={`Schedule test alert ${option.label}`}
+                onPress={() => pickTestDelay(option.ms)}
+                style={({ pressed }) => [styles.scheduleChip, pressed && styles.subNavPressed]}>
+                <Text style={styles.scheduleChipText}>{option.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <Pressable onPress={() => setTestPickerOpen(false)} style={styles.scheduleCancel}>
+            <Text style={styles.scheduleCancelText}>Cancel</Text>
+          </Pressable>
+        </>
+      ) : null}
+    </View>
+  );
+
   return (
     <Screen wide>
       {!isDesktopWeb ? <BrandHeader eyebrow={regionConfig.label} /> : null}
 
+      {showEnableBanner ? (
+        <View style={styles.enableBanner}>
+          <View style={styles.enableBannerCopy}>
+            <Text style={styles.enableBannerTitle}>Enable lock-screen notifications</Text>
+            <Text style={styles.enableBannerBody}>
+              Get pinged when stock moves — even with DropLinq closed.
+            </Text>
+          </View>
+          <Pressable
+            accessibilityLabel="Enable notifications"
+            accessibilityRole="button"
+            onPress={() => router.push('/notifications' as never)}
+            style={({ pressed }) => [styles.enableBannerBtn, pressed && styles.subNavPressed]}>
+            <Text style={styles.enableBannerBtnText}>Enable</Text>
+          </Pressable>
+        </View>
+      ) : null}
       {isDesktopWeb ? (
         <View style={styles.desktopPage}>
           <View style={styles.desktopHeader}>
@@ -377,16 +439,23 @@ export default function HomeScreen() {
                   <Text style={[styles.sideCardTitle, styles.sideCardTitleInline]}>Activity</Text>
                   <TourAnchor id="home-test">
                   <Pressable
-                    accessibilityLabel="Send test alert"
+                    accessibilityLabel="Schedule test alert"
                     accessibilityRole="button"
                     unstable_pressDelay={0}
-                    onPress={triggerTestAlert}
+                    onPress={() => {
+                      if (isTutorialSessionActive()) {
+                        scheduleTestAlert(0);
+                        return;
+                      }
+                      setTestPickerOpen((open) => !open);
+                    }}
                     style={({ pressed }) => [styles.testChip, pressed && styles.subNavPressed]}>
                     <Ionicons color={palette.cardInk} name="flash" size={14} />
                     <Text style={styles.testChipText}>TEST</Text>
                   </Pressable>
                   </TourAnchor>
                 </View>
+                {testPickerOpen ? testScheduleRow : null}
                 {stockEvents.length === 0 ? (
                   <Text style={styles.emptyRecentsText}>No events yet</Text>
                 ) : (
@@ -507,8 +576,19 @@ export default function HomeScreen() {
           <Panel tone="dark" style={styles.bottomPanel}>
             <Text style={styles.testLabel}>ALARM CHECK</Text>
             <TourAnchor id="home-test">
-              <MetalButton icon="flash" label="Send test alert" onPress={triggerTestAlert} />
+              <MetalButton
+                icon="flash"
+                label={testPickerOpen ? 'Pick a time below' : 'Schedule test alert'}
+                onPress={() => {
+                  if (isTutorialSessionActive()) {
+                    scheduleTestAlert(0);
+                    return;
+                  }
+                  setTestPickerOpen((open) => !open);
+                }}
+              />
             </TourAnchor>
+            {testPickerOpen ? testScheduleRow : null}
             <View style={styles.divider} />
             <Text style={styles.recentsLabel}>ACTIVITY</Text>
             {stockEvents.length === 0 ? (
@@ -730,6 +810,76 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 0.8,
+  },
+  enableBanner: {
+    alignItems: 'center',
+    backgroundColor: palette.blackRaised,
+    borderColor: palette.redDark,
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  enableBannerCopy: { flex: 1, gap: 4, minWidth: 0 },
+  enableBannerTitle: {
+    color: palette.white,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  enableBannerBody: {
+    color: palette.whiteShadow,
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 16,
+  },
+  enableBannerBtn: {
+    backgroundColor: palette.red,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  enableBannerBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  scheduleBlock: {
+    gap: 10,
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  schedulePrompt: {
+    color: palette.whiteDim,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  scheduleChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  scheduleChip: {
+    backgroundColor: palette.card,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  scheduleChipText: {
+    color: palette.cardInk,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  scheduleCancel: {
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+  },
+  scheduleCancelText: {
+    color: palette.whiteShadow,
+    fontSize: 12,
+    fontWeight: '700',
   },
   body: { alignItems: 'center', paddingBottom: 8, paddingTop: 4 },
   statusRow: { alignItems: 'center', flexDirection: 'row', gap: 8, marginBottom: 22 },

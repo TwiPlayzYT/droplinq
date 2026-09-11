@@ -130,6 +130,8 @@ type DropDexContextValue = PersistedState & {
   updateFilters: (filters: FilterPreferences) => void;
   updateAlertPreferences: (alerts: AlertPreferences) => void;
   triggerTestAlert: () => void;
+  /** Schedule in-app test (+ lock-screen push if subscribed) after delayMs. */
+  scheduleTestAlert: (delayMs: number) => void;
   acknowledgeAlert: () => void;
   openProductBrowser: (product: Product) => void;
   pendingOpenProduct: Product | null;
@@ -1070,6 +1072,67 @@ export function DropDexProvider({ children }: PropsWithChildren) {
     );
   }, [processProduct]);
 
+  const testAlertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (testAlertTimerRef.current) clearTimeout(testAlertTimerRef.current);
+    },
+    [],
+  );
+
+  const scheduleTestAlert = useCallback(
+    (delayMs: number) => {
+      if (testAlertTimerRef.current) {
+        clearTimeout(testAlertTimerRef.current);
+        testAlertTimerRef.current = null;
+      }
+
+      const fire = () => {
+        testAlertTimerRef.current = null;
+        emitTourAction('test-alert');
+        void unlockAlertAudio();
+        processProduct(
+          { ...testAlertProduct, detectedAt: new Date().toISOString() },
+          true,
+          false,
+          true,
+        );
+        if (webPushState === 'subscribed') {
+          void sendTestLockScreenPush();
+        }
+      };
+
+      if (delayMs <= 0) {
+        fire();
+        if (webPushState !== 'subscribed') {
+          showFeedback(
+            'success',
+            'Test alert sent',
+            'In-app overlay fired. Enable Notifications for a lock-screen push on the next test.',
+          );
+        }
+        return;
+      }
+
+      const at = new Date(Date.now() + delayMs);
+      const whenLabel = at.toLocaleTimeString(undefined, {
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+      showFeedback(
+        'info',
+        'Test alert scheduled',
+        webPushState === 'subscribed'
+          ? `In-app overlay + lock-screen push at ${whenLabel}.`
+          : `In-app overlay at ${whenLabel}. Enable Notifications to also get lock-screen push.`,
+      );
+      testAlertTimerRef.current = setTimeout(fire, delayMs);
+    },
+    [processProduct, sendTestLockScreenPush, showFeedback, webPushState],
+  );
+
   const acknowledgeAlert = useCallback(() => {
     const alert = activeAlertRef.current;
     if (!alert) return;
@@ -1288,6 +1351,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       updateFilters,
       updateAlertPreferences,
       triggerTestAlert,
+      scheduleTestAlert,
       acknowledgeAlert,
       openProductBrowser,
       pendingOpenProduct,
@@ -1332,6 +1396,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       syncState,
       toggleProductMute,
       triggerTestAlert,
+      scheduleTestAlert,
       updateAlertPreferences,
       updateFilters,
       webPushState,

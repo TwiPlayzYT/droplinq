@@ -6,10 +6,10 @@ import { useWebLayout } from '@/hooks/use-web-layout';
 /** Icon row + label inside the bottom tab bar (excluding home-indicator inset). */
 export const MOBILE_TAB_BAR_CONTENT_HEIGHT = 56;
 
-/** Mobile Safari often reports 0 insets on web — keep a sensible floor. */
+/** Use real safe-area only — no artificial 34px floor (that left a black gap). */
 export function mobileWebBottomInset(insetFromHook: number) {
-  if (Platform.OS !== 'web') return Math.max(insetFromHook, 8);
-  return Math.max(insetFromHook, 34);
+  if (Platform.OS !== 'web') return Math.max(insetFromHook, 0);
+  return Math.max(insetFromHook, 0);
 }
 
 export function mobileTabBarHeight(bottomInset: number) {

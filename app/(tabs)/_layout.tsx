@@ -26,9 +26,8 @@ export default function TabLayout() {
           borderTopColor: palette.blackSoft,
           borderTopWidth: 1,
           // Keep height + safe-area padding in sync via CSS so iOS never clips labels.
-          height:
-            'calc(56px + max(34px, env(safe-area-inset-bottom, 0px)))' as unknown as number,
-          paddingBottom: 'max(34px, env(safe-area-inset-bottom, 0px))' as unknown as number,
+          height: 'calc(56px + env(safe-area-inset-bottom, 0px))' as unknown as number,
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)' as unknown as number,
           paddingTop: 6,
           zIndex: 50,
         } as object)

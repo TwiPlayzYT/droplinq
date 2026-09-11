@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 const faqs = [
   {
     q: 'How do lock-screen alerts work on iPhone?',
-    a: 'Use Safari → Share → Add to Home Screen → open the DropLinq icon → Settings → Home Screen & lock-screen → Enable alerts. Regular Safari tabs and in-app browsers often block closed-app push.',
+    a: 'Use Safari → Share → Add to Home Screen → open the DropLinq icon → Settings → Notifications → Enable alerts. Regular Safari tabs and in-app browsers often block closed-app push.',
   },
   {
     q: 'What is the free trial?',

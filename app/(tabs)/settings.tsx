@@ -71,9 +71,21 @@ export default function SettingsScreen() {
   const pushCaption =
     Platform.OS === 'web'
       ? webPushState === 'subscribed'
-        ? 'This device is registered. Closed-app delivery still needs the alert server to be awake.'
-        : 'Home Screen setup is required on iPhone. This is not the in-app overlay on Home.'
+        ? 'This device is registered for lock-screen push. Closed-app delivery still needs the monitor Live/awake.'
+        : 'Needs Home Screen setup on iPhone, then Enable alerts. Separate from in-app overlay sounds.'
       : 'Uses the system notification permission on this device.';
+
+  const notificationsReady = Platform.OS !== 'web' || webPushState === 'subscribed';
+  const notificationsStatus =
+    Platform.OS !== 'web'
+      ? 'System'
+      : webPushState === 'subscribed'
+        ? 'On'
+        : webPushState === 'unsupported'
+          ? 'Unsupported'
+          : webPushState === 'checking'
+            ? 'Checking…'
+            : 'Needs setup';
 
   const updateAlert = (key: keyof typeof alerts, value: boolean) => {
     updateAlertPreferences({ ...alerts, [key]: value });
@@ -196,14 +208,35 @@ export default function SettingsScreen() {
         </View>
       </SettingsGroup>
 
+      <SettingsGroup title="Notifications">
+        <TourAnchor id="settings-homescreen">
+          <Pressable
+            accessibilityLabel="Open notifications setup"
+            accessibilityRole="button"
+            onPress={() => {
+              if (isTutorialSessionActive()) {
+                emitTourAction('tap');
+                return;
+              }
+              router.push('/notifications' as never);
+            }}
+            style={({ pressed }) => [styles.notifCard, pressed && styles.notifPressed]}>
+            <View style={styles.notifCopy}>
+              <Text style={styles.notifTitle}>Lock-screen & Home Screen</Text>
+              <Text style={styles.notifCaption}>{pushCaption}</Text>
+              <Text style={styles.notifStatus}>Status · {notificationsStatus}</Text>
+            </View>
+            <View style={styles.notifCta}>
+              <Text style={styles.notifCtaText}>
+                {notificationsReady ? 'Open setup' : 'Enable'}
+              </Text>
+              <Ionicons color="#fff" name="chevron-forward" size={16} />
+            </View>
+          </Pressable>
+        </TourAnchor>
+      </SettingsGroup>
+
       <SettingsGroup title="Alerts">
-        <SettingsNavRow
-          caption={pushCaption}
-          onPress={() => router.push('/setup/notifications')}
-          title="Home Screen & lock-screen"
-          tourId="settings-homescreen"
-          value={webPushState === 'subscribed' ? 'On' : 'Set up'}
-        />
         <SettingsNavRow
           caption={`${alertHistory.length} recent · mute individual products`}
           onPress={() => router.push('/alerts/history' as never)}
@@ -340,8 +373,8 @@ export default function SettingsScreen() {
       <View style={styles.testHint}>
         <Ionicons color={palette.cardMuted} name="information-circle-outline" size={16} />
         <Text style={styles.testHintText}>
-          Home → Test plays the in-app overlay only. Lock-screen tests live on the Home Screen
-          setup page.
+          Home → Schedule test plays the in-app overlay (and lock-screen push if subscribed). Full
+          lock-screen setup lives under Notifications above.
         </Text>
       </View>
     </Screen>
@@ -476,6 +509,50 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     lineHeight: 17,
+  },
+  notifCard: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  notifPressed: { opacity: 0.9 },
+  notifCopy: {
+    flex: 1,
+    gap: 6,
+    minWidth: 0,
+  },
+  notifTitle: {
+    color: palette.cardInk,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  notifCaption: {
+    color: palette.cardMuted,
+    fontSize: 13,
+    fontWeight: '500',
+    lineHeight: 18,
+  },
+  notifStatus: {
+    color: palette.red,
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  notifCta: {
+    alignItems: 'center',
+    backgroundColor: palette.red,
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  notifCtaText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
   },
   quietRow: {
     alignItems: 'center',

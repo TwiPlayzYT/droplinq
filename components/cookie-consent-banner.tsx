@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { palette } from '@/constants/dropdex';
@@ -7,14 +8,23 @@ import { legalHref } from '@/constants/legal';
 import { useCookieConsent } from '@/hooks/use-cookie-consent';
 import { useMobileWebChrome } from '@/hooks/use-mobile-web-chrome';
 import { useWebLayout } from '@/hooks/use-web-layout';
+import { useAuth } from '@/store/auth-context';
 
 export function CookieConsentBanner() {
   const { needsBanner, acceptEssential } = useCookieConsent();
+  const { session } = useAuth();
   const { isDesktopWeb, isMobileWeb } = useWebLayout();
   const { tabBarHeight } = useMobileWebChrome();
   const router = useRouter();
 
-  if (!needsBanner) return null;
+  // Returning signed-in users already have a session — accept essential silently.
+  useEffect(() => {
+    if (session && needsBanner) {
+      void acceptEssential();
+    }
+  }, [acceptEssential, needsBanner, session]);
+
+  if (!needsBanner || session) return null;
 
   return (
     <View

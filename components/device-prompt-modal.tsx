@@ -161,13 +161,13 @@ export function DevicePromptModal() {
                 label="Yes, show me the guide"
                 onPress={() => {
                   void finish();
-                  router.push('/setup/notifications');
+                  router.push('/notifications' as never);
                 }}
               />
               <View style={styles.spacer} />
               <MetalButton icon="arrow-forward" label="Not now" onPress={() => void finish()} />
               <Text style={styles.footer}>
-                You can open Home Screen & lock-screen setup anytime from Settings.
+                You can open Notifications setup anytime from Settings.
               </Text>
             </>
           ) : null}
