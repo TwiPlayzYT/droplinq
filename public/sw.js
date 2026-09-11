@@ -1,5 +1,5 @@
-const CACHE_NAME = 'droplinq-shell-v12';
-const APP_SHELL = ['/', '/manifest.webmanifest', '/droplinq-icon.svg'];
+const CACHE_NAME = 'droplinq-shell-v13';
+const APP_SHELL = ['/', '/manifest.webmanifest', '/droplinq-icon.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -58,8 +58,8 @@ self.addEventListener('push', (event) => {
     Promise.all([
       self.registration.showNotification(title, {
         body,
-        badge: '/droplinq-icon.svg',
-        icon: '/droplinq-icon.svg',
+        badge: '/droplinq-icon.png',
+        icon: '/droplinq-icon.png',
         tag: product?.id ? `droplinq-${product.id}` : 'droplinq-alert',
         renotify: true,
         data: {

@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { PropsWithChildren, useState } from 'react';
+import { Image } from 'expo-image';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -20,6 +21,8 @@ import { SiteFooter } from '@/components/site-footer';
 import { palette } from '@/constants/dropdex';
 import { useMobileWebChrome } from '@/hooks/use-mobile-web-chrome';
 import { useWebLayout } from '@/hooks/use-web-layout';
+
+const brandIcon = require('../assets/images/icon.png');
 
 
 /** Zero press-in delay so taps feel immediate across the app. */
@@ -114,11 +117,12 @@ export function BrandHeader({ eyebrow }: { eyebrow: string }) {
         <Text style={styles.eyebrow}>{eyebrow.toUpperCase()}</Text>
         <Text accessibilityRole="header" style={styles.brand}>DROPLINQ</Text>
       </View>
-      <View style={styles.headerBall}>
-        <View style={styles.headerBallTop} />
-        <View style={styles.headerBallLine} />
-        <View style={styles.headerBallButton} />
-      </View>
+      <Image
+        accessibilityIgnoresInvertColors
+        contentFit="cover"
+        source={brandIcon}
+        style={styles.headerIcon}
+      />
     </View>
   );
 }
@@ -356,31 +360,14 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   brand: { color: palette.white, fontSize: 30, fontWeight: '900', letterSpacing: 0.6 },
-  headerBall: {
-    backgroundColor: palette.card,
-    borderColor: palette.cardBorder,
-    borderRadius: 25,
-    borderWidth: 3,
+  headerIcon: {
+    borderRadius: 12,
     height: 50,
-    overflow: 'hidden',
     shadowColor: palette.red,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
+    shadowOpacity: 0.55,
     shadowRadius: 10,
     width: 50,
-  },
-  headerBallTop: { backgroundColor: palette.red, height: 22 },
-  headerBallLine: { backgroundColor: palette.cardInk, height: 6 },
-  headerBallButton: {
-    backgroundColor: palette.card,
-    borderColor: palette.cardInk,
-    borderRadius: 8,
-    borderWidth: 4,
-    height: 16,
-    left: 14,
-    position: 'absolute',
-    top: 17,
-    width: 16,
   },
   panelShadow: {
     backgroundColor: palette.blackSoft,

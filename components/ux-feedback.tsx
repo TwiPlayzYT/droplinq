@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useSegments } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -18,6 +19,8 @@ import { useDropDex } from '@/store/dropdex-context';
 
 /** Must match DropDexProvider showFeedback auto-dismiss duration. */
 const FEEDBACK_DURATION_MS = 4500;
+const brandIcon = require('../assets/images/icon.png');
+
 
 export function AppBootScreen() {
   const pulse = useRef(new Animated.Value(0.35)).current;
@@ -48,10 +51,8 @@ export function AppBootScreen() {
       accessibilityLabel="Loading your DropLinq preferences"
       accessibilityRole="progressbar"
       style={styles.boot}>
-      <Animated.View style={[styles.bootBall, { opacity: pulse }]}>
-        <View style={styles.bootBallTop} />
-        <View style={styles.bootBallLine} />
-        <View style={styles.bootBallButton} />
+      <Animated.View style={[styles.bootIconWrap, { opacity: pulse }]}>
+        <Image accessibilityIgnoresInvertColors contentFit="cover" source={brandIcon} style={styles.bootIcon} />
       </Animated.View>
       <Text style={styles.bootBrand}>DROPLINQ</Text>
       <Text style={styles.bootTitle}>GETTING YOUR WATCHLIST READY</Text>
@@ -235,30 +236,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 28,
   },
-  bootBall: {
-    backgroundColor: palette.card,
-    borderColor: palette.cardBorder,
-    borderRadius: 40,
-    borderWidth: 4,
-    height: 80,
-    overflow: 'hidden',
+  bootIconWrap: {
     shadowColor: palette.red,
     shadowOpacity: 0.8,
     shadowRadius: 18,
-    width: 80,
   },
-  bootBallTop: { backgroundColor: palette.red, height: 36 },
-  bootBallLine: { backgroundColor: palette.black, height: 8 },
-  bootBallButton: {
-    backgroundColor: palette.card,
-    borderColor: palette.black,
-    borderRadius: 12,
-    borderWidth: 5,
-    height: 24,
-    left: 23,
-    position: 'absolute',
-    top: 28,
-    width: 24,
+  bootIcon: {
+    borderRadius: 18,
+    height: 80,
+    width: 80,
   },
   bootBrand: {
     color: palette.white,

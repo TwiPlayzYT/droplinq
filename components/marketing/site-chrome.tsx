@@ -1,4 +1,5 @@
 import { useRouter, usePathname } from 'expo-router';
+import { Image } from 'expo-image';
 import { PropsWithChildren } from 'react';
 import {
   Platform,
@@ -16,6 +17,8 @@ import { palette } from '@/constants/dropdex';
 import { legalHref } from '@/constants/legal';
 import { openAppPath } from '@/lib/open-app';
 import { useAuth } from '@/store/auth-context';
+
+const brandIcon = require('../../assets/images/icon.png');
 
 const navItems = [
   { label: 'Home', href: '/' as const },
@@ -40,8 +43,11 @@ export function MarketingChrome({
     <View style={[styles.root, { paddingTop: Math.max(insets.top, 8) }]}>
       <View style={[styles.nav, desktop && styles.navDesktop]}>
         <Pressable onPress={() => router.push('/' as never)} style={styles.brandBlock}>
-          <Text style={styles.brand}>{brand.displayName}</Text>
-          <Text style={styles.brandTag}>{brand.tagline}</Text>
+          <Image accessibilityIgnoresInvertColors contentFit="cover" source={brandIcon} style={styles.brandIcon} />
+          <View style={styles.brandText}>
+            <Text style={styles.brand}>{brand.displayName}</Text>
+            <Text style={styles.brandTag}>{brand.tagline}</Text>
+          </View>
         </Pressable>
 
         {desktop ? (
@@ -151,6 +157,17 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   brandBlock: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexShrink: 1,
+    gap: 10,
+  },
+  brandIcon: {
+    borderRadius: 9,
+    height: 36,
+    width: 36,
+  },
+  brandText: {
     flexShrink: 1,
   },
   brand: {

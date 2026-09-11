@@ -202,7 +202,9 @@ export default function RootLayout() {
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content={brand.displayName} />
         <link rel="manifest" href="/manifest.webmanifest" />
-        <link rel="apple-touch-icon" href="/droplinq-icon.svg" />
+        <link rel="icon" type="image/png" href="/favicon.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/droplinq-icon-192.png" />
+        <link rel="apple-touch-icon" href="/droplinq-icon.png" />
       </Head>
       <SafeAreaProvider>
         <AppearanceProvider>

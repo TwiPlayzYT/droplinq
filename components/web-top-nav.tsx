@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { usePathname, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -8,6 +9,8 @@ import { tourDomProps } from '@/components/tour-anchor';
 import { WebSearchPalette } from '@/components/web-search-palette';
 import { palette } from '@/constants/dropdex';
 import { useWebLayout } from '@/hooks/use-web-layout';
+
+const brandIcon = require('../assets/images/icon.png');
 
 const LINKS = [
   { href: '/home', match: ['/home', '/(tabs)/home', '/(tabs)'], label: 'Home', key: 'home' },
@@ -74,6 +77,7 @@ export function WebTopNav() {
             accessibilityRole="link"
             onPress={() => router.push('/home' as never)}
             style={styles.mobileBrand}>
+            <Image accessibilityIgnoresInvertColors contentFit="cover" source={brandIcon} style={styles.mobileBrandIcon} />
             <Text style={styles.mobileBrandText}>DROPLINQ</Text>
           </Pressable>
           <View style={styles.mobileActions}>
@@ -103,8 +107,11 @@ export function WebTopNav() {
             accessibilityRole="link"
             onPress={() => router.push('/home' as never)}
             style={styles.brandBlock}>
-            <Text style={styles.brand}>DROPLINQ</Text>
-            <Text style={styles.tagline}>MONITOR · ALERT · CHECK</Text>
+            <Image accessibilityIgnoresInvertColors contentFit="cover" source={brandIcon} style={styles.brandIcon} />
+            <View>
+              <Text style={styles.brand}>DROPLINQ</Text>
+              <Text style={styles.tagline}>MONITOR · ALERT · CHECK</Text>
+            </View>
           </Pressable>
 
           <View style={styles.links}>
@@ -164,7 +171,17 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     width: '100%',
   },
-  brandBlock: { marginRight: 8 },
+  brandBlock: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    marginRight: 8,
+  },
+  brandIcon: {
+    borderRadius: 10,
+    height: 40,
+    width: 40,
+  },
   brand: {
     color: palette.white,
     fontSize: 22,
@@ -254,7 +271,15 @@ const styles = StyleSheet.create({
       : null),
   },
   mobileBrand: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
     paddingRight: 4,
+  },
+  mobileBrandIcon: {
+    borderRadius: 7,
+    height: 28,
+    width: 28,
   },
   mobileBrandText: {
     color: palette.white,

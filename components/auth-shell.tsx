@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { PropsWithChildren } from 'react';
 import {
   KeyboardAvoidingView,
@@ -13,6 +14,8 @@ import { AuthLegalLinks } from '@/components/auth-legal-links';
 import { palette } from '@/constants/dropdex';
 import { useCookieConsent } from '@/hooks/use-cookie-consent';
 import { useWebLayout } from '@/hooks/use-web-layout';
+
+const brandIcon = require('../assets/images/icon.png');
 
 /** Collectr-style teal for the recommended email CTA */
 export const authAccent = '#3ECFBE';
@@ -44,6 +47,7 @@ export function AuthShell({ tagline, children }: AuthShellProps) {
           showsVerticalScrollIndicator={false}>
           <View style={[styles.card, isWeb && styles.cardWeb]}>
             <View style={styles.brandBlock}>
+              <Image accessibilityIgnoresInvertColors contentFit="cover" source={brandIcon} style={styles.brandIcon} />
               <Text style={styles.brand}>DROPLINQ</Text>
               <Text style={styles.tagline}>{tagline}</Text>
             </View>
@@ -236,6 +240,12 @@ const styles = StyleSheet.create({
   brandBlock: {
     alignItems: 'center',
     marginBottom: 28,
+  },
+  brandIcon: {
+    borderRadius: 16,
+    height: 64,
+    marginBottom: 14,
+    width: 64,
   },
   brand: {
     color: '#F7F5F2',
