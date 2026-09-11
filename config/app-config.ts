@@ -15,8 +15,8 @@ export const brand = {
     'DropLinq is an independent product availability monitoring service and is not affiliated with or endorsed by the retailers or brands it monitors.',
 } as const;
 
-/** Live static site. Update when a custom domain is connected. */
-export const productionWebOrigin = 'https://droplinq-web.onrender.com';
+/** Live static site (custom domain). onrender.com still works as a fallback host. */
+export const productionWebOrigin = 'https://getdroplinq.com';
 
 export type DataMode = 'mock' | 'supabase';
 
