@@ -53,8 +53,14 @@ function isProductPath(pathname: string) {
   );
 }
 
+/** Random delay before the Pro offer appears (ms). */
+function randomOfferDelayMs() {
+  return 10_000 + Math.floor(Math.random() * 20_001);
+}
+
 /**
- * Centered vertical Pro upgrade card — shown once per app open when entering product.
+ * Centered vertical Pro upgrade card — trial accounts only, once per app open,
+ * after tutorial settles, delayed 10–30s on the product app.
  */
 export function ProUpgradeModal() {
   const { profile, profileReady, session, startProCheckout } = useAuth();
@@ -66,13 +72,22 @@ export function ProUpgradeModal() {
   const [message, setMessage] = useState<string | null>(null);
   /** False while tutorial will ask / is running; true once done or skipped. */
   const [tutorialSettled, setTutorialSettled] = useState(false);
+  const delayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const legalOk = hasAcceptedCurrentLegal(profile);
   const onboarded = Boolean(profile?.onboardingCompleted);
   const entitlements = resolveEntitlements(profile);
   const onProduct = isProductPath(pathname);
+  const onTrial = entitlements.trialActive || entitlements.status === 'trialing';
   const alreadyPro = entitlements.status === 'active';
   const price = proPriceLabel(interval);
+
+  const clearDelayTimer = () => {
+    if (delayTimerRef.current) {
+      clearTimeout(delayTimerRef.current);
+      delayTimerRef.current = null;
+    }
+  };
 
   const offerGateRef = useRef({
     profileReady,
@@ -81,6 +96,8 @@ export function ProUpgradeModal() {
     onboarded,
     onProduct,
     tutorialSettled,
+    onTrial,
+    alreadyPro,
   });
   offerGateRef.current = {
     profileReady,
@@ -89,6 +106,8 @@ export function ProUpgradeModal() {
     onboarded,
     onProduct,
     tutorialSettled,
+    onTrial,
+    alreadyPro,
   };
 
   const tryShowOffer = () => {
@@ -97,9 +116,24 @@ export function ProUpgradeModal() {
       return;
     }
     if (!gate.tutorialSettled) return;
-    if (sessionOfferShown) return;
+    // Paid Pro never sees the upgrade popup; only trial accounts.
+    if (gate.alreadyPro || !gate.onTrial) return;
+    if (sessionOfferShown || delayTimerRef.current) return;
     sessionOfferShown = true;
-    setVisible(true);
+    const delayMs = randomOfferDelayMs();
+    delayTimerRef.current = setTimeout(() => {
+      delayTimerRef.current = null;
+      const latest = offerGateRef.current;
+      if (
+        !latest.onProduct ||
+        !latest.tutorialSettled ||
+        latest.alreadyPro ||
+        !latest.onTrial
+      ) {
+        return;
+      }
+      setVisible(true);
+    }, delayMs);
   };
 
   useEffect(() => {
@@ -120,18 +154,19 @@ export function ProUpgradeModal() {
       if (cancelled) return;
       setTutorialSettled(true);
       offerGateRef.current.tutorialSettled = true;
-      // Show immediately on Not now / Finish so we do not rely on a stale mount read.
       tryShowOffer();
     });
     const unsubCleared = subscribeTutorialCleared(() => {
       if (cancelled) return;
       sessionOfferShown = false;
+      clearDelayTimer();
       setTutorialSettled(false);
       offerGateRef.current.tutorialSettled = false;
       setVisible(false);
     });
     return () => {
       cancelled = true;
+      clearDelayTimer();
       unsubSettled();
       unsubCleared();
     };
@@ -140,9 +175,10 @@ export function ProUpgradeModal() {
   useEffect(() => {
     // Cover cases where settle already happened but product/auth gates open later.
     tryShowOffer();
-  }, [legalOk, onboarded, onProduct, profileReady, session, tutorialSettled]);
+  }, [alreadyPro, legalOk, onboarded, onProduct, onTrial, profileReady, session, tutorialSettled]);
 
   const dismiss = () => {
+    clearDelayTimer();
     setVisible(false);
     setMessage(null);
   };
