@@ -202,10 +202,13 @@ export default function RootLayout() {
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content={brand.displayName} />
         <link rel="manifest" href="/manifest.webmanifest" />
-        <link rel="icon" type="image/png" href="/favicon.png?v=15" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=15" />
-        <link rel="icon" type="image/png" sizes="192x192" href="/droplinq-icon-192.png?v=15" />
-        <link rel="apple-touch-icon" href="/droplinq-icon.png?v=15" />
+        {/* Stable favicon URLs for Google Search (no cache-bust query). Expo also emits /favicon.ico in static HTML. */}
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+        <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/droplinq-icon-192.png" />
+        <link rel="apple-touch-icon" href="/droplinq-icon-192.png" />
+        <link rel="shortcut icon" href="/favicon.ico" />
       </Head>
       <SafeAreaProvider>
         <AppearanceProvider>
