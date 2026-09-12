@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import { palette } from '@/constants/dropdex';
+import { matchesProductSearch } from '@/lib/product-search';
 import { categoryNamesForProduct } from '@/lib/filter-matcher';
 import { useDropDex } from '@/store/dropdex-context';
 import { Product } from '@/types/dropdex';
@@ -32,18 +33,6 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'region', label: 'Go to Region', href: '/(tabs)/region', icon: 'globe-outline' },
   { key: 'settings', label: 'Go to Settings', href: '/(tabs)/settings', icon: 'settings-outline' },
 ];
-
-function matchesSearch(product: Product, query: string) {
-  const categories = categoryNamesForProduct(product);
-  const haystack = [product.title, product.id, ...product.tags, ...categories]
-    .join(' ')
-    .toLowerCase();
-  return query
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean)
-    .every((term) => haystack.includes(term));
-}
 
 function productSubtitle(product: Product) {
   const categories = categoryNamesForProduct(product);
@@ -74,7 +63,7 @@ export function WebSearchPalette({ visible, onClose }: Props) {
   const products = useMemo(() => {
     if (!trimmed) return [] as Product[];
     return [...liveProducts]
-      .filter((product) => matchesSearch(product, trimmed))
+      .filter((product) => matchesProductSearch(product, trimmed))
       .sort((a, b) => a.title.localeCompare(b.title))
       .slice(0, 24);
   }, [liveProducts, trimmed]);

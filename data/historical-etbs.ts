@@ -1,5 +1,6 @@
 import { pcCategorySeedProducts } from '@/data/pc-category-seeds';
 import { Product, ProductFormat } from '@/types/dropdex';
+import { normalizeSearchText } from '@/lib/product-search';
 
 const formatTags: Record<ProductFormat, string[]> = {
   etb: ['elite trainer box', 'pokemon center etb'],
@@ -28,7 +29,7 @@ const makeProduct = (
   url,
   imageUrl: `https://tcgplayer-cdn.tcgplayer.com/product/${imageId}_in_1000x1000.jpg`,
   detectedAt: new Date().toISOString(),
-  tags: ['tcg', ...formatTags[format], ...title.toLowerCase().split(/\s+/)],
+  tags: ['tcg', ...formatTags[format], ...normalizeSearchText(title).split(' ').filter(Boolean)],
 });
 
 const productUrl = (id: string, slug: string) =>
@@ -352,6 +353,37 @@ export const historicalProducts: Product[] = [
     'Mega Evolution—Chaos Rising Booster Box',
     '2026-05-22',
     'chaos rising booster box',
+  ),
+
+  // Pitch Black — 2026-07-17
+  makeEtb(
+    '10-10416-112',
+    'Mega Evolution—Pitch Black Pokémon Center Elite Trainer Box',
+    '2026-07-17',
+    'pokemon-tcg-mega-evolution-pitch-black-pokemon-center-elite-trainer-box',
+    '692949',
+  ),
+  makeProduct(
+    'booster-bundle',
+    '10-10422-109',
+    'Mega Evolution—Pitch Black Booster Bundle',
+    '2026-07-17',
+    productUrl(
+      '10-10422-109',
+      'pokemon-tcg-mega-evolution-pitch-black-booster-bundle-6-packs',
+    ),
+    '692949',
+  ),
+  makeProduct(
+    'booster-box',
+    '10-10425-120',
+    'Mega Evolution—Pitch Black Booster Box',
+    '2026-07-17',
+    productUrl(
+      '10-10425-120',
+      'pokemon-tcg-mega-evolution-pitch-black-booster-display-box-36-packs',
+    ),
+    '692949',
   ),
 ];
 

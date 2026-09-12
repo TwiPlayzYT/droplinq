@@ -43,13 +43,14 @@ function animateLayout() {
 import { palette } from '@/constants/dropdex';
 import { coverageModeCopy } from '@/data/pokemon-center-filters';
 import { getRegion } from '@/data/regions';
+import { useWebLayout } from '@/hooks/use-web-layout';
 import {
   categoryNamesForProduct,
   matchesCatalogCoverage,
   matchesFilters,
   signalsFromLegacyProduct,
 } from '@/lib/filter-matcher';
-import { useWebLayout } from '@/hooks/use-web-layout';
+import { matchesProductSearch } from '@/lib/product-search';
 import { useDropDex } from '@/store/dropdex-context';
 import { CatalogStockEvent, StockEventKind } from '@/types/catalog';
 import { Product, ProductAvailability, RegionId } from '@/types/dropdex';
@@ -85,19 +86,6 @@ function formatRelativeTime(iso?: string | null) {
   if (age < 3_600_000) return `${Math.max(1, Math.round(age / 60_000))} min ago`;
   if (age < 86_400_000) return `${Math.max(1, Math.round(age / 3_600_000))} hr ago`;
   return `${Math.max(1, Math.round(age / 86_400_000))}d ago`;
-}
-
-function matchesSearch(product: Product, query: string) {
-  if (!query) return true;
-  const categories = categoryNamesForProduct(product);
-  const haystack = [product.title, product.id, ...product.tags, ...categories]
-    .join(' ')
-    .toLowerCase();
-  return query
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean)
-    .every((term) => haystack.includes(term));
 }
 
 function isRecentlySoldOut(product: Product) {
@@ -583,7 +571,19 @@ export default function StockScreen() {
   );
 
   const catalogProducts = useMemo(() => {
-    let list = coverageProducts.filter((product) => matchesSearch(product, query));
+    const trimmed = query.trim();
+    // Searching looks across the full live catalog so coverage mode never hides a match.
+    const pool = trimmed
+      ? (liveProducts as StockProduct[]).filter((product) => matchesProductSearch(product, trimmed))
+      : coverageProducts;
+    let list = trimmed
+      ? [...pool].sort((a, b) => {
+          const aCovered = matchesCatalogCoverage(a, filters) ? 0 : 1;
+          const bCovered = matchesCatalogCoverage(b, filters) ? 0 : 1;
+          if (aCovered !== bCovered) return aCovered - bCovered;
+          return a.title.localeCompare(b.title);
+        })
+      : pool;
     if (viewFilter === 'in-stock') {
       list = list.filter((product) => product.availability === 'in-stock');
     } else if (viewFilter === 'sold-out') {
@@ -594,7 +594,7 @@ export default function StockScreen() {
       list = list.filter((product) => product.releaseType === 'preorder');
     }
     return list;
-  }, [coverageProducts, query, viewFilter]);
+  }, [coverageProducts, filters, liveProducts, query, viewFilter]);
 
   const watchedCountLabel = customEmpty
     ? 'Pick categories in Filter'
