@@ -91,7 +91,7 @@ export async function deliverProductAlert(product: Product, settings: AlertPrefe
       badge: '/droplinq-icon.png',
       icon: '/droplinq-icon.png',
       tag: `droplinq-local-${product.id}`,
-      data: { product, appUrl: '/' },
+      data: { product, appUrl: '/app' },
     });
   }
 }

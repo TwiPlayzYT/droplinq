@@ -56,7 +56,8 @@ export default function TabLayout() {
           isDesktopWeb
             ? { top: 0, right: 0, bottom: 0, left: 0 }
             : isMobileWeb
-              ? { bottom: bottomInset }
+              ? // Padding already comes from tabBarStyle env(safe-area-inset-bottom).
+                { top: 0, right: 0, bottom: 0, left: 0 }
               : undefined
         }
         screenOptions={{

@@ -26,7 +26,8 @@ export default function AuthCallbackScreen() {
 
       const { data: existing } = await supabase.auth.getSession();
       if (existing.session) {
-        if (active) router.replace('/setup' as never);
+        // /app routes by legal + onboarding — returning users go home, new users finish setup.
+        if (active) router.replace('/app' as never);
         return;
       }
 
@@ -58,7 +59,7 @@ export default function AuthCallbackScreen() {
         }
       }
 
-      if (active) router.replace('/setup' as never);
+      if (active) router.replace('/app' as never);
     };
 
     const href =

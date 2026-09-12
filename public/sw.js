@@ -1,4 +1,4 @@
-const CACHE_NAME = 'droplinq-shell-v17';
+const CACHE_NAME = 'droplinq-shell-v18';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/droplinq-icon.png'];
 
 self.addEventListener('install', (event) => {
@@ -65,7 +65,7 @@ self.addEventListener('push', (event) => {
         data: {
           product,
           productUrl: product?.url,
-          appUrl: '/',
+          appUrl: '/app',
         },
       }),
       self.registration.setAppBadge?.(1),
@@ -93,7 +93,7 @@ self.addEventListener('notificationclick', (event) => {
         return existing.focus();
       }
 
-      const target = new URL(data.appUrl ?? '/', self.location.origin);
+      const target = new URL(data.appUrl ?? '/app', self.location.origin);
       if (data.product) {
         target.searchParams.set('drop', JSON.stringify(data.product));
       }
