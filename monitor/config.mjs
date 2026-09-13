@@ -14,6 +14,16 @@ export const config = {
     [
       'https://www.pokemoncenter.com/en-ca/category/trading-card-game',
       'https://www.pokemoncenter.com/en-ca/category/new-releases',
+      'https://www.pokemoncenter.com/category/trading-card-game',
+      'https://www.pokemoncenter.com/category/new-releases',
+      'https://www.pokemoncenter.com/en-gb/category/trading-card-game',
+      'https://www.pokemoncenter.com/en-gb/category/new-releases',
+      'https://www.pokemoncenter.com/de-de/category/trading-card-game',
+      'https://www.pokemoncenter.com/de-de/category/new-releases',
+      'https://www.pokemoncenter.com/en-au/category/trading-card-game',
+      'https://www.pokemoncenter.com/en-au/category/new-releases',
+      'https://www.pokemoncenter.com/en-nz/category/trading-card-game',
+      'https://www.pokemoncenter.com/en-nz/category/new-releases',
     ].join(',')
   )
     .split(',')

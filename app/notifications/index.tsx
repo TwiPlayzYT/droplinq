@@ -154,11 +154,10 @@ export default function NotificationSetupScreen() {
       <Panel tone="dark">
         <Text style={styles.honestKicker}>WHAT THIS CAN AND CANNOT DO</Text>
         <Text style={styles.honestBody}>
-          Enable alerts registers this device with the alert server. A lock-screen test is a real
-          push. Home → Test is the in-app overlay (and a lock-screen push if this device is
-          subscribed). Closed-app delivery still needs the DropLinq monitor to be Live and awake —
-          if the monitor is sleeping, you will get in-app alerts while DropLinq is open, but not
-          lock-screen pushes.
+          Enable alerts registers this device with the always-on alert server. A lock-screen test is
+          a real push. Home → Test is the in-app overlay (and a lock-screen push if this device is
+          subscribed). Keep alerts enabled on this phone or computer so drops can reach you after
+          you close the tab.
         </Text>
       </Panel>
 

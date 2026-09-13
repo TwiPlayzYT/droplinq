@@ -2,15 +2,26 @@ import { sendMatchingPushes } from './expo-push.mjs';
 import { fetchPokemonCenterProducts } from './pokemon-center-source.mjs';
 import { sendMatchingWebPushes } from './web-push.mjs';
 
+const snapshotKey = (product) => `${product.region ?? 'ca'}:${product.id}`;
+
 export class MonitorEngine {
   #running = false;
   #timer;
+  #urlCursor = 0;
 
   constructor({ store, urls, pollIntervalMs, requestTimeoutMs }) {
     this.store = store;
     this.urls = urls;
     this.pollIntervalMs = pollIntervalMs;
     this.requestTimeoutMs = requestTimeoutMs;
+  }
+
+  #nextUrlBatch() {
+    if (this.urls.length <= 2) return { urls: this.urls, completeSweep: true };
+    const first = this.urls[this.#urlCursor % this.urls.length];
+    const second = this.urls[(this.#urlCursor + 1) % this.urls.length];
+    this.#urlCursor = (this.#urlCursor + 2) % this.urls.length;
+    return { urls: [first, second], completeSweep: false };
   }
 
   start() {
@@ -30,15 +41,17 @@ export class MonitorEngine {
     this.#running = true;
 
     try {
-      const result = await fetchPokemonCenterProducts(this.urls, this.requestTimeoutMs);
+      const { urls, completeSweep } = this.#nextUrlBatch();
+      const result = await fetchPokemonCenterProducts(urls, this.requestTimeoutMs);
       const now = new Date().toISOString();
 
       const updated = await this.store.update((state) => {
-        const observedIds = new Set(result.products.map((product) => product.id));
+        const observedIds = new Set(result.products.map((product) => snapshotKey(product)));
         const newEvents = [];
 
         for (const product of result.products) {
-          const previous = state.snapshot[product.id];
+          const key = snapshotKey(product);
+          const previous = state.snapshot[key];
           let releaseType;
 
           if (state.baselineReady) {
@@ -53,13 +66,13 @@ export class MonitorEngine {
 
           if (releaseType) {
             newEvents.push({
-              id: `${product.id}-${Date.now()}-${releaseType}`,
+              id: `${key}-${Date.now()}-${releaseType}`,
               product: { ...product, releaseType, detectedAt: now },
               attempts: 0,
             });
           }
 
-          state.snapshot[product.id] = {
+          state.snapshot[key] = {
             ...product,
             inStock: true,
             missingPolls: 0,
@@ -67,7 +80,7 @@ export class MonitorEngine {
           };
         }
 
-        if (state.baselineReady && result.complete) {
+        if (state.baselineReady && result.complete && completeSweep) {
           for (const [id, previous] of Object.entries(state.snapshot)) {
             if (observedIds.has(id)) continue;
             const missingPolls = (previous.missingPolls ?? 0) + 1;
@@ -81,6 +94,11 @@ export class MonitorEngine {
 
         state.pendingEvents.push(...newEvents);
         state.baselineReady = true;
+        state.lastObservationAt = now;
+        state.lastObservationCount = result.products.length;
+        state.lastCheckAt = now;
+        state.lastError = result.errors[0] ?? null;
+        state.sourceBlocked = false;
         return state;
       });
 
@@ -93,6 +111,15 @@ export class MonitorEngine {
           `${updated.pendingEvents.length} event(s) pending`,
       );
       await this.#flushPendingEvents();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[monitor] Check failed:', message);
+      await this.store.update((state) => {
+        state.lastCheckAt = new Date().toISOString();
+        state.lastError = message;
+        state.sourceBlocked = /challenge|incapsula|blocked|unsuccessful/i.test(message);
+        return state;
+      });
     } finally {
       this.#running = false;
     }
@@ -105,11 +132,11 @@ export class MonitorEngine {
 
     const now = new Date().toISOString();
     const updated = await this.store.update((state) => {
-      const observedIds = new Set(products.map((product) => product.id));
+      const observedIds = new Set(products.map((product) => snapshotKey(product)));
       const newEvents = [];
 
       for (const product of products) {
-        const previous = state.snapshot[product.id];
+        const previous = state.snapshot[snapshotKey(product)];
         const observedInStock =
           product.availability === 'in-stock'
             ? true
@@ -130,13 +157,13 @@ export class MonitorEngine {
 
         if (releaseType) {
           newEvents.push({
-            id: `${product.id}-${Date.now()}-${releaseType}`,
+            id: `${snapshotKey(product)}-${Date.now()}-${releaseType}`,
             product: { ...product, releaseType, detectedAt: now },
             attempts: 0,
           });
         }
 
-        state.snapshot[product.id] = {
+        state.snapshot[snapshotKey(product)] = {
           ...product,
           inStock: observedInStock,
           missingPolls: 0,
@@ -185,7 +212,7 @@ export class MonitorEngine {
           product,
           attempts: 0,
         });
-        state.snapshot[product.id] = {
+        state.snapshot[snapshotKey(product)] = {
           ...product,
           inStock: true,
           missingPolls: 0,

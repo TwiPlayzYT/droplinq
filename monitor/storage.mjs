@@ -9,6 +9,9 @@ const emptyState = () => ({
   baselineReady: false,
   lastObservationAt: null,
   lastObservationCount: 0,
+  lastCheckAt: null,
+  lastError: null,
+  sourceBlocked: false,
 });
 
 export class JsonStore {
@@ -51,9 +54,13 @@ export class JsonStore {
     const temporaryPath = `${this.filePath}.tmp`;
 
     this.#writeQueue = this.#writeQueue.then(async () => {
-      await mkdir(dirname(this.filePath), { recursive: true });
-      await writeFile(temporaryPath, serialized, 'utf8');
-      await rename(temporaryPath, this.filePath);
+      try {
+        await mkdir(dirname(this.filePath), { recursive: true });
+        await writeFile(temporaryPath, serialized, 'utf8');
+        await rename(temporaryPath, this.filePath);
+      } catch (error) {
+        console.error('[store] Persist failed:', error instanceof Error ? error.message : error);
+      }
     });
 
     return this.#writeQueue;

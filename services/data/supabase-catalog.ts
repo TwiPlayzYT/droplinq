@@ -1,5 +1,6 @@
 import { getSupabase } from '@/services/supabase/client';
 import { CatalogRepository } from '@/services/data/catalog-repository';
+import { sanitizeProductImageUrl } from '@/lib/product-image';
 import {
   CatalogProduct,
   CatalogStockEvent,
@@ -123,7 +124,7 @@ function mapProduct(row: Record<string, unknown>): CatalogProduct {
     format,
     releaseType: status === 'preorder' ? 'preorder' : 'new',
     url: String(row.product_url),
-    imageUrl: (row.image_url as string | null) ?? undefined,
+    imageUrl: sanitizeProductImageUrl((row.image_url as string | null) ?? undefined),
     availability: status === 'in-stock' ? 'in-stock' : status === 'out-of-stock' ? 'sold-out' : 'unknown',
     detectedAt: (row.last_checked_at as string) ?? new Date().toISOString(),
     tags: ['tcg', format],

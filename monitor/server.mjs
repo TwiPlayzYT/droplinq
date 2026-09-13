@@ -151,10 +151,14 @@ const server = createServer(async (request, response) => {
     const state = store.getState();
     sendJson(response, 200, {
       ok: true,
+      alwaysOn: true,
       baselineReady: state.baselineReady,
       observedProducts: Object.keys(state.snapshot).length,
       registrations: Object.keys(state.registrations).length,
       pendingEvents: state.pendingEvents.length,
+      lastCheckAt: state.lastCheckAt ?? null,
+      lastError: state.lastError ?? null,
+      sourceBlocked: state.sourceBlocked === true,
     });
     return;
   }
@@ -162,12 +166,25 @@ const server = createServer(async (request, response) => {
   if (request.method === 'GET' && request.url === '/v1/status') {
     const state = store.getState();
     sendJson(response, 200, {
+      alwaysOn: true,
       baselineReady: state.baselineReady,
       observedProducts: Object.values(state.snapshot).filter((product) => product.inStock).length,
       pollIntervalMs: config.pollIntervalMs,
       lastObservationAt: state.lastObservationAt ?? null,
       lastObservationCount: state.lastObservationCount ?? 0,
-      sourceBlocked: !state.baselineReady,
+      lastCheckAt: state.lastCheckAt ?? null,
+      lastError: state.lastError ?? null,
+      sourceBlocked: state.sourceBlocked === true,
+    });
+    return;
+  }
+
+  if (request.method === 'GET' && request.url === '/v1/catalog') {
+    const state = store.getState();
+    sendJson(response, 200, {
+      baselineReady: state.baselineReady,
+      lastObservationAt: state.lastObservationAt ?? null,
+      products: Object.values(state.snapshot),
     });
     return;
   }

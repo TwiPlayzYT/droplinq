@@ -1,5 +1,16 @@
 const PRODUCT_LINK =
-  /\/en-ca\/product\/([a-zA-Z0-9-]+)\/([a-zA-Z0-9][a-zA-Z0-9-]*)/g;
+  /(?:\/([a-z]{2}-[a-z]{2}))?\/product\/([a-zA-Z0-9-]+)\/([a-zA-Z0-9][a-zA-Z0-9-]*)/g;
+
+const LOCALE_TO_REGION = {
+  'en-ca': 'ca',
+  'en-gb': 'uk',
+  'de-de': 'de',
+  'en-au': 'au',
+  'en-nz': 'nz',
+};
+
+const BROWSER_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
 
 const decodeText = (value) =>
   value
@@ -45,24 +56,30 @@ const looksBlocked = (html) => {
   );
 };
 
+const regionFromLocale = (locale) => LOCALE_TO_REGION[locale] ?? 'us';
+
+const productUrl = (locale, id, slug) =>
+  `https://www.pokemoncenter.com${locale ? `/${locale}` : ''}/product/${id}/${slug}`;
+
 export const extractProducts = (html) => {
   const normalizedHtml = html.replaceAll('\\/', '/');
   const products = new Map();
 
   for (const match of normalizedHtml.matchAll(PRODUCT_LINK)) {
-    const [, id, slug] = match;
+    const [, locale, id, slug] = match;
     const title = titleFromSlug(slug);
     const format = classifyFormat(title);
     if (!format) continue;
 
-    products.set(id, {
+    const region = regionFromLocale(locale);
+    products.set(`${region}:${id}`, {
       id,
       title,
       category: 'Trading Card Game',
       format,
-      region: 'ca',
+      region,
       releaseType: title.toLowerCase().includes('preorder') ? 'preorder' : 'new',
-      url: `https://www.pokemoncenter.com/en-ca/product/${id}/${slug}`,
+      url: productUrl(locale, id, slug),
       detectedAt: new Date().toISOString(),
       tags: ['tcg', format],
       inStock: true,
@@ -72,6 +89,24 @@ export const extractProducts = (html) => {
   return [...products.values()];
 };
 
+async function fetchCatalogHtml(url, timeoutMs) {
+  const response = await fetch(url, {
+    headers: {
+      accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'accept-language': 'en-CA,en;q=0.9',
+      'cache-control': 'no-cache',
+      'user-agent': process.env.MONITOR_USER_AGENT ?? BROWSER_UA,
+    },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+
+  if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+
+  const html = await response.text();
+  if (looksBlocked(html)) throw new Error('Pokémon Center security challenge returned');
+  return html;
+}
+
 export async function fetchPokemonCenterProducts(urls, timeoutMs) {
   const products = new Map();
   const errors = [];
@@ -79,25 +114,10 @@ export async function fetchPokemonCenterProducts(urls, timeoutMs) {
   await Promise.all(
     urls.map(async (url) => {
       try {
-        const response = await fetch(url, {
-          headers: {
-            accept: 'text/html,application/xhtml+xml',
-            'accept-language': 'en-CA,en;q=0.9',
-            'user-agent':
-              process.env.MONITOR_USER_AGENT ??
-              'DropLinq/1.0 availability monitor (standard HTTP; no checkout automation)',
-          },
-          signal: AbortSignal.timeout(timeoutMs),
-        });
-
-        if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-
-        const html = await response.text();
-        if (looksBlocked(html)) throw new Error('Pokémon Center security challenge returned');
-
+        const html = await fetchCatalogHtml(url, timeoutMs);
         const found = extractProducts(html);
         if (found.length === 0) throw new Error('No supported TCG products found in page data');
-        found.forEach((product) => products.set(product.id, product));
+        found.forEach((product) => products.set(`${product.region}:${product.id}`, product));
       } catch (error) {
         errors.push(`${url}: ${error.message}`);
       }

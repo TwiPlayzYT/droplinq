@@ -105,9 +105,11 @@ class DevelopmentMonitorService implements MonitorService {
   }
 }
 
+const PRODUCTION_MONITOR_URL = 'https://droplinq-monitor.onrender.com';
+
 const apiUrl =
   process.env.EXPO_PUBLIC_MONITOR_API_URL ??
-  (typeof window !== 'undefined' ? window.location.origin : undefined);
+  PRODUCTION_MONITOR_URL;
 
 export const remoteMonitorConfigured = Boolean(apiUrl);
 

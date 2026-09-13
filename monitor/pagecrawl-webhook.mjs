@@ -7,16 +7,29 @@ const productFromPayload = (payload) => {
   const title = payload.product_title ?? payload.title;
   if (typeof url !== 'string' || typeof title !== 'string') return undefined;
 
-  const match = url.match(/\/en-ca\/product\/([a-zA-Z0-9-]+)\//);
+  const match = url.match(/(?:\/([a-z]{2}-[a-z]{2}))?\/product\/([a-zA-Z0-9-]+)\//);
   const format = classifyFormat(title);
   if (!match || !format) return undefined;
+  const locale = match[1];
+  const region =
+    locale === 'en-ca'
+      ? 'ca'
+      : locale === 'en-gb'
+        ? 'uk'
+        : locale === 'de-de'
+          ? 'de'
+          : locale === 'en-au'
+            ? 'au'
+            : locale === 'en-nz'
+              ? 'nz'
+              : 'us';
 
   return {
-    id: match[1],
+    id: match[2],
     title,
     category: 'Trading Card Game',
     format,
-    region: 'ca',
+    region,
     releaseType: 'new',
     url,
     detectedAt: payload.changed_at ?? new Date().toISOString(),

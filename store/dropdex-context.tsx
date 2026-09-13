@@ -28,6 +28,7 @@ import {
 } from '@/services/tour-session';
 import { useAuth } from '@/store/auth-context';
 import { applyQuietHoursDelivery, isProductMuted } from '@/lib/alert-quiet';
+import { PokemonCenterLiveScanner } from '@/components/pokemon-center-live-scanner';
 import { seededEtbs } from '@/data/historical-etbs';
 import {
   defaultRegionId,
@@ -36,6 +37,7 @@ import {
   regions,
 } from '@/data/regions';
 import { matchesFilters } from '@/lib/filter-matcher';
+import { preferProductImageUrl, sanitizeProductImageUrl } from '@/lib/product-image';
 import { openPokemonCenterProduct, type OpenProductMode } from '@/lib/open-product';
 import {
   detectLiveChanges,
@@ -586,26 +588,27 @@ export function DropDexProvider({ children }: PropsWithChildren) {
           ...existing,
           ...product,
           historical: false,
-          imageUrl: product.imageUrl || existing?.imageUrl,
+          imageUrl: preferProductImageUrl(existing?.imageUrl, product.imageUrl),
           releaseDate: product.releaseDate ?? existing?.releaseDate,
         });
       });
 
-      const products = [...byId.values()];
+      const products = [...byId.values()].map((product) => ({
+        ...product,
+        imageUrl: sanitizeProductImageUrl(product.imageUrl),
+      }));
       setLiveProducts(products);
       setStockEvents(remoteEvents);
       setLastBackendUpdate(updatedAt ?? (products.length ? now : null));
-      setLiveStatus({
-        state: stateRef.current.monitoring ? 'ok' : 'idle',
-        observedCount: products.length,
-        lastCheckedAt: updatedAt ?? now,
-        message: stateRef.current.monitoring
-          ? isMockData || remoteProducts.length === 0
-            ? 'Alerts on. Showing curated catalog until live backend products sync.'
-            : 'Alerts on. Showing the latest backend catalog.'
-          : 'Alerts paused. Backend monitoring of retailers is separate.',
-        progress: stateRef.current.monitoring ? 100 : 0,
-      });
+      if (!stateRef.current.monitoring) {
+        setLiveStatus({
+          state: 'idle',
+          observedCount: products.length,
+          lastCheckedAt: updatedAt ?? now,
+          message: 'Alerts paused. Backend monitoring of retailers is separate.',
+          progress: 0,
+        });
+      }
 
       // Local notifier: compare catalog snapshots and backend stock events while alerts are on.
       const changeEvents = await detectLiveChanges(products);
@@ -655,12 +658,14 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       if (fallback.length && liveProductsRef.current.length === 0) {
         setLiveProducts(fallback);
       }
-      setLiveStatus({
-        state: 'error',
-        observedCount: Math.max(liveProductsRef.current.length, fallback.length),
-        message: 'Could not refresh catalog.',
-        progress: 0,
-      });
+      if (!stateRef.current.monitoring) {
+        setLiveStatus({
+          state: 'error',
+          observedCount: Math.max(liveProductsRef.current.length, fallback.length),
+          message: 'Could not refresh catalog.',
+          progress: 0,
+        });
+      }
     } finally {
       setCatalogLoading(false);
     }
@@ -702,7 +707,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
               new Date().toISOString()
             : undefined;
 
-        const imageUrl = product.imageUrl || existing?.imageUrl;
+        const imageUrl = preferProductImageUrl(existing?.imageUrl, product.imageUrl);
 
         if (
           existing &&
@@ -776,7 +781,8 @@ export function DropDexProvider({ children }: PropsWithChildren) {
           return;
         }
 
-        const imageUrl = seed.imageUrl || existing.imageUrl;
+        // Never keep a wrong-game TCGplayer seed image once seeds omit imagery.
+        const imageUrl = preferProductImageUrl(existing.imageUrl, seed.imageUrl);
         const soldOutAt = seed.soldOutAt ?? existing.soldOutAt;
 
         if (
@@ -803,11 +809,24 @@ export function DropDexProvider({ children }: PropsWithChildren) {
         changed = true;
       });
 
-      return changed ? [...byId.values()] : previous;
+      return (() => {
+        const next = [...byId.values()].map((product) => ({
+          ...product,
+          imageUrl: sanitizeProductImageUrl(product.imageUrl),
+        }));
+        if (!changed) {
+          const needsScrub = next.some((product) => {
+            const prior = previous.find((item) => item.id === product.id);
+            return prior && prior.imageUrl !== product.imageUrl;
+          });
+          if (!needsScrub) return previous;
+        }
+        return next;
+      })();
     });
   }, [hydrated, state.monitoring, state.region]);
 
-  // Keep the free-tier monitor awake while this browser has monitoring on.
+  // Keep a heartbeat so we notice quickly if the always-on monitor is unreachable.
   useEffect(() => {
     if (!hydrated || !remoteMonitorConfigured || !state.monitoring) return;
     if (Platform.OS !== 'web') return;
@@ -979,13 +998,13 @@ export function DropDexProvider({ children }: PropsWithChildren) {
         showFeedback(
           'success',
           'This device is registered',
-          'A lock-screen test was sent from the alert server. Leave DropLinq and wait a few seconds. If nothing arrives, the monitor may be asleep — in-app alerts still work while the site is open.',
+          'A lock-screen test was sent from the always-on alert server. Leave DropLinq and wait a few seconds.',
         );
       } catch {
         showFeedback(
           'error',
           'Permission is on — test push did not arrive',
-          'This device can show DropLinq alerts, but the alert server could not deliver a closed-app test. That is separate from the in-app test on Home. The monitor may be sleeping.',
+          'This device can show DropLinq alerts, but the alert server could not deliver a closed-app test. That is separate from the in-app test on Home.',
         );
       }
       return true;
@@ -1404,7 +1423,16 @@ export function DropDexProvider({ children }: PropsWithChildren) {
   );
 
   return (
-    <DropDexContext.Provider value={value}>{children}</DropDexContext.Provider>
+    <DropDexContext.Provider value={value}>
+      <PokemonCenterLiveScanner
+        enabled={hydrated && state.monitoring}
+        region={getRegion(state.region)}
+        onStatus={setLiveStatus}
+        onProducts={handleObservedCatalog}
+        reportObservations={(products) => monitorService.reportObservations(products)}
+      />
+      {children}
+    </DropDexContext.Provider>
   );
 }
 

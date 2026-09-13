@@ -1,6 +1,6 @@
 import { pcCategorySeedProducts } from '@/data/pc-category-seeds';
-import { Product, ProductFormat } from '@/types/dropdex';
 import { normalizeSearchText } from '@/lib/product-search';
+import { Product, ProductFormat } from '@/types/dropdex';
 
 const formatTags: Record<ProductFormat, string[]> = {
   etb: ['elite trainer box', 'pokemon center etb'],
@@ -15,7 +15,8 @@ const makeProduct = (
   title: string,
   releaseDate: string,
   url: string,
-  imageId: string,
+  // Kept for stable product ids (tcg-bundle-*, etc.) — never used as an image source.
+  _imageId?: string,
 ): Product => ({
   id,
   title,
@@ -27,7 +28,9 @@ const makeProduct = (
   historical: false,
   releaseDate,
   url,
-  imageUrl: `https://tcgplayer-cdn.tcgplayer.com/product/${imageId}_in_1000x1000.jpg`,
+  // Official packshots come from Pokémon Center / monitor sync. Guessing TCGplayer
+  // CDN ids has shown Magic cards on Pokémon products — never do that again.
+  imageUrl: undefined,
   detectedAt: new Date().toISOString(),
   tags: ['tcg', ...formatTags[format], ...normalizeSearchText(title).split(' ').filter(Boolean)],
 });

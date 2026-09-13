@@ -12,19 +12,21 @@ test('classifies only supported sealed TCG formats', () => {
   assert.equal(classifyFormat('Pikachu Plush'), undefined);
 });
 
-test('extracts and deduplicates Canadian product links', () => {
+test('extracts and deduplicates product links across storefronts', () => {
   const html = `
     <a href="/en-ca/product/100-10001/prismatic-evolutions-elite-trainer-box">ETB</a>
     <a href="\\/en-ca\\/product\\/100-10002\\/journey-together-booster-bundle">Bundle</a>
     <a href="/en-ca/product/100-10001/prismatic-evolutions-elite-trainer-box">Duplicate</a>
-    <a href="/en-us/product/100-10003/ignored-elite-trainer-box">Wrong store</a>
+    <a href="/product/100-10003/surging-sparks-elite-trainer-box">US ETB</a>
+    <a href="/en-ca/product/100-10004/pikachu-plush">Ignored plush</a>
   `;
 
   const products = extractProducts(html);
-  assert.equal(products.length, 2);
+  assert.equal(products.length, 3);
   assert.deepEqual(
     products.map((product) => product.format).sort(),
-    ['booster-bundle', 'etb'],
+    ['booster-bundle', 'etb', 'etb'],
   );
-  assert.ok(products.every((product) => product.url.includes('/en-ca/product/')));
+  assert.ok(products.some((product) => product.region === 'ca' && product.url.includes('/en-ca/product/')));
+  assert.ok(products.some((product) => product.region === 'us' && product.url.includes('/product/')));
 });

@@ -1,7 +1,7 @@
 import { Product, ProductFormat } from '@/types/dropdex';
 
 const PRODUCT_LINK =
-  /\/en-ca\/product\/([a-zA-Z0-9-]+)\/([a-zA-Z0-9][a-zA-Z0-9-]*)/g;
+  /(?:\/([a-z]{2}-[a-z]{2}))?\/product\/([a-zA-Z0-9-]+)\/([a-zA-Z0-9][a-zA-Z0-9-]*)/g;
 
 const MONITOR_URLS = [
   'https://www.pokemoncenter.com/en-ca/category/trading-card-game',
@@ -123,7 +123,7 @@ export function extractProducts(html: string): Product[] {
   const products = new Map<string, Product>();
 
   for (const match of normalizedHtml.matchAll(PRODUCT_LINK)) {
-    const [, id, slug] = match;
+    const [, locale, id, slug] = match;
     const title = titleFromSlug(slug);
     const format = classifyFormat(title);
     if (!format) continue;
@@ -134,7 +134,7 @@ export function extractProducts(html: string): Product[] {
       category: 'Trading Card Game',
       format,
       releaseType: title.toLowerCase().includes('preorder') ? 'preorder' : 'new',
-      url: `https://www.pokemoncenter.com/en-ca/product/${id}/${slug}`,
+      url: `https://www.pokemoncenter.com${locale ? `/${locale}` : ''}/product/${id}/${slug}`,
       imageUrl: extractImageForProductId(normalizedHtml, id),
       availability: 'unknown',
       detectedAt: new Date().toISOString(),

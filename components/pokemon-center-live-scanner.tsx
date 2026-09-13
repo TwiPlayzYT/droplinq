@@ -11,6 +11,7 @@ import {
   looksBlockedHtml,
   normalizeImageUrl,
 } from '@/lib/pokemon-center-parser';
+import { preferProductImageUrl, sanitizeProductImageUrl } from '@/lib/product-image';
 import { Product, ProductAvailability, ProductFormat } from '@/types/dropdex';
 
 const SAFARI_UA =
@@ -267,7 +268,7 @@ function toProduct(payload: CatalogProductPayload): Product | null {
         ? 'preorder'
         : 'new',
     url: payload.url,
-    imageUrl: normalizeImageUrl(payload.imageUrl),
+    imageUrl: sanitizeProductImageUrl(normalizeImageUrl(payload.imageUrl)),
     availability: payload.availability === 'sold-out' ? 'sold-out' : 'in-stock',
     soldOutAt: payload.availability === 'sold-out' ? now : undefined,
     lastSeenAt: now,
@@ -386,7 +387,7 @@ export function PokemonCenterLiveScanner({
 
       productsRef.current.set(product.id, {
         ...existing,
-        imageUrl: product.imageUrl || existing.imageUrl,
+        imageUrl: preferProductImageUrl(existing.imageUrl, product.imageUrl),
         historical: false,
         pcCategoryId: product.pcCategoryId ?? existing.pcCategoryId,
         releaseDate: product.releaseDate ?? existing.releaseDate,
@@ -569,7 +570,7 @@ export function PokemonCenterLiveScanner({
         ...transition,
         historical: false,
         releaseDate: existing?.releaseDate ?? product.releaseDate,
-        imageUrl: product.imageUrl || existing?.imageUrl,
+        imageUrl: preferProductImageUrl(existing?.imageUrl, product.imageUrl),
         lastSeenAt: now,
         detectedAt: now,
       });
@@ -630,7 +631,7 @@ export function PokemonCenterLiveScanner({
         merged.set(product.id, {
           ...existing,
           ...product,
-          imageUrl: normalizeImageUrl(product.imageUrl || existing?.imageUrl),
+          imageUrl: preferProductImageUrl(existing?.imageUrl, product.imageUrl),
           availability:
             product.availability === 'sold-out' || existing?.availability === 'sold-out'
               ? 'sold-out'
