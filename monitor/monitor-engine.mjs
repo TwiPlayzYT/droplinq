@@ -117,7 +117,7 @@ export class MonitorEngine {
       await this.store.update((state) => {
         state.lastCheckAt = new Date().toISOString();
         state.lastError = message;
-        state.sourceBlocked = /challenge|incapsula|blocked|unsuccessful/i.test(message);
+        state.sourceBlocked = /challenge|incapsula|blocked|unsuccessful|403|forbidden/i.test(message);
         return state;
       });
     } finally {
