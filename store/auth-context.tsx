@@ -15,6 +15,7 @@ import { dropDayKey } from '@/constants/billing';
 import { clearTutorialStorage } from '@/constants/tutorial';
 import { authAdapter } from '@/services/auth';
 import { AuthProfile, AuthResult, OAuthProvider } from '@/services/auth/types';
+import { openStripePortal, startStripeCheckout } from '@/services/billing/stripe-checkout';
 
 export function hasAcceptedCurrentLegal(profile: AuthProfile | null | undefined) {
   return Boolean(
@@ -50,11 +51,10 @@ type AuthContextValue = {
   updateIdentity: (input: { displayName: string; handle: string }) => Promise<AuthResult>;
   /** Records first real drop-alert day (trial boundary). Safe to call repeatedly. */
   markFirstDropDay: (isoTimestamp?: string) => Promise<AuthResult>;
-  /**
-   * Activates Pro on the profile (monthly or annual).
-   * Card billing provider can replace this later; status is stored now.
-   */
+  /** Opens Stripe Checkout. Pro unlocks only after a paid webhook. */
   startProCheckout: (interval: 'monthly' | 'annual') => Promise<AuthResult>;
+  /** Opens the Stripe customer portal for cancel / payment method updates. */
+  openBillingPortal: () => Promise<AuthResult>;
   refreshProfile: () => Promise<void>;
 };
 
@@ -182,21 +182,44 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const day = dropDayKey(isoTimestamp ?? new Date().toISOString());
         const result = await authAdapter.saveProfile(userId, {
           firstDropDay: day,
-          subscriptionStatus: profileRef.current?.subscriptionStatus ?? 'trialing',
         });
         if (result.ok) await loadProfile(userId);
         return result;
       },
       startProCheckout: async (interval) => {
-        const userId = sessionRef.current?.user.id;
+        const current = sessionRef.current;
+        const userId = current?.user.id;
         if (!userId) return { ok: false, message: 'Not signed in.' };
-        const result = await authAdapter.saveProfile(userId, {
-          subscriptionTier: 'PRO',
-          subscriptionStatus: 'active',
-          billingInterval: interval,
-        });
-        if (result.ok) await loadProfile(userId);
-        return result.ok ? { ok: true } : result;
+        try {
+          await startStripeCheckout({
+            accessToken: current.access_token,
+            userId,
+            interval,
+          });
+          return { ok: true };
+        } catch (error) {
+          return {
+            ok: false,
+            message: error instanceof Error ? error.message : 'Could not start checkout.',
+          };
+        }
+      },
+      openBillingPortal: async () => {
+        const current = sessionRef.current;
+        const userId = current?.user.id;
+        if (!userId) return { ok: false, message: 'Not signed in.' };
+        try {
+          await openStripePortal({
+            accessToken: current.access_token,
+            userId,
+          });
+          return { ok: true };
+        } catch (error) {
+          return {
+            ok: false,
+            message: error instanceof Error ? error.message : 'Could not open billing portal.',
+          };
+        }
       },
       refreshProfile: async () => {
         const userId = sessionRef.current?.user.id;

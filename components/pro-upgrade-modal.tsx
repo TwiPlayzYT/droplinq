@@ -16,6 +16,7 @@ import {
 import {
   PRO_ANNUAL_MONTHLY_CAD,
   PRO_MONTHLY_CAD,
+  billingLegalCopy,
   formatCad,
   proPriceLabel,
   trialCopy,
@@ -189,8 +190,7 @@ export function ProUpgradeModal() {
     const result = await startProCheckout(interval);
     setBusy(false);
     if (result.ok) {
-      setMessage('Pro activated.');
-      setTimeout(dismiss, 700);
+      setMessage(billingLegalCopy.confirming);
       return;
     }
     setMessage(result.message);
@@ -262,12 +262,12 @@ export function ProUpgradeModal() {
                   busy && styles.disabled,
                 ]}>
                 <Text style={styles.ctaText}>
-                  {busy ? 'Working…' : 'Upgrade to Pro'}
+                  {busy ? 'Working…' : billingLegalCopy.checkoutCta}
                 </Text>
               </Pressable>
               <Text style={styles.fine}>
                 From {formatCad(PRO_ANNUAL_MONTHLY_CAD)}/mo billed yearly, or{' '}
-                {formatCad(PRO_MONTHLY_CAD)}/mo. Cancel anytime in Settings.
+                {formatCad(PRO_MONTHLY_CAD)}/mo, before tax. {billingLegalCopy.tax} Cancel in Settings.
               </Text>
             </>
           ) : (

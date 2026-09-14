@@ -2,7 +2,7 @@ import { brand } from '@/config/app-config';
 import type { Href } from 'expo-router';
 
 /** Bump when legal docs change so users must re-accept. */
-export const LEGAL_VERSION = '2026-09-06';
+export const LEGAL_VERSION = '2026-09-13';
 
 export const COOKIE_CONSENT_KEY = 'droplinq.cookie-consent.v1';
 export const COOKIE_CONSENT_VERSION = LEGAL_VERSION;
@@ -40,8 +40,8 @@ Do not misuse the service, attempt unauthorized access, scrape retailers through
 6. Purchases and third-party sites
 Product links open the retailer’s own website in a new tab, window, or in-app browser. Purchases, shipping, taxes, and retailer refunds are solely between you and that retailer. ${brand.name} is not a party to those transactions and does not process retailer checkout or payments.
 
-7. Subscriptions
-Paid DropLinq plans, if offered, will show price, billing interval, and renewal terms before you purchase. Retailer storefronts are not DropLinq checkouts.
+7. DropLinq subscriptions
+DropLinq Pro is a paid auto-renewing subscription sold on this website. Advertised prices are ${brand.name} plan prices in Canadian dollars before tax (currently $6.99 CAD per month or $59.88 CAD per year). Applicable GST, HST, VAT, or similar sales tax is added on top at checkout based on your billing address. You authorize Stripe, our payment processor, to charge the payment method you provide at each renewal until you cancel. You can cancel auto-renew in Settings → Manage billing (Stripe customer portal). Access continues through the period already paid. ${brand.name} does not unlock Pro without a successful paid charge for that account. Guest mode cannot be billed. Retailer storefronts are not DropLinq checkouts. If you buy ${brand.name} through the Apple App Store or Google Play, those stores’ billing terms apply instead of website checkout.
 
 8. Intellectual property and images
 Site design, branding, and software belong to ${brand.name}. Retailer names, logos, and product images remain property of their owners and are shown only to identify products. We do not claim copyright in those third-party assets. Do not copy ${brand.name} software or branding without permission.
@@ -81,7 +81,7 @@ We collect only what we need to run accounts, preferences, and alerts:
 - Preferences: region, retailers, TCG/categories, alert settings, watchlists, appearance.
 - Alerts: web-push or device-push subscription details if you opt in; alert acknowledgements.
 - Technical: basic browser/device diagnostics needed to keep the service working.
-We do not collect date of birth, payment card numbers for retailer checkouts, advertising profiles, or extra “just in case” fields.
+We do not collect date of birth, payment card numbers for retailer checkouts, advertising profiles, or extra “just in case” fields. If you buy DropLinq Pro, Stripe collects payment-method and billing-address details on Stripe-hosted pages; we store the resulting customer and subscription identifiers on your account so we can keep Pro in sync.
 
 2. How we use information
 - Provide monitoring status, watchlists, and the alerts you turn on
@@ -92,7 +92,7 @@ We do not collect date of birth, payment card numbers for retailer checkouts, ad
 We do not sell personal information and we do not use it for third-party advertising.
 
 3. Legal bases (GDPR/UK GDPR, where they apply)
-- Contract: running the account and alerts you request
+- Contract: running the account, alerts, and paid subscriptions you request
 - Legitimate interests: security, debugging, keeping essential storage working
 - Consent: optional browser/lock-screen notifications, and any non-essential cookies if we add them later
 - Legal obligation: when the law requires us to keep or disclose records
@@ -104,7 +104,7 @@ If you enable notifications, we store a push subscription for that browser so we
 See the Cookie Policy. We use essential cookies and local storage to sign you in, save preferences, and remember cookie notice. We do not run advertising pixels, third-party analytics suites, or cross-site trackers. Opening a retailer product page happens only after you choose to open it.
 
 6. Service providers
-We use processors such as Supabase (auth/database), cloud hosting (for example Render, Railway, or a static web host), Google or Apple if you use those sign-in buttons, and push-notification infrastructure. They process data only to operate the service. Product images may load from retailer CDNs when we display a catalog item; that is identification, not an embedded shop.
+We use processors such as Supabase (auth/database), Stripe (payment processing, tax calculation, billing address, and subscription records), cloud hosting (for example Render, Railway, or a static web host), Google or Apple if you use those sign-in buttons, and push-notification infrastructure. They process data only to operate the service. Product images may load from retailer CDNs when we display a catalog item; that is identification, not an embedded shop.
 
 7. Data sharing
 We do not sell your personal information. We may share data with service providers under contract, or if required by law.
@@ -163,6 +163,7 @@ We do not set advertising cookies, social-media tracking pixels, or third-party 
 - Supabase (or mock/local auth in development) for account session
 - Google or Apple only if you tap Continue with Google / Apple
 - Hosting and push providers as described in the Privacy Policy
+- Stripe, only if you start DropLinq Pro checkout or open Manage billing (hosted on Stripe’s domain)
 - Retailer sites and image CDNs only when you open a product or when we show a product photo for identification
 Those third parties have their own policies. We do not embed retailer checkout, videos, or widgets on DropLinq pages.
 
@@ -186,10 +187,12 @@ Last updated: ${LEGAL_VERSION}
 ${brand.name} is a monitoring and alert tool. Product pages and “Open product” send you to the retailer’s website. Prices, shipping, taxes, cancellations, and refunds for those orders are controlled by that retailer — not by ${brand.name}. Contact the retailer (or your card issuer) for those purchases.
 
 2. DropLinq subscriptions
-The service is currently offered without a DropLinq checkout on this website. If we later offer paid DropLinq plans:
-- You will see the price and renewal terms before you pay
-- Digital subscriptions that you have not meaningfully used may be refunded within 14 days of the first charge, or longer if your local consumer law requires it
+If you subscribe to DropLinq Pro on this website:
+- Price and renewal terms are shown before you pay; advertised prices are before tax, and GST/HST/VAT is added on top
+- Payments are processed by Stripe. We do not store your full card number
+- Digital subscriptions may be refunded within 14 days of the first charge if you have not meaningfully used Pro after paying, or longer if your local consumer law requires it
 - After that window, fees are generally non-refundable except where the law says otherwise, or if the service was unavailable for a sustained period we could not reasonably fix
+- Cancel auto-renew in Settings → Manage billing. Cancellation stops future charges; it does not by itself refund the current period
 - If you bought through the Apple App Store or Google Play, refunds must be requested from Apple or Google under their rules
 
 3. Alerts are not a purchase guarantee

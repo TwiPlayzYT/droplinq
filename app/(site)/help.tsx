@@ -21,6 +21,10 @@ const faqs = [
     a: 'Yes when lock-screen push is set up and the DropLinq monitor service is awake. Keep Alerts armed on Home.',
   },
   {
+    q: 'Do prices include tax?',
+    a: 'No. The $6.99 CAD monthly and $59.88 CAD yearly plan prices are before tax. GST, HST, VAT, or similar sales tax is added on top at Stripe Checkout from your billing address. Subscriptions auto-renew until you cancel in Settings → Manage billing.',
+  },
+  {
     q: 'Is DropLinq affiliated with Pokémon Center?',
     a: 'No. DropLinq is an independent availability monitor and is not endorsed by Nintendo, The Pokémon Company, or any retailer we watch.',
   },

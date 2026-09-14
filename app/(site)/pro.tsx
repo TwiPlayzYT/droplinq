@@ -8,6 +8,7 @@ import { brand } from '@/config/app-config';
 import {
   formatCad,
   proPriceLabel,
+  billingLegalCopy,
   type BillingInterval,
 } from '@/constants/billing';
 import { palette } from '@/constants/dropdex';
@@ -36,7 +37,7 @@ export default function MarketingPro() {
     setMessage(null);
     const result = await startProCheckout(interval);
     setBusy(false);
-    setMessage(result.ok ? 'Pro activated.' : result.message);
+    setMessage(result.ok ? billingLegalCopy.confirming : result.message);
   };
 
   return (
@@ -93,12 +94,12 @@ export default function MarketingPro() {
           ))}
           <Pressable disabled={busy} onPress={() => void onUpgrade()} style={styles.primaryBtn}>
             <Text style={styles.primaryBtnText}>
-              {busy ? 'Working…' : session ? 'Upgrade to PRO' : 'Open App to go PRO'}
+              {busy ? 'Working…' : session ? billingLegalCopy.checkoutCta : 'Open App to go PRO'}
             </Text>
           </Pressable>
           <Text style={styles.comingSoon}>
             Free until your first drop day. Then {formatCad(6.99)}/mo or {formatCad(4.99)}/mo billed
-            yearly. Cancel anytime from Settings.
+            yearly, before tax. {billingLegalCopy.tax} {billingLegalCopy.renew}
           </Text>
           {message ? <Text style={styles.message}>{message}</Text> : null}
         </View>

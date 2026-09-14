@@ -86,7 +86,16 @@ export async function loadGuestProfile(): Promise<AuthProfile | null> {
 
 export async function saveGuestProfile(patch: Partial<AuthProfile>): Promise<AuthResult> {
   const existing = (await loadGuestProfile()) ?? defaultGuestProfile();
-  const next = { ...existing, ...patch, id: GUEST_ID };
+  const next = {
+    ...existing,
+    ...patch,
+    id: GUEST_ID,
+    subscriptionTier: 'FREE' as const,
+    subscriptionStatus: existing.subscriptionStatus ?? null,
+    billingInterval: existing.billingInterval ?? null,
+    stripeCustomerId: null,
+    stripeSubscriptionId: null,
+  };
   await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(next));
   return { ok: true };
 }

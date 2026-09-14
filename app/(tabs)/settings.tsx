@@ -15,6 +15,7 @@ import {
 } from '@/components/settings-row';
 import { brand } from '@/config/app-config';
 import {
+  billingLegalCopy,
   formatCad,
   PRO_ANNUAL_MONTHLY_CAD,
   PRO_MONTHLY_CAD,
@@ -41,7 +42,7 @@ function initialsFrom(name: string) {
 
 export default function SettingsScreen() {
   const { alerts, filters, updateAlertPreferences, webPushState, alertHistory } = useDropDex();
-  const { profile, signOut, updateIdentity, startProCheckout } = useAuth();
+  const { profile, signOut, updateIdentity, startProCheckout, openBillingPortal } = useAuth();
   const router = useRouter();
   const entitlements = useMemo(() => resolveEntitlements(profile), [profile]);
   const planLabel =
@@ -102,7 +103,15 @@ export default function SettingsScreen() {
     setBillingMessage(null);
     const result = await startProCheckout(billingInterval);
     setBillingBusy(false);
-    setBillingMessage(result.ok ? 'Pro activated on this account.' : result.message);
+    setBillingMessage(result.ok ? billingLegalCopy.confirming : result.message);
+  };
+
+  const onManageBilling = async () => {
+    setBillingBusy(true);
+    setBillingMessage(null);
+    const result = await openBillingPortal();
+    setBillingBusy(false);
+    setBillingMessage(result.ok ? 'Opening billing portal…' : result.message);
   };
 
   return (
@@ -171,8 +180,10 @@ export default function SettingsScreen() {
           <Text style={styles.proTitle}>{trialCopy.headline}</Text>
           <Text style={styles.proBody}>{trialCopy.body}</Text>
           <Text style={styles.proPrice}>
-            {formatCad(PRO_MONTHLY_CAD)}/mo · or {formatCad(PRO_ANNUAL_MONTHLY_CAD)}/mo billed yearly
+            {formatCad(PRO_MONTHLY_CAD)}/mo · or {formatCad(PRO_ANNUAL_MONTHLY_CAD)}/mo billed yearly,
+            before tax
           </Text>
+          <Text style={styles.proMeta}>{billingLegalCopy.tax}</Text>
           {entitlements.firstDropDay ? (
             <Text style={styles.proMeta}>First drop day recorded · {entitlements.firstDropDay}</Text>
           ) : (
@@ -201,9 +212,18 @@ export default function SettingsScreen() {
                 ? 'Working…'
                 : entitlements.status === 'active'
                   ? 'Pro active'
-                  : 'Upgrade to Pro'}
+                  : billingLegalCopy.checkoutCta}
             </Text>
           </Pressable>
+          {entitlements.status === 'active' || profile?.stripeCustomerId ? (
+            <Pressable
+              disabled={billingBusy}
+              onPress={() => void onManageBilling()}
+              style={styles.proGhostBtn}>
+              <Text style={styles.proGhostBtnText}>Manage billing</Text>
+            </Pressable>
+          ) : null}
+          <Text style={styles.proHint}>{billingLegalCopy.renew}</Text>
           {billingMessage ? <Text style={styles.proHint}>{billingMessage}</Text> : null}
         </View>
       </SettingsGroup>
@@ -500,6 +520,18 @@ const styles = StyleSheet.create({
   },
   proBtnText: {
     color: '#fff',
+    fontSize: 14,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  proGhostBtn: {
+    borderColor: palette.blackSoft,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingVertical: 12,
+  },
+  proGhostBtnText: {
+    color: palette.white,
     fontSize: 14,
     fontWeight: '800',
     textAlign: 'center',

@@ -14,6 +14,9 @@ export type AuthProfile = {
   firstDropDay?: string | null;
   subscriptionStatus?: 'trialing' | 'active' | 'past_due' | 'canceled' | 'none' | null;
   billingInterval?: 'monthly' | 'annual' | null;
+  /** Present only after Stripe Checkout; required for paid Pro. */
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
   legalAcceptedAt: string | null;
   legalVersion: string | null;
   appearanceId?: string | null;

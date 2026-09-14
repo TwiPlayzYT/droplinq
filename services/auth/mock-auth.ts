@@ -148,7 +148,16 @@ export const mockAuth: AuthAdapter = {
     const profiles = await readJson<Record<string, AuthProfile>>(PROFILES_KEY, {});
     const existing = profiles[userId];
     if (!existing) return { ok: false, message: 'Profile not found.' };
-    profiles[userId] = { ...existing, ...patch, id: userId };
+    profiles[userId] = {
+      ...existing,
+      ...patch,
+      id: userId,
+      subscriptionTier: existing.subscriptionTier,
+      subscriptionStatus: existing.subscriptionStatus,
+      billingInterval: existing.billingInterval,
+      stripeCustomerId: existing.stripeCustomerId ?? null,
+      stripeSubscriptionId: existing.stripeSubscriptionId ?? null,
+    };
     await AsyncStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
     return { ok: true };
   },

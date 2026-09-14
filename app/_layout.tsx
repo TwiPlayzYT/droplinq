@@ -31,7 +31,7 @@ export const unstable_settings = {
 /** Public Collectr-style pages. */
 function isMarketingPath(pathname: string) {
   const path = (pathname || '/').split('?')[0].replace(/\/+$/, '') || '/';
-  return path === '/' || path === '/pro' || path === '/help';
+  return path === '/' || path === '/pro' || path === '/help' || path.startsWith('/billing/');
 }
 
 function AuthGate({ children }: { children: ReactNode }) {

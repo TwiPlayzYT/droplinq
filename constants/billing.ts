@@ -1,8 +1,6 @@
 /**
  * DropLinq billing + trial rules.
- * Pro checkout and first-drop-day trial are live in the product UI.
- * Real card charging (Stripe etc.) can replace startProCheckout later;
- * activating Pro still writes subscription_status=active on the profile now.
+ * Pro unlocks only after Stripe reports a paid subscription.
  */
 export const BILLING_ENFORCEMENT_ENABLED = true;
 
@@ -59,4 +57,12 @@ export function isFirstDropTrialActive(firstDropDay: string | null | undefined) 
 export const trialCopy = {
   headline: 'Free until your first drop day',
   body: 'Most apps give you 7 days. Drops don’t care about calendars. DropLinq stays free until we alert you on your first real drop day — that day is your trial. After that, Pro keeps monitoring going.',
+} as const;
+
+export const billingLegalCopy = {
+  tax: 'Plan prices are before tax. GST, HST, VAT, or similar sales tax is added on top at checkout from your billing address.',
+  renew: 'Subscriptions auto-renew until you cancel. Cancel anytime in Settings → Manage billing.',
+  processor: 'Payments are processed by Stripe. DropLinq never stores your full card number.',
+  checkoutCta: 'Continue to secure checkout',
+  confirming: 'Redirecting to Stripe…',
 } as const;

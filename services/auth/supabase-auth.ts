@@ -89,6 +89,8 @@ export const supabaseAuth: AuthAdapter = {
       firstDropDay: (data.first_drop_day as string | null) ?? null,
       subscriptionStatus: (data.subscription_status as AuthProfile['subscriptionStatus']) ?? null,
       billingInterval: (data.billing_interval as AuthProfile['billingInterval']) ?? null,
+      stripeCustomerId: (data.stripe_customer_id as string | null) ?? null,
+      stripeSubscriptionId: (data.stripe_subscription_id as string | null) ?? null,
       legalAcceptedAt: (data.legal_accepted_at as string | null) ?? null,
       legalVersion: (data.legal_version as string | null) ?? null,
       appearanceId: (data.appearance_id as string | null) ?? null,
@@ -116,10 +118,7 @@ export const supabaseAuth: AuthAdapter = {
     if (patch.onboardingCompleted !== undefined) row.onboarding_completed = patch.onboardingCompleted;
     if (patch.alertsActive !== undefined) row.alerts_active = patch.alertsActive;
     if (patch.selectedRegionId !== undefined) row.selected_region_id = patch.selectedRegionId;
-    if (patch.subscriptionTier !== undefined) row.subscription_tier = patch.subscriptionTier;
     if (patch.firstDropDay !== undefined) row.first_drop_day = patch.firstDropDay;
-    if (patch.subscriptionStatus !== undefined) row.subscription_status = patch.subscriptionStatus;
-    if (patch.billingInterval !== undefined) row.billing_interval = patch.billingInterval;
     if (patch.legalAcceptedAt !== undefined) row.legal_accepted_at = patch.legalAcceptedAt;
     if (patch.legalVersion !== undefined) row.legal_version = patch.legalVersion;
     if (patch.appearanceId !== undefined) row.appearance_id = patch.appearanceId;
@@ -135,14 +134,12 @@ export const supabaseAuth: AuthAdapter = {
       row,
       stripOptional(row, ['display_name']),
       stripOptional(row, ['appearance_id']),
-      stripOptional(row, ['first_drop_day', 'subscription_status', 'billing_interval']),
+      stripOptional(row, ['first_drop_day']),
       stripOptional(row, ['display_name', 'appearance_id']),
       stripOptional(row, [
         'display_name',
         'appearance_id',
         'first_drop_day',
-        'subscription_status',
-        'billing_interval',
       ]),
     ];
 

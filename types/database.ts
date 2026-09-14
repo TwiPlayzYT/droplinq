@@ -15,6 +15,11 @@ export type Database = {
           onboarding_completed: boolean;
           alerts_active: boolean;
           selected_region_id: string;
+          first_drop_day: string | null;
+          subscription_status: string | null;
+          billing_interval: string | null;
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
         };
         Insert: Partial<Database['public']['Tables']['profiles']['Row']> & { id: string };
         Update: Partial<Database['public']['Tables']['profiles']['Row']>;

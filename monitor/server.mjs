@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { extname, resolve } from 'node:path';
 
 import { config } from './config.mjs';
-import { normalizeCoverageFilters } from './coverage-match.mjs';
+import { ALLOWED_FORMATS, normalizeCoverageFilters } from './coverage-match.mjs';
 import { MonitorEngine } from './monitor-engine.mjs';
 import {
   productsFromPageCrawl,
@@ -17,14 +17,22 @@ import {
   isValidWebPushSubscription,
   sendTestWebPush,
 } from './web-push.mjs';
-import { ALLOWED_FORMATS } from './coverage-match.mjs';
+import {
+  billingConfig,
+  billingReady,
+  createCheckoutSession,
+  createPortalSession,
+  loadStripeCustomerId,
+  requireSignedInUser,
+} from './billing.mjs';
+import { applyStripeEvent, verifyStripeSignature } from './billing-webhook.mjs';
 
 const allowedRegions = new Set(['us', 'ca', 'uk', 'de', 'au', 'nz', 'jp']);
 const allowedFormats = ALLOWED_FORMATS;
 
 const sendJson = (response, status, value) => {
   response.writeHead(status, {
-    'Access-Control-Allow-Headers': 'content-type',
+    'Access-Control-Allow-Headers': 'content-type, authorization',
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
     'Access-Control-Allow-Origin': '*',
     'Content-Type': 'application/json',
@@ -150,6 +158,7 @@ const server = createServer(async (request, response) => {
       lastCheckAt: state.lastCheckAt ?? null,
       lastError: state.lastError ?? null,
       sourceBlocked: state.sourceBlocked === true,
+      billingConfigured: billingReady(),
     });
     return;
   }
@@ -232,6 +241,73 @@ const server = createServer(async (request, response) => {
       sendJson(response, 200, { ok: true, monitoring: registration.enabled });
     } catch (error) {
       sendJson(response, 422, { ok: false, error: error.message });
+    }
+    return;
+  }
+
+  if (request.method === 'POST' && request.url === '/v1/billing/checkout') {
+    try {
+      if (!billingReady()) {
+        sendJson(response, 503, { ok: false, error: 'Stripe checkout is not configured yet.' });
+        return;
+      }
+      const user = await requireSignedInUser(request);
+      const accessToken = String(request.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+      const body = JSON.parse(await readBody(request));
+      const interval = body.interval === 'annual' ? 'annual' : 'monthly';
+      const customerId = await loadStripeCustomerId(user.id, accessToken);
+      const session = await createCheckoutSession({ user, interval, customerId });
+      sendJson(response, 200, { ok: true, url: session.url });
+    } catch (error) {
+      sendJson(response, 422, { ok: false, error: error.message });
+    }
+    return;
+  }
+
+  if (request.method === 'POST' && request.url === '/v1/billing/portal') {
+    try {
+      if (!billingReady()) {
+        sendJson(response, 503, { ok: false, error: 'Stripe billing portal is not configured yet.' });
+        return;
+      }
+      const user = await requireSignedInUser(request);
+      const accessToken = String(request.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+      const profileResponse = await fetch(
+        `${billingConfig.supabaseUrl.replace(/\/$/, '')}/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=stripe_customer_id`,
+        {
+          headers: {
+            apikey: billingConfig.supabaseAnonKey,
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+      const rows = await profileResponse.json();
+      const customerId = Array.isArray(rows) ? rows[0]?.stripe_customer_id : rows?.stripe_customer_id;
+      const portal = await createPortalSession({ customerId });
+      sendJson(response, 200, { ok: true, url: portal.url });
+    } catch (error) {
+      sendJson(response, 422, { ok: false, error: error.message });
+    }
+    return;
+  }
+
+  if (request.method === 'POST' && request.url === '/v1/billing/webhook') {
+    try {
+      const rawBody = await readBody(request);
+      const valid = verifyStripeSignature(
+        rawBody,
+        request.headers['stripe-signature'],
+        billingConfig.webhookSecret,
+      );
+      if (!valid) {
+        sendJson(response, 401, { ok: false, error: 'Invalid Stripe signature' });
+        return;
+      }
+      const event = JSON.parse(rawBody);
+      const result = await applyStripeEvent(event);
+      sendJson(response, 200, { ok: true, ...result });
+    } catch (error) {
+      sendJson(response, 400, { ok: false, error: error.message });
     }
     return;
   }

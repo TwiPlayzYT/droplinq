@@ -29,19 +29,22 @@ export function profileBilling(profile: AuthProfile | null | undefined) {
     status: (profile?.subscriptionStatus ?? 'none') as SubscriptionStatus,
     interval: (profile?.billingInterval ?? null) as BillingInterval | null,
     firstDropDay: profile?.firstDropDay ?? null,
+    stripeSubscriptionId: profile?.stripeSubscriptionId ?? null,
   };
 }
 
 /**
  * Resolve what the user can do right now.
- * While BILLING_ENFORCEMENT_ENABLED is false, everyone keeps full Pro-class access
- * so shipping Pro UI does not surprise existing users.
+ * Paid Pro requires a Stripe subscription id plus an active status — the client
+ * cannot grant this itself.
  */
 export function resolveEntitlements(profile: AuthProfile | null | undefined): EntitlementSnapshot {
   const billed = profileBilling(profile);
   const trialActive = isFirstDropTrialActive(billed.firstDropDay);
   const paid =
-    billed.status === 'active' && (billed.tier === 'PRO' || billed.tier === 'PRO_PLUS');
+    Boolean(billed.stripeSubscriptionId) &&
+    billed.status === 'active' &&
+    (billed.tier === 'PRO' || billed.tier === 'PRO_PLUS');
 
   if (!BILLING_ENFORCEMENT_ENABLED) {
     return {

@@ -47,6 +47,18 @@ services:
         source: /pro/
         destination: /index.html
       - type: rewrite
+        source: /billing/success
+        destination: /index.html
+      - type: rewrite
+        source: /billing/success/
+        destination: /index.html
+      - type: rewrite
+        source: /billing/cancel
+        destination: /index.html
+      - type: rewrite
+        source: /billing/cancel/
+        destination: /index.html
+      - type: rewrite
         source: /help
         destination: /index.html
       - type: rewrite
@@ -112,4 +124,20 @@ services:
       - key: VAPID_PRIVATE_KEY
         sync: false
       - key: VAPID_SUBJECT
+        sync: false
+      - key: PUBLIC_SITE_URL
+        value: https://getdroplinq.com
+      - key: STRIPE_PRICE_MONTHLY
+        value: price_1UFPgoRBL2iCt8U25j53wi6x
+      - key: STRIPE_PRICE_ANNUAL
+        value: price_1UFPgpRBL2iCt8U2cnMhBf6T
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
