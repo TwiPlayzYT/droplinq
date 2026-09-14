@@ -28,3 +28,9 @@ export async function subscribeToWebPush(
 ): Promise<WebPushSubscriptionPayload> {
   throw new Error('Web Push is only available in the web app.');
 }
+
+export function rememberPushContext(_input: {
+  installationId: string;
+  monitorUrl: string;
+  publicKey?: string;
+}) {}

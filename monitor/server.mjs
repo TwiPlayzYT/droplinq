@@ -9,6 +9,8 @@ import {
   productsFromPageCrawl,
   verifyPageCrawlSignature,
 } from './pagecrawl-webhook.mjs';
+import { mergeRegistration, sanitizeSubscription } from './registration.mjs';
+import { createScheduledPushRunner } from './scheduled-push.mjs';
 import { JsonStore } from './storage.mjs';
 import {
   getWebPushPublicConfig,
@@ -91,7 +93,7 @@ const validateRegistration = (input) => {
 
   const filters = normalizeCoverageFilters(input.filters);
 
-  let alerts = {
+  const alerts = {
     push: input.alerts?.push !== false,
     sound: input.alerts?.sound !== false,
     vibration: input.alerts?.vibration !== false,
@@ -99,24 +101,10 @@ const validateRegistration = (input) => {
     fullScreen: input.alerts?.fullScreen !== false,
   };
 
-  const webPushSubscription = isValidWebPushSubscription(input.webPushSubscription)
-    ? {
-        endpoint: input.webPushSubscription.endpoint,
-        expirationTime:
-          typeof input.webPushSubscription.expirationTime === 'number'
-            ? input.webPushSubscription.expirationTime
-            : null,
-        keys: {
-          auth: input.webPushSubscription.keys.auth.slice(0, 512),
-          p256dh: input.webPushSubscription.keys.p256dh.slice(0, 512),
-        },
-      }
-    : undefined;
+  const webPushSubscription = sanitizeSubscription(input.webPushSubscription);
 
-  // Expo Go may not return a token; PWA registrations use Web Push instead.
-  if (input.enabled && alerts.push && !input.expoPushToken && !webPushSubscription) {
-    alerts = { ...alerts, push: false };
-  }
+  // Never disable push here — a reload may omit the subscription for a tick.
+  // mergeRegistration keeps the stored endpoint so closed-app delivery survives.
 
   return {
     installationId: input.installationId.slice(0, 128),
@@ -133,6 +121,8 @@ const validateRegistration = (input) => {
 
 const store = new JsonStore(config.dataFile);
 await store.load();
+const scheduledPushes = createScheduledPushRunner(store);
+await scheduledPushes.restore();
 
 const engine = new MonitorEngine({
   store,
@@ -156,6 +146,7 @@ const server = createServer(async (request, response) => {
       observedProducts: Object.keys(state.snapshot).length,
       registrations: Object.keys(state.registrations).length,
       pendingEvents: state.pendingEvents.length,
+      scheduledPushes: (state.scheduledPushes ?? []).length,
       lastCheckAt: state.lastCheckAt ?? null,
       lastError: state.lastError ?? null,
       sourceBlocked: state.sourceBlocked === true,
@@ -210,11 +201,32 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (request.method === 'POST' && request.url === '/v1/web-push/schedule') {
+    try {
+      const body = JSON.parse(await readBody(request));
+      const scheduled = await scheduledPushes.schedule({
+        subscription: body.webPushSubscription,
+        product: body.product,
+        delayMs: body.delayMs,
+        installationId: body.installationId,
+      });
+      sendJson(response, 200, { ok: true, ...scheduled });
+    } catch (error) {
+      const status = /VAPID|not configured/i.test(error.message) ? 503 : 422;
+      sendJson(response, status, { ok: false, error: error.message });
+    }
+    return;
+  }
+
   if (request.method === 'POST' && request.url === '/v1/registrations') {
     try {
       const registration = validateRegistration(JSON.parse(await readBody(request)));
       await store.update((state) => {
-        state.registrations[registration.installationId] = registration;
+        const previous = state.registrations[registration.installationId];
+        state.registrations[registration.installationId] = mergeRegistration(
+          previous,
+          registration,
+        );
         return state;
       });
       sendJson(response, 200, { ok: true, monitoring: registration.enabled });
@@ -237,11 +249,11 @@ const server = createServer(async (request, response) => {
           allowedFormats.has(product.format),
       );
 
-      // Device polls already alert locally; keep Railway baseline warm without double-pushing.
-      const emitEvents = payload.source !== 'expo-go-device';
+      // Device catalogs are partial — never mark unseen SKUs sold out from one phone.
+      // Always emit so closed-app subscribers still get the lock-screen push.
       const result = await engine.ingestObservations(allowed, {
-        complete: payload.complete !== false,
-        emitEvents,
+        complete: false,
+        emitEvents: payload.emitEvents !== false,
       });
       sendJson(response, 200, { ok: true, ...result });
     } catch (error) {

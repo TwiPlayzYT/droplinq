@@ -60,6 +60,7 @@ import {
 import {
   getExistingWebPushSubscription,
   getWebPushState,
+  rememberPushContext,
   subscribeToWebPush,
   WebPushState,
 } from '@/services/web-push-service';
@@ -454,6 +455,8 @@ export function DropDexProvider({ children }: PropsWithChildren) {
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let attempts = 0;
 
+    if (Platform.OS === 'web' && !webPushChecked) return;
+
     const register = async () => {
       const remoteConfigured = remoteMonitorConfigured;
       setSyncState(remoteConfigured ? 'syncing' : 'local');
@@ -477,6 +480,14 @@ export function DropDexProvider({ children }: PropsWithChildren) {
           expoPushToken,
           webPushSubscription,
         });
+        if (webPushSubscription && webPushPublicKey) {
+          rememberPushContext({
+            installationId: state.installationId,
+            monitorUrl:
+              process.env.EXPO_PUBLIC_MONITOR_API_URL ?? 'https://droplinq-monitor.onrender.com',
+            publicKey: webPushPublicKey,
+          });
+        }
         if (cancelled) return;
 
         cloudSyncWarnRef.current.consecutiveFailures = 0;
@@ -539,6 +550,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
     state.monitoring,
     state.region,
     webPushChecked,
+    webPushPublicKey,
     webPushSubscription,
   ]);
 
@@ -989,6 +1001,12 @@ export function DropDexProvider({ children }: PropsWithChildren) {
         alerts: { ...stateRef.current.alerts, push: true },
         webPushSubscription: subscription,
       });
+      rememberPushContext({
+        installationId: stateRef.current.installationId,
+        monitorUrl:
+          process.env.EXPO_PUBLIC_MONITOR_API_URL ?? 'https://droplinq-monitor.onrender.com',
+        publicKey,
+      });
 
       try {
         await monitorService.sendTestWebPush(subscription, {
@@ -1107,7 +1125,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
         testAlertTimerRef.current = null;
       }
 
-      const fire = () => {
+      const fireOverlay = () => {
         testAlertTimerRef.current = null;
         emitTourAction('test-alert');
         void unlockAlertAudio();
@@ -1117,39 +1135,85 @@ export function DropDexProvider({ children }: PropsWithChildren) {
           false,
           true,
         );
-        if (webPushState === 'subscribed') {
-          void sendTestLockScreenPush();
-        }
       };
 
-      if (delayMs <= 0) {
-        fire();
-        if (webPushState !== 'subscribed') {
-          showFeedback(
-            'success',
-            'Test alert sent',
-            'In-app overlay fired. Enable Notifications for a lock-screen push on the next test.',
-          );
-        }
-        return;
-      }
-
-      const at = new Date(Date.now() + delayMs);
-      const whenLabel = at.toLocaleTimeString(undefined, {
+      const whenLabel = new Date(Date.now() + Math.max(delayMs, 0)).toLocaleTimeString(undefined, {
         hour: 'numeric',
         minute: '2-digit',
         second: '2-digit',
       });
-      showFeedback(
-        'info',
-        'Test alert scheduled',
-        webPushState === 'subscribed'
-          ? `In-app overlay + lock-screen push at ${whenLabel}.`
-          : `In-app overlay at ${whenLabel}. Enable Notifications to also get lock-screen push.`,
-      );
-      testAlertTimerRef.current = setTimeout(fire, delayMs);
+
+      const armOverlay = () => {
+        if (delayMs <= 0) {
+          fireOverlay();
+          return;
+        }
+        testAlertTimerRef.current = setTimeout(fireOverlay, delayMs);
+      };
+
+      if (webPushState !== 'subscribed') {
+        armOverlay();
+        showFeedback(
+          delayMs <= 0 ? 'success' : 'info',
+          delayMs <= 0 ? 'Test alert sent' : 'Test alert scheduled',
+          delayMs <= 0
+            ? 'In-app overlay fired. Enable Notifications so the next test can reach you with DropLinq closed.'
+            : `In-app overlay at ${whenLabel}. Enable Notifications for a lock-screen push after you close the app.`,
+        );
+        return;
+      }
+
+      const product = { ...testAlertProduct, detectedAt: new Date().toISOString() };
+      const subscription = webPushSubscription;
+      if (!subscription) {
+        armOverlay();
+        showFeedback(
+          'error',
+          'Lock-screen test is not armed',
+          'Enable alerts again, then reschedule. The in-app overlay will still fire if DropLinq stays open.',
+        );
+        return;
+      }
+
+      if (delayMs <= 0) {
+        fireOverlay();
+        void sendTestLockScreenPush();
+        return;
+      }
+
+      void monitorService
+        .scheduleTestWebPush(subscription, product, delayMs, stateRef.current.installationId)
+        .then((scheduled) => {
+          armOverlay();
+          const serverWhen = new Date(scheduled.fireAt).toLocaleTimeString(undefined, {
+            hour: 'numeric',
+            minute: '2-digit',
+            second: '2-digit',
+          });
+          showFeedback(
+            'info',
+            'Test alert scheduled',
+            `Close DropLinq if you want. Lock-screen push at ${serverWhen} comes from the alert server, not this tab.`,
+          );
+        })
+        .catch((error) => {
+          armOverlay();
+          showFeedback(
+            'error',
+            'Could not arm the closed-app test',
+            error instanceof Error
+              ? error.message
+              : 'The in-app overlay will still fire if DropLinq stays open.',
+          );
+        });
     },
-    [processProduct, sendTestLockScreenPush, showFeedback, webPushState],
+    [
+      processProduct,
+      sendTestLockScreenPush,
+      showFeedback,
+      webPushState,
+      webPushSubscription,
+    ],
   );
 
   const acknowledgeAlert = useCallback(() => {

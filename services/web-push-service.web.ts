@@ -120,3 +120,17 @@ export async function subscribeToWebPush(vapidPublicKey: string) {
   if (!serialized) throw new Error('The browser returned an incomplete push subscription.');
   return serialized;
 }
+
+/** Persist enough context for the service worker to re-register after a subscription rotation. */
+export function rememberPushContext(input: {
+  installationId: string;
+  monitorUrl: string;
+  publicKey?: string;
+}) {
+  navigator.serviceWorker?.controller?.postMessage({
+    type: 'DROPLINQ_PUSH_CONTEXT',
+    installationId: input.installationId,
+    monitorUrl: input.monitorUrl,
+    publicKey: input.publicKey,
+  });
+}

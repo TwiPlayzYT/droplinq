@@ -1,4 +1,6 @@
-const CACHE_NAME = 'droplinq-shell-v20';
+const CACHE_NAME = 'droplinq-shell-v21';
+const PUSH_CONTEXT_CACHE = 'droplinq-push-context-v1';
+const PUSH_CONTEXT_URL = '/__droplinq/push-context';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/droplinq-icon.png'];
 
 self.addEventListener('install', (event) => {
@@ -16,7 +18,11 @@ self.addEventListener('activate', (event) => {
       caches
         .keys()
         .then((keys) =>
-          Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))),
+          Promise.all(
+            keys
+              .filter((key) => key !== CACHE_NAME && key !== PUSH_CONTEXT_CACHE)
+              .map((key) => caches.delete(key)),
+          ),
         ),
       self.clients.claim(),
     ]),
@@ -42,6 +48,28 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+const showDropNotification = (payload) => {
+  const product = payload.product;
+  const title = payload.title ?? 'DROP DETECTED';
+  const body = payload.body ?? product?.title ?? 'A matching product is available.';
+
+  return self.registration
+    .showNotification(title, {
+      body,
+      badge: '/droplinq-icon.png',
+      icon: '/droplinq-icon.png',
+      tag: product?.id ? `droplinq-${product.id}` : 'droplinq-alert',
+      renotify: true,
+      data: {
+        product,
+        productUrl: product?.url,
+        appUrl: '/app',
+      },
+    })
+    .then(() => self.registration.setAppBadge?.(1))
+    .catch(() => undefined);
+};
+
 self.addEventListener('push', (event) => {
   let payload = {};
   try {
@@ -50,34 +78,66 @@ self.addEventListener('push', (event) => {
     payload = { body: event.data?.text() };
   }
 
-  const product = payload.product;
-  const title = payload.title ?? 'DROP DETECTED';
-  const body = payload.body ?? product?.title ?? 'A matching product is available.';
+  event.waitUntil(showDropNotification(payload));
+});
 
-  event.waitUntil(
-    Promise.all([
-      self.registration.showNotification(title, {
-        body,
-        badge: '/droplinq-icon.png',
-        icon: '/droplinq-icon.png',
-        tag: product?.id ? `droplinq-${product.id}` : 'droplinq-alert',
-        renotify: true,
-        data: {
-          product,
-          productUrl: product?.url,
-          appUrl: '/app',
-        },
+const readPushContext = async () => {
+  const cache = await caches.open(PUSH_CONTEXT_CACHE);
+  const response = await cache.match(PUSH_CONTEXT_URL);
+  if (!response) return null;
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+};
+
+const writePushContext = async (value) => {
+  const cache = await caches.open(PUSH_CONTEXT_CACHE);
+  await cache.put(PUSH_CONTEXT_URL, new Response(JSON.stringify(value), {
+    headers: { 'Content-Type': 'application/json' },
+  }));
+};
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'DROPLINQ_PUSH_CONTEXT') {
+    event.waitUntil(
+      writePushContext({
+        installationId: event.data.installationId,
+        monitorUrl: event.data.monitorUrl,
+        publicKey: event.data.publicKey,
       }),
-      self.registration.setAppBadge?.(1),
-    ]),
-  );
+    );
+  }
 });
 
 self.addEventListener('pushsubscriptionchange', (event) => {
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+    (async () => {
+      const context = await readPushContext();
+      const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       clients.forEach((client) => client.postMessage({ type: 'DROPLINQ_PUSH_SUB_CHANGED' }));
-    }),
+      if (!context?.monitorUrl || !context.publicKey || !self.registration.pushManager) return;
+
+      const padding = '='.repeat((4 - (context.publicKey.length % 4)) % 4);
+      const base64 = (context.publicKey + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const applicationServerKey = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+      const subscription = await self.registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      });
+      const json = subscription.toJSON();
+      await fetch(`${String(context.monitorUrl).replace(/\/$/, '')}/v1/registrations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          installationId: context.installationId,
+          enabled: true,
+          webPushSubscription: json,
+          alerts: { push: true },
+        }),
+      });
+    })().catch(() => undefined),
   );
 });
 

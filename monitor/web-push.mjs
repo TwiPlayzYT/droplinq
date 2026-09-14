@@ -33,6 +33,7 @@ const matchesRegistration = (product, registration) => {
   if (!registration.enabled || !registration.alerts?.push || !registration.webPushSubscription) {
     return false;
   }
+  if (product?.id === 'droplinq-test-alert') return true;
   if (product.region && registration.region !== product.region) return false;
   return productMatchesCoverage(product, registration.filters);
 };

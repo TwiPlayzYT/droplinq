@@ -5,6 +5,7 @@ const emptyState = () => ({
   registrations: {},
   snapshot: {},
   pendingEvents: [],
+  scheduledPushes: [],
   webhookEventIds: [],
   baselineReady: false,
   lastObservationAt: null,
@@ -31,6 +32,7 @@ export class JsonStore {
         registrations: saved.registrations ?? {},
         snapshot: saved.snapshot ?? {},
         pendingEvents: saved.pendingEvents ?? [],
+        scheduledPushes: saved.scheduledPushes ?? [],
         webhookEventIds: saved.webhookEventIds ?? [],
       };
     } catch (error) {

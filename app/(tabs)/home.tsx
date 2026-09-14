@@ -319,7 +319,7 @@ export default function HomeScreen() {
           <View style={styles.enableBannerCopy}>
             <Text style={styles.enableBannerTitle}>Enable lock-screen notifications</Text>
             <Text style={styles.enableBannerBody}>
-              Get pinged when stock moves — even with DropLinq closed.
+              Get pinged when stock moves or a scheduled test fires — even with DropLinq fully closed.
             </Text>
           </View>
           <Pressable

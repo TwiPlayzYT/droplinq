@@ -32,6 +32,12 @@ export interface MonitorService {
     subscription: WebPushSubscriptionPayload,
     product?: Product,
   ): Promise<void>;
+  scheduleTestWebPush(
+    subscription: WebPushSubscriptionPayload,
+    product: Product | undefined,
+    delayMs: number,
+    installationId?: string,
+  ): Promise<{ fireAt: string }>;
 }
 
 class RemoteMonitorService implements MonitorService {
@@ -71,7 +77,8 @@ class RemoteMonitorService implements MonitorService {
       body: JSON.stringify({
         source: 'expo-go-device',
         products,
-        complete: true,
+        complete: false,
+        emitEvents: true,
       }),
     });
 
@@ -91,6 +98,29 @@ class RemoteMonitorService implements MonitorService {
       throw new Error(`Test push failed (${response.status}) ${detail}`.trim());
     }
   }
+
+  async scheduleTestWebPush(
+    subscription: WebPushSubscriptionPayload,
+    product: Product | undefined,
+    delayMs: number,
+    installationId?: string,
+  ) {
+    const response = await fetch(`${this.baseUrl}/v1/web-push/schedule`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        webPushSubscription: subscription,
+        product,
+        delayMs,
+        installationId,
+      }),
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      throw new Error(`Schedule push failed (${response.status}) ${detail}`.trim());
+    }
+    return (await response.json()) as { fireAt: string };
+  }
 }
 
 class DevelopmentMonitorService implements MonitorService {
@@ -101,6 +131,9 @@ class DevelopmentMonitorService implements MonitorService {
   }
   async reportObservations() {}
   async sendTestWebPush() {
+    throw new Error('Monitor API URL is not configured.');
+  }
+  async scheduleTestWebPush(): Promise<{ fireAt: string }> {
     throw new Error('Monitor API URL is not configured.');
   }
 }
