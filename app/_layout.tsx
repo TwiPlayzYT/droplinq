@@ -214,13 +214,15 @@ export default function RootLayout() {
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content={brand.displayName} />
         <link rel="manifest" href="/manifest.webmanifest" />
-        {/* Stable favicon URLs for Google Search (no cache-bust query). Expo also emits /favicon.ico in static HTML. */}
+        {/* Google Search favicon: stable 48x48 opaque black D (fills Google's circle, no white). */}
+        <link rel="icon" href="/google-favicon-48.png" type="image/png" sizes="48x48" />
+        <link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
         <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
         <link rel="icon" type="image/png" sizes="192x192" href="/droplinq-icon-192.png" />
-        <link rel="apple-touch-icon" href="/droplinq-icon-192.png" />
-        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="shortcut icon" href="/google-favicon-48.png" />
       </Head>
       <SafeAreaProvider>
         <AppearanceProvider>
