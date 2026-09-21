@@ -214,15 +214,11 @@ export default function RootLayout() {
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content={brand.displayName} />
         <link rel="manifest" href="/manifest.webmanifest" />
-        {/* Google Search favicon: stable 48x48 opaque black D (fills Google's circle, no white). */}
-        <link rel="icon" href="/google-favicon-48.png" type="image/png" sizes="48x48" />
-        <link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
-        <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
-        <link rel="icon" type="image/png" sizes="192x192" href="/droplinq-icon-192.png" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="shortcut icon" href="/google-favicon-48.png" />
+        {/* One primary Google-eligible favicon: square PNG larger than 48px, stable absolute URL. */}
+        <link rel="icon" href="https://getdroplinq.com/favicon-96.png" type="image/png" sizes="96x96" />
+        <link rel="icon" href="https://getdroplinq.com/favicon.ico" sizes="any" />
+        <link rel="apple-touch-icon" href="https://getdroplinq.com/apple-touch-icon.png" />
+        <link rel="shortcut icon" href="https://getdroplinq.com/favicon-96.png" />
       </Head>
       <SafeAreaProvider>
         <AppearanceProvider>

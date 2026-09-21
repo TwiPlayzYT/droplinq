@@ -27,6 +27,15 @@ services:
       - path: /sw.js
         name: Cache-Control
         value: no-cache
+      - path: /favicon.ico
+        name: Cache-Control
+        value: public, max-age=86400, no-transform
+      - path: /favicon-96.png
+        name: Cache-Control
+        value: public, max-age=86400, no-transform
+      - path: /apple-touch-icon.png
+        name: Cache-Control
+        value: public, max-age=86400, no-transform
     routes:
       - type: rewrite
         source: /sw.js
@@ -34,6 +43,48 @@ services:
       - type: rewrite
         source: /manifest.webmanifest
         destination: /manifest.webmanifest
+      - type: rewrite
+        source: /favicon.ico
+        destination: /favicon.ico
+      - type: rewrite
+        source: /favicon.png
+        destination: /favicon.png
+      - type: rewrite
+        source: /favicon-16.png
+        destination: /favicon-16.png
+      - type: rewrite
+        source: /favicon-32.png
+        destination: /favicon-32.png
+      - type: rewrite
+        source: /favicon-48.png
+        destination: /favicon-48.png
+      - type: rewrite
+        source: /favicon-96.png
+        destination: /favicon-96.png
+      - type: rewrite
+        source: /favicon-144.png
+        destination: /favicon-144.png
+      - type: rewrite
+        source: /google-favicon-48.png
+        destination: /google-favicon-48.png
+      - type: rewrite
+        source: /apple-touch-icon.png
+        destination: /apple-touch-icon.png
+      - type: rewrite
+        source: /droplinq-icon.png
+        destination: /droplinq-icon.png
+      - type: rewrite
+        source: /droplinq-icon-192.png
+        destination: /droplinq-icon-192.png
+      - type: rewrite
+        source: /droplinq-icon-512.png
+        destination: /droplinq-icon-512.png
+      - type: rewrite
+        source: /robots.txt
+        destination: /robots.txt
+      - type: rewrite
+        source: /sitemap.xml
+        destination: /sitemap.xml
       - type: rewrite
         source: /auth/callback
         destination: /index.html
