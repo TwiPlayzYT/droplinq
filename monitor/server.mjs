@@ -7,10 +7,12 @@ import { ALLOWED_FORMATS, normalizeCoverageFilters } from './coverage-match.mjs'
 import { MonitorEngine } from './monitor-engine.mjs';
 import {
   productsFromPageCrawl,
+  verifyIngestToken,
   verifyPageCrawlSignature,
 } from './pagecrawl-webhook.mjs';
 import { mergeRegistration, sanitizeSubscription } from './registration.mjs';
 import { createScheduledPushRunner } from './scheduled-push.mjs';
+import { ensureSeedCatalog } from './seed-catalog.mjs';
 import { JsonStore } from './storage.mjs';
 import {
   getWebPushPublicConfig,
@@ -32,7 +34,8 @@ const allowedFormats = ALLOWED_FORMATS;
 
 const sendJson = (response, status, value) => {
   response.writeHead(status, {
-    'Access-Control-Allow-Headers': 'content-type, authorization',
+    'Access-Control-Allow-Headers':
+      'content-type, authorization, x-droplinq-ingest-token, x-pagecrawl-signature, x-pagecrawl-timestamp',
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
     'Access-Control-Allow-Origin': '*',
     'Content-Type': 'application/json',
@@ -129,8 +132,15 @@ const validateRegistration = (input) => {
 
 const store = new JsonStore(config.dataFile);
 await store.load();
+await ensureSeedCatalog(store);
 const scheduledPushes = createScheduledPushRunner(store);
 await scheduledPushes.restore();
+
+if (!process.env.PAGECRAWL_SIGNING_SECRET && !process.env.MONITOR_INGEST_TOKEN) {
+  console.warn(
+    '[server] WARNING: PAGECRAWL_SIGNING_SECRET / MONITOR_INGEST_TOKEN unset — drop webhooks cannot authenticate. Device observations still notify.',
+  );
+}
 
 const engine = new MonitorEngine({
   store,
@@ -341,22 +351,69 @@ const server = createServer(async (request, response) => {
   if (request.method === 'POST' && request.url === '/v1/webhooks/pagecrawl') {
     try {
       const rawBody = await readBody(request);
-      const verified = verifyPageCrawlSignature({
+      const hmacOk = verifyPageCrawlSignature({
         rawBody,
         signature: request.headers['x-pagecrawl-signature'],
         timestamp: request.headers['x-pagecrawl-timestamp'],
         secret: process.env.PAGECRAWL_SIGNING_SECRET,
       });
-      if (!verified) {
+      const tokenOk = verifyIngestToken({
+        authorization: request.headers.authorization,
+        headerToken: request.headers['x-droplinq-ingest-token'],
+        secret: process.env.MONITOR_INGEST_TOKEN || process.env.PAGECRAWL_SIGNING_SECRET,
+      });
+      if (!hmacOk && !tokenOk) {
         sendJson(response, 401, { ok: false, error: 'Invalid webhook signature' });
         return;
       }
 
       const payload = JSON.parse(rawBody);
       const products = productsFromPageCrawl(payload);
-      const eventId = `pagecrawl-${payload.id ?? 'change'}-${payload.changed_at ?? request.headers['x-pagecrawl-timestamp']}`;
+      const eventId = `pagecrawl-${payload.id ?? 'change'}-${payload.changed_at ?? request.headers['x-pagecrawl-timestamp'] ?? Date.now()}`;
       await engine.ingestWebhookProducts(products, eventId);
       sendJson(response, 200, { ok: true, matchedProducts: products.length });
+    } catch (error) {
+      sendJson(response, 422, { ok: false, error: error.message });
+    }
+    return;
+  }
+
+  if (request.method === 'POST' && request.url === '/v1/ingest') {
+    try {
+      const tokenOk = verifyIngestToken({
+        authorization: request.headers.authorization,
+        headerToken: request.headers['x-droplinq-ingest-token'],
+        secret: process.env.MONITOR_INGEST_TOKEN || process.env.PAGECRAWL_SIGNING_SECRET,
+      });
+      if (!tokenOk) {
+        sendJson(response, 401, { ok: false, error: 'Invalid ingest token' });
+        return;
+      }
+      const body = JSON.parse(await readBody(request));
+      const products = Array.isArray(body.products) ? body.products : [];
+      const allowed = products.filter(
+        (product) =>
+          product &&
+          typeof product.id === 'string' &&
+          typeof product.title === 'string' &&
+          typeof product.url === 'string' &&
+          allowedFormats.has(product.format),
+      );
+      if (allowed.length === 0) {
+        sendJson(response, 422, { ok: false, error: 'No valid products' });
+        return;
+      }
+      const eventId = `ingest-${body.eventId ?? Date.now()}`;
+      const matched = await engine.ingestWebhookProducts(
+        allowed.map((product) => ({
+          ...product,
+          releaseType: product.releaseType ?? 'new',
+          detectedAt: product.detectedAt ?? new Date().toISOString(),
+          inStock: true,
+        })),
+        eventId,
+      );
+      sendJson(response, 200, { ok: true, matchedProducts: matched });
     } catch (error) {
       sendJson(response, 422, { ok: false, error: error.message });
     }

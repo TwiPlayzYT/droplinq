@@ -51,6 +51,7 @@ import {
   signalsFromLegacyProduct,
 } from '@/lib/filter-matcher';
 import { matchesProductSearch } from '@/lib/product-search';
+import { productPlaceholderSource } from '@/lib/product-placeholder';
 import { useDropDex } from '@/store/dropdex-context';
 import { CatalogStockEvent, StockEventKind } from '@/types/catalog';
 import { Product, ProductAvailability, RegionId } from '@/types/dropdex';
@@ -120,14 +121,14 @@ function eventCopy(kind: StockEventKind) {
 function ProductThumbnail({ product, size = 72 }: { product: Product; size?: number }) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
-
-  if (!product.imageUrl || failed) {
-    return <Ionicons color={palette.whiteShadow} name="image-outline" size={22} />;
-  }
+  const remote = Boolean(product.imageUrl) && !failed;
+  const source = remote
+    ? { uri: product.imageUrl as string }
+    : productPlaceholderSource(product.format);
 
   return (
     <>
-      {!loaded ? (
+      {remote && !loaded ? (
         <View style={styles.thumbLoader}>
           <ActivityIndicator color={palette.red} size="small" />
         </View>
@@ -137,11 +138,13 @@ function ProductThumbnail({ product, size = 72 }: { product: Product; size?: num
         alt={`Product photo of ${product.title}`}
         cachePolicy="memory-disk"
         contentFit="cover"
-        onError={() => setFailed(true)}
+        onError={() => {
+          if (remote) setFailed(true);
+        }}
         onLoad={() => setLoaded(true)}
-        recyclingKey={product.id}
-        source={{ uri: product.imageUrl }}
-        style={[{ height: size, width: size }, !loaded && styles.thumbHidden]}
+        recyclingKey={`${product.id}-${remote ? 'remote' : 'local'}`}
+        source={source}
+        style={[{ height: size, width: size }, remote && !loaded && styles.thumbHidden]}
         transition={0}
       />
     </>

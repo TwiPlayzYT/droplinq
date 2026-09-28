@@ -12,7 +12,6 @@ import { CookieConsentBanner } from '@/components/cookie-consent-banner';
 import { DevicePromptModal } from '@/components/device-prompt-modal';
 import { DropAlertModal } from '@/components/drop-alert-modal';
 import { OpenProductChooser } from '@/components/open-product-chooser';
-import { ProUpgradeModal } from '@/components/pro-upgrade-modal';
 import { SiteTutorial } from '@/components/site-tutorial';
 import { UserAppearanceSync } from '@/components/user-appearance-sync';
 import { AppBootScreen, GlobalUXFeedback } from '@/components/ux-feedback';
@@ -180,7 +179,6 @@ function AppExperience() {
           />
         </Stack>
         <DevicePromptModal />
-        <ProUpgradeModal />
         <SiteTutorial />
         <DropAlertModal />
         <OpenProductChooser />

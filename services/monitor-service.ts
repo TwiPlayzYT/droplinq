@@ -38,6 +38,7 @@ export interface MonitorService {
     delayMs: number,
     installationId?: string,
   ): Promise<{ fireAt: string }>;
+  fetchCatalogProducts(): Promise<Product[]>;
 }
 
 class RemoteMonitorService implements MonitorService {
@@ -121,6 +122,22 @@ class RemoteMonitorService implements MonitorService {
     }
     return (await response.json()) as { fireAt: string };
   }
+
+  async fetchCatalogProducts(): Promise<Product[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/v1/catalog`);
+      if (!response.ok) return [];
+      const payload = (await response.json()) as {
+        products?: Array<Partial<Product> & { id?: string; title?: string; url?: string }>;
+      };
+      const products = Array.isArray(payload.products) ? payload.products : [];
+      return products
+        .filter((product) => product && typeof product.id === 'string')
+        .map((product) => product as Product);
+    } catch {
+      return [];
+    }
+  }
 }
 
 class DevelopmentMonitorService implements MonitorService {
@@ -135,6 +152,9 @@ class DevelopmentMonitorService implements MonitorService {
   }
   async scheduleTestWebPush(): Promise<{ fireAt: string }> {
     throw new Error('Monitor API URL is not configured.');
+  }
+  async fetchCatalogProducts() {
+    return [];
   }
 }
 

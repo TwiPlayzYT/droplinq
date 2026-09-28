@@ -15,14 +15,11 @@ export default function BillingCancel() {
         <title>Checkout canceled — {brand.name}</title>
       </Head>
       <View style={styles.hero}>
-        <Text style={styles.kicker}>DROPLINQ PRO</Text>
+        <Text style={styles.kicker}>BILLING</Text>
         <Text style={styles.headline}>Checkout canceled</Text>
-        <Text style={styles.sub}>
-          You were not charged. Pro stays locked until a paid Stripe subscription is on your
-          account.
-        </Text>
-        <Pressable onPress={() => router.push('/pro' as never)} style={styles.primaryBtn}>
-          <Text style={styles.primaryBtnText}>Back to Pro</Text>
+        <Text style={styles.sub}>You were not charged. Premium checkout is paused for now.</Text>
+        <Pressable onPress={() => router.push('/' as never)} style={styles.primaryBtn}>
+          <Text style={styles.primaryBtnText}>Back home</Text>
         </Pressable>
       </View>
     </MarketingChrome>
@@ -44,26 +41,25 @@ const styles = StyleSheet.create({
     color: palette.white,
     fontSize: 34,
     fontWeight: '900',
-    letterSpacing: -1,
   },
   sub: {
     color: palette.whiteDim,
     fontSize: 15,
     fontWeight: '500',
     lineHeight: 22,
-    maxWidth: 640,
   },
   primaryBtn: {
+    alignItems: 'center',
     alignSelf: 'flex-start',
     backgroundColor: palette.red,
-    borderRadius: 999,
+    borderRadius: 12,
     marginTop: 8,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
   primaryBtnText: {
-    color: '#fff',
-    fontSize: 14,
+    color: palette.white,
+    fontSize: 15,
     fontWeight: '800',
   },
 });

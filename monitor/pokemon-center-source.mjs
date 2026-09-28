@@ -61,6 +61,37 @@ const regionFromLocale = (locale) => LOCALE_TO_REGION[locale] ?? 'us';
 const productUrl = (locale, id, slug) =>
   `https://www.pokemoncenter.com${locale ? `/${locale}` : ''}/product/${id}/${slug}`;
 
+const normalizeImageUrl = (url) => {
+  if (!url) return undefined;
+  const trimmed = String(url).trim().replaceAll('\\/', '/').replaceAll('\\u002F', '/');
+  if (!trimmed || trimmed.startsWith('data:') || trimmed === 'null' || trimmed === 'undefined') {
+    return undefined;
+  }
+  if (trimmed.startsWith('//')) return `https:${trimmed}`;
+  if (trimmed.startsWith('/')) return `https://www.pokemoncenter.com${trimmed}`;
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+  return undefined;
+};
+
+const extractImageForProductId = (html, productId) => {
+  const idIndex = html.indexOf(productId);
+  if (idIndex < 0) return undefined;
+  const windowStart = Math.max(0, idIndex - 2500);
+  const windowEnd = Math.min(html.length, idIndex + 2500);
+  const slice = html.slice(windowStart, windowEnd).replaceAll('\\/', '/');
+  const candidates = [
+    ...slice.matchAll(/(?:src|data-src|data-lazy-src)=["']([^"']+)["']/gi),
+    ...slice.matchAll(
+      /https?:\/\/[^"'\\\s]+(?:scene7|demandware|images|media|pokemon)[^"'\\\s]+\.(?:jpg|jpeg|png|webp)/gi,
+    ),
+  ];
+  for (const match of candidates) {
+    const url = normalizeImageUrl(Array.isArray(match) ? match[1] ?? match[0] : match[0]);
+    if (url && !url.includes('placeholder') && !url.includes('spacer')) return url;
+  }
+  return undefined;
+};
+
 export const extractProducts = (html) => {
   const normalizedHtml = html.replaceAll('\\/', '/');
   const products = new Map();
@@ -72,6 +103,7 @@ export const extractProducts = (html) => {
     if (!format) continue;
 
     const region = regionFromLocale(locale);
+    const imageUrl = extractImageForProductId(normalizedHtml, id);
     products.set(`${region}:${id}`, {
       id,
       title,
@@ -80,6 +112,7 @@ export const extractProducts = (html) => {
       region,
       releaseType: title.toLowerCase().includes('preorder') ? 'preorder' : 'new',
       url: productUrl(locale, id, slug),
+      imageUrl,
       detectedAt: new Date().toISOString(),
       tags: ['tcg', format],
       inStock: true,

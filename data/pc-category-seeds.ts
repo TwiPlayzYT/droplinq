@@ -176,6 +176,12 @@ const SPECS: SeedSpec[] = [
 function seedFromSpec(spec: SeedSpec): Product {
   const category = allPokemonCenterLeafCategories.find((item) => item.id === spec.categoryId);
   const format = formatForCategory(spec.categoryId);
+  const formatArt: Record<ProductFormat, string> = {
+    etb: 'https://droplinq-web.onrender.com/product-art/etb.png',
+    'booster-bundle': 'https://droplinq-web.onrender.com/product-art/booster-bundle.png',
+    'booster-box': 'https://droplinq-web.onrender.com/product-art/booster-box.png',
+    upc: 'https://droplinq-web.onrender.com/product-art/upc.png',
+  };
   return {
     id: `pc-seed-${spec.categoryId}`,
     title: spec.title,
@@ -187,8 +193,8 @@ function seedFromSpec(spec: SeedSpec): Product {
     historical: false,
     releaseDate: spec.releaseDate,
     url: searchUrl(spec.search),
-    // Image comes from live Pokémon Center / monitor sync — never guess a TCGplayer id.
-    imageUrl: undefined,
+    // Format art until live Pokémon Center / monitor sync supplies a retailer photo.
+    imageUrl: formatArt[format] ?? formatArt.etb,
     detectedAt: `${spec.releaseDate}T12:00:00.000Z`,
     tags: [
       'tcg',

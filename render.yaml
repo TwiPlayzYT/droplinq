@@ -80,6 +80,9 @@ services:
         source: /droplinq-icon-512.png
         destination: /droplinq-icon-512.png
       - type: rewrite
+        source: /product-art/*
+        destination: /product-art/*
+      - type: rewrite
         source: /robots.txt
         destination: /robots.txt
       - type: rewrite
@@ -191,4 +194,8 @@ services:
       - key: SUPABASE_ANON_KEY
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: PAGECRAWL_SIGNING_SECRET
+        sync: false
+      - key: MONITOR_INGEST_TOKEN
         sync: false

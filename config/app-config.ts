@@ -6,8 +6,11 @@ export const brand = {
   name: 'DropLinq',
   displayName: 'DROPLINQ',
   legalName: 'DropLinq',
-  /** Public support inbox — update if you later use a different domain. */
-  contactEmail: 'hello@droplinq.app',
+  /** Public support inbox. */
+  contactEmail: 'droplinqco@gmail.com',
+  /** Official YouTube channel. */
+  youtubeUrl: 'https://www.youtube.com/@DropLinqCo',
+  youtubeHandle: '@DropLinqCo',
   /** Operating region for privacy / consumer-law notices. Not a street address. */
   jurisdiction: 'Canada',
   tagline: 'Monitor · Alert · Check',

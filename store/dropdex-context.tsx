@@ -581,13 +581,16 @@ export function DropDexProvider({ children }: PropsWithChildren) {
         } as Product & { retailerName: string; regionName: string; lastCheckedAt: string };
       });
 
-      const [remoteProducts, remoteEvents, updatedAt] = await Promise.all([
+      const [remoteProducts, remoteEvents, updatedAt, monitorProducts] = await Promise.all([
         catalogRepository.listProducts({
           regionId,
           categorySlugs: undefined,
         }),
         catalogRepository.listEvents(),
         catalogRepository.lastBackendUpdate(),
+        remoteMonitorConfigured
+          ? monitorService.fetchCatalogProducts().catch(() => [] as Product[])
+          : Promise.resolve([] as Product[]),
       ]);
 
       // Supabase may be empty (no rows yet) or blocked for guests (RLS).
@@ -602,6 +605,26 @@ export function DropDexProvider({ children }: PropsWithChildren) {
           historical: false,
           imageUrl: preferProductImageUrl(existing?.imageUrl, product.imageUrl),
           releaseDate: product.releaseDate ?? existing?.releaseDate,
+        });
+      });
+      monitorProducts.forEach((product) => {
+        if (!product?.id) return;
+        const existing = byId.get(product.id);
+        if (!existing) {
+          byId.set(product.id, {
+            ...product,
+            historical: false,
+            imageUrl: sanitizeProductImageUrl(product.imageUrl),
+            retailerName: regionConfig.storefront,
+            regionName: regionConfig.label,
+          } as Product);
+          return;
+        }
+        byId.set(product.id, {
+          ...existing,
+          imageUrl: preferProductImageUrl(existing.imageUrl, product.imageUrl),
+          availability: product.availability ?? existing.availability,
+          lastSeenAt: product.lastSeenAt ?? existing.lastSeenAt,
         });
       });
 

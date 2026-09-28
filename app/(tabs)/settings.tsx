@@ -15,6 +15,7 @@ import {
 } from '@/components/settings-row';
 import { brand } from '@/config/app-config';
 import {
+  PRO_UI_ENABLED,
   billingLegalCopy,
   formatCad,
   PRO_ANNUAL_MONTHLY_CAD,
@@ -175,6 +176,7 @@ export default function SettingsScreen() {
         visible={editOpen}
       />
 
+      {PRO_UI_ENABLED ? (
       <SettingsGroup title="DropLinq Pro">
         <View style={styles.proCard}>
           <Text style={styles.proTitle}>{trialCopy.headline}</Text>
@@ -227,6 +229,7 @@ export default function SettingsScreen() {
           {billingMessage ? <Text style={styles.proHint}>{billingMessage}</Text> : null}
         </View>
       </SettingsGroup>
+      ) : null}
 
       <SettingsGroup title="Notifications">
         <TourAnchor id="settings-homescreen">

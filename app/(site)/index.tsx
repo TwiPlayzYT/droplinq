@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import Head from 'expo-router/head';
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { MarketingPhoneStack } from '@/components/marketing/phone-mocks';
 import { MarketingChrome } from '@/components/marketing/site-chrome';
@@ -9,7 +9,6 @@ import { AppBootScreen } from '@/components/ux-feedback';
 import { brand } from '@/config/app-config';
 import { palette } from '@/constants/dropdex';
 import { openAppPath } from '@/lib/open-app';
-import { proMarketingFeatures, proPricingBlurb } from '@/services/subscriptions/tiers';
 import { useAuth } from '@/store/auth-context';
 
 const featureCards = [
@@ -79,6 +78,22 @@ export default function MarketingHome() {
             DropLinq is the command center for Pokémon Center restocks. Arm alerts, tune coverage,
             and open the product before the wave is gone.
           </Text>
+
+          <View style={styles.socialRow}>
+            <Pressable
+              onPress={() => void Linking.openURL(brand.youtubeUrl)}
+              style={styles.socialBtn}>
+              <Ionicons color="#fff" name="logo-youtube" size={18} />
+              <Text style={styles.socialBtnText}>YouTube {brand.youtubeHandle}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => void Linking.openURL(`mailto:${brand.contactEmail}`)}
+              style={styles.socialBtnGhost}>
+              <Ionicons color={palette.white} name="mail-outline" size={18} />
+              <Text style={styles.socialBtnGhostText}>{brand.contactEmail}</Text>
+            </Pressable>
+          </View>
+
           <Pressable onPress={goApp} style={styles.primaryCta}>
             <Text style={styles.primaryCtaText}>
               {session ? 'Open App' : 'Start monitoring today'}
@@ -148,27 +163,10 @@ export default function MarketingHome() {
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Supercharge with Pro.</Text>
-        <Text style={styles.sectionSub}>{proPricingBlurb.trial.body}</Text>
-        <View style={[styles.grid, desktop && styles.gridDesktop]}>
-          {proMarketingFeatures.slice(0, 3).map((item) => (
-            <View key={item.title} style={[styles.card, desktop && styles.cardDesktop]}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardBody}>{item.body}</Text>
-            </View>
-          ))}
-        </View>
-        <Pressable onPress={() => router.push('/pro' as never)} style={styles.secondaryCta}>
-          <Text style={styles.secondaryCtaText}>Explore PRO</Text>
-        </Pressable>
-      </View>
-
       <View style={styles.closing}>
         <Text style={styles.closingTitle}>Start monitoring today.</Text>
         <Text style={styles.closingSub}>
-          Free until your first drop day. Downloads · To be decided. Join collectors who want the
-          ping, not the Discord chaos.
+          Free monitoring while we build. Join collectors who want the ping, not the Discord chaos.
         </Text>
         <Pressable onPress={goApp} style={styles.primaryCta}>
           <Text style={styles.primaryCtaText}>Open App</Text>
@@ -215,6 +213,40 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     lineHeight: 24,
     maxWidth: 460,
+  },
+  socialRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  socialBtn: {
+    alignItems: 'center',
+    backgroundColor: '#FF0000',
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  socialBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  socialBtnGhost: {
+    alignItems: 'center',
+    borderColor: palette.blackSoft,
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  socialBtnGhostText: {
+    color: palette.white,
+    fontSize: 13,
+    fontWeight: '700',
   },
   primaryCta: {
     alignSelf: 'flex-start',

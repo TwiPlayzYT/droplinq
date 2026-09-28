@@ -14,7 +14,7 @@ const faqs = [
   },
   {
     q: 'What is the free trial?',
-    a: 'Not a useless 7-day clock. DropLinq stays free until we alert you on your first real drop day. After that day, Pro keeps full monitoring if you want to continue.',
+    a: 'DropLinq monitoring is free right now. Arm alerts, watch your region, and get lock-screen pings when stock moves — no paid plan required while Pro is paused.',
   },
   {
     q: 'Does monitoring work with the website closed?',
@@ -22,7 +22,7 @@ const faqs = [
   },
   {
     q: 'Do prices include tax?',
-    a: 'No. The $6.99 CAD monthly and $59.88 CAD yearly plan prices are before tax. GST, HST, VAT, or similar sales tax is added on top at Stripe Checkout from your billing address. Subscriptions auto-renew until you cancel in Settings → Manage billing.',
+    a: 'Premium checkout is paused. When billing returns, plan prices will be before tax — GST, HST, VAT, or similar is added at checkout from your billing address.',
   },
   {
     q: 'Is DropLinq affiliated with Pokémon Center?',
@@ -43,15 +43,19 @@ export default function MarketingHelp() {
         <Text style={styles.kicker}>HELP CENTER</Text>
         <Text style={styles.headline}>Answers & support</Text>
         <Text style={styles.sub}>
-          Support inbox · <Text style={styles.tbd}>To be decided</Text>
+          Support · {brand.contactEmail}
           {'\n'}
-          We will publish a dedicated help email once branding DNS is ready. Until then, use the
-          contact on your account Settings or the placeholder below.
+          YouTube · {brand.youtubeHandle}
         </Text>
+        <Pressable
+          onPress={() => void Linking.openURL(brand.youtubeUrl)}
+          style={styles.mailBtn}>
+          <Text style={styles.mailBtnText}>YouTube · {brand.youtubeHandle}</Text>
+        </Pressable>
         <Pressable
           onPress={() => void Linking.openURL(`mailto:${brand.contactEmail}`)}
           style={styles.mailBtn}>
-          <Text style={styles.mailBtnText}>Email placeholder · {brand.contactEmail}</Text>
+          <Text style={styles.mailBtnText}>Email · {brand.contactEmail}</Text>
         </Pressable>
       </View>
 

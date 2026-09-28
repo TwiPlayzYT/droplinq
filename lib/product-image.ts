@@ -10,7 +10,8 @@ export function isPokemonRetailerImageUrl(url?: string | null): boolean {
   return (
     value.includes('pokemoncenter.com') ||
     value.includes('pokemon.com') ||
-    (value.includes('scene7.com') && value.includes('pokemon')) ||
+    value.includes('scene7.com') ||
+    value.includes('demandware') ||
     value.includes('pokemonblog.com') ||
     value.includes('pokemon-center')
   );

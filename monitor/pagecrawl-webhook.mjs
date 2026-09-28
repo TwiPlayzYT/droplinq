@@ -32,6 +32,12 @@ const productFromPayload = (payload) => {
     region,
     releaseType: 'new',
     url,
+    imageUrl:
+      typeof payload.image_url === 'string'
+        ? payload.image_url
+        : typeof payload.imageUrl === 'string'
+          ? payload.imageUrl
+          : undefined,
     detectedAt: payload.changed_at ?? new Date().toISOString(),
     tags: ['tcg', format],
     inStock: true,
@@ -77,6 +83,20 @@ export function verifyPageCrawlSignature({ rawBody, signature, timestamp, secret
     receivedBuffer.length === expectedBuffer.length &&
     timingSafeEqual(receivedBuffer, expectedBuffer)
   );
+}
+
+/** Shared-secret auth for PageCrawl or any drop webhook when HMAC is unavailable. */
+export function verifyIngestToken({ authorization, headerToken, secret }) {
+  if (!secret) return false;
+  const bearer =
+    typeof authorization === 'string' && authorization.toLowerCase().startsWith('bearer ')
+      ? authorization.slice(7).trim()
+      : '';
+  const candidate = bearer || (typeof headerToken === 'string' ? headerToken.trim() : '');
+  if (!candidate) return false;
+  const a = Buffer.from(candidate);
+  const b = Buffer.from(secret);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 export function productsFromPageCrawl(payload) {

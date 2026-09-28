@@ -9,6 +9,14 @@ const formatTags: Record<ProductFormat, string[]> = {
   upc: ['ultra premium collection', 'upc'],
 };
 
+/** Hosted format art (also shipped in /public/product-art). Prefer live PC photos when available. */
+const FORMAT_ART: Record<ProductFormat, string> = {
+  etb: 'https://droplinq-web.onrender.com/product-art/etb.png',
+  'booster-bundle': 'https://droplinq-web.onrender.com/product-art/booster-bundle.png',
+  'booster-box': 'https://droplinq-web.onrender.com/product-art/booster-box.png',
+  upc: 'https://droplinq-web.onrender.com/product-art/upc.png',
+};
+
 const makeProduct = (
   format: ProductFormat,
   id: string,
@@ -17,6 +25,7 @@ const makeProduct = (
   url: string,
   // Kept for stable product ids (tcg-bundle-*, etc.) — never used as an image source.
   _imageId?: string,
+  imageUrl?: string,
 ): Product => ({
   id,
   title,
@@ -28,9 +37,9 @@ const makeProduct = (
   historical: false,
   releaseDate,
   url,
-  // Official packshots come from Pokémon Center / monitor sync. Guessing TCGplayer
-  // CDN ids has shown Magic cards on Pokémon products — never do that again.
-  imageUrl: undefined,
+  // Format art until Pokémon Center / monitor sync supplies a retailer photo.
+  // Never guess TCGplayer CDN ids — wrong IDs have shown Magic cards.
+  imageUrl: imageUrl ?? FORMAT_ART[format],
   detectedAt: new Date().toISOString(),
   tags: ['tcg', ...formatTags[format], ...normalizeSearchText(title).split(' ').filter(Boolean)],
 });

@@ -1,8 +1,10 @@
 /**
  * DropLinq billing + trial rules.
- * Pro unlocks only after Stripe reports a paid subscription.
+ * Premium/Pro is temporarily hidden — everyone gets full access until billing ships later.
  */
-export const BILLING_ENFORCEMENT_ENABLED = true;
+export const BILLING_ENFORCEMENT_ENABLED = false;
+/** Hide all Pro upgrade / checkout UI while billing is paused. */
+export const PRO_UI_ENABLED = false;
 
 /** Monthly Pro price in CAD. */
 export const PRO_MONTHLY_CAD = 6.99;

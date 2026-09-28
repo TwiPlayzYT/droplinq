@@ -22,7 +22,6 @@ const brandIcon = require('../../assets/images/icon.png');
 
 const navItems = [
   { label: 'Home', href: '/' as const },
-  { label: 'PRO', href: '/pro' as const },
   { label: 'Help', href: '/help' as const },
 ];
 
@@ -104,9 +103,6 @@ export function MarketingChrome({
               <Pressable onPress={() => router.push('/' as never)}>
                 <Text style={styles.footerLink}>Home</Text>
               </Pressable>
-              <Pressable onPress={() => router.push('/pro' as never)}>
-                <Text style={styles.footerLink}>PRO</Text>
-              </Pressable>
               <Pressable onPress={goApp}>
                 <Text style={styles.footerLink}>Open App</Text>
               </Pressable>
@@ -131,7 +127,7 @@ export function MarketingChrome({
             </View>
           </View>
           <Text style={styles.footerMeta}>
-            {brand.legalName} · {brand.jurisdiction} · Support: To be decided
+            {brand.legalName} · {brand.jurisdiction} · Support: {brand.contactEmail}
           </Text>
         </View>
       </ScrollView>

@@ -73,7 +73,9 @@ export class MonitorEngine {
           }
 
           state.snapshot[key] = {
+            ...previous,
             ...product,
+            imageUrl: product.imageUrl || previous?.imageUrl,
             inStock: true,
             missingPolls: 0,
             lastSeenAt: now,
@@ -164,7 +166,9 @@ export class MonitorEngine {
         }
 
         state.snapshot[snapshotKey(product)] = {
+          ...previous,
           ...product,
+          imageUrl: product.imageUrl || previous?.imageUrl,
           inStock: observedInStock,
           missingPolls: 0,
           lastSeenAt: now,
@@ -213,7 +217,9 @@ export class MonitorEngine {
           attempts: 0,
         });
         state.snapshot[snapshotKey(product)] = {
+          ...(state.snapshot[snapshotKey(product)] ?? {}),
           ...product,
+          imageUrl: product.imageUrl || state.snapshot[snapshotKey(product)]?.imageUrl,
           inStock: true,
           missingPolls: 0,
           lastSeenAt: product.detectedAt,

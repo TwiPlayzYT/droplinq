@@ -29,6 +29,7 @@ import {
   subscribeTutorialSettled,
 } from '@/constants/tutorial';
 import { tierCopy } from '@/services/subscriptions/tiers';
+import { PRO_UI_ENABLED } from '@/constants/billing';
 import { resolveEntitlements } from '@/services/subscriptions/entitlements';
 import { hasAcceptedCurrentLegal, useAuth } from '@/store/auth-context';
 
@@ -64,6 +65,8 @@ function randomOfferDelayMs() {
  * after tutorial settles, delayed 10–30s on the product app.
  */
 export function ProUpgradeModal() {
+  if (!PRO_UI_ENABLED) return null;
+
   const { profile, profileReady, session, startProCheckout } = useAuth();
   const pathname = usePathname();
   const { height } = useWindowDimensions();

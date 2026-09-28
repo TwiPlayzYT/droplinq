@@ -48,13 +48,14 @@ export function resolveEntitlements(profile: AuthProfile | null | undefined): En
 
   if (!BILLING_ENFORCEMENT_ENABLED) {
     return {
+      // Full access for everyone while Pro UI is paused.
       effectiveTier: 'PRO',
-      billedTier: billed.tier,
-      status: trialActive ? 'trialing' : billed.status === 'none' ? 'trialing' : billed.status,
-      interval: billed.interval,
+      billedTier: 'FREE',
+      status: 'none',
+      interval: null,
       firstDropDay: billed.firstDropDay,
-      trialActive,
-      showUpgradeNudge: !paid && !trialActive,
+      trialActive: false,
+      showUpgradeNudge: false,
       isLockedToFree: false,
       enforcementEnabled: false,
     };
