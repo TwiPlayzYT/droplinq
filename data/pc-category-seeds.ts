@@ -1,11 +1,12 @@
 import { allPokemonCenterLeafCategories } from '@/data/pokemon-center-filters';
+import { hostedProductPhotoUrl } from '@/lib/product-photo';
 import { Product, ProductFormat } from '@/types/dropdex';
 
 /**
  * Curated placeholders for every Pokémon Center Filter leaf category.
  * These fill Stock → Catalog for All TCG until live Supabase / scanner rows exist.
  * Do not invent "last seen in stock" times — leave soldOutAt / lastSeenAt unset.
- * Do not attach TCGplayer CDN images — wrong IDs show other games' art.
+ * Packshots are DropLinq-hosted under /product-photos (never guess TCGplayer ids).
  */
 const searchUrl = (query: string) =>
   `https://www.pokemoncenter.com/en-ca/search/${encodeURIComponent(query)}`;
@@ -16,6 +17,34 @@ const formatForCategory = (categoryId: string): ProductFormat => {
   if (categoryId.includes('bundle')) return 'booster-bundle';
   if (categoryId.includes('box') && !categoryId.includes('collection')) return 'booster-box';
   return 'etb';
+};
+
+/** Representative curated packshot id per category leaf (files in /public/product-photos). */
+const CATEGORY_PHOTO: Record<string, string> = {
+  'pokemon-pc-etb': '593324',
+  'pokemon-premium-collections': '648415',
+  'pokemon-upc': '648415',
+  'pokemon-major-special': '30th-celebration-etb',
+  'pokemon-collection-boxes': '654213',
+  'pokemon-special-collections': '654135',
+  'pokemon-poster-collections': '654137',
+  'pokemon-sticker-collections': '668497',
+  'pokemon-pin-collections': '668541',
+  'pokemon-figure-collections': '672404',
+  'pokemon-mini-tins': '672394',
+  'pokemon-collector-tins': '672396',
+  'pokemon-premium-tins': '684452',
+  'pokemon-collector-chests': '684444',
+  'pokemon-build-battle': '684456',
+  'pokemon-battle-decks': '630431',
+  'pokemon-league-battle-decks': '630687',
+  'pokemon-pc-exclusives': '552998',
+  'pokemon-holiday': '630688',
+  'pokemon-anniversary': '30th-celebration-etb',
+  'pokemon-limited': '644282',
+  'pokemon-promo-tcg': '600518',
+  'pokemon-collaborations': '644298',
+  'pokemon-other-tcg': '565606',
 };
 
 type SeedSpec = {
@@ -176,12 +205,7 @@ const SPECS: SeedSpec[] = [
 function seedFromSpec(spec: SeedSpec): Product {
   const category = allPokemonCenterLeafCategories.find((item) => item.id === spec.categoryId);
   const format = formatForCategory(spec.categoryId);
-  const formatArt: Record<ProductFormat, string> = {
-    etb: 'https://droplinq-web.onrender.com/product-art/etb.png',
-    'booster-bundle': 'https://droplinq-web.onrender.com/product-art/booster-bundle.png',
-    'booster-box': 'https://droplinq-web.onrender.com/product-art/booster-box.png',
-    upc: 'https://droplinq-web.onrender.com/product-art/upc.png',
-  };
+  const photoId = CATEGORY_PHOTO[spec.categoryId];
   return {
     id: `pc-seed-${spec.categoryId}`,
     title: spec.title,
@@ -193,8 +217,9 @@ function seedFromSpec(spec: SeedSpec): Product {
     historical: false,
     releaseDate: spec.releaseDate,
     url: searchUrl(spec.search),
-    // Format art until live Pokémon Center / monitor sync supplies a retailer photo.
-    imageUrl: formatArt[format] ?? formatArt.etb,
+    imageUrl: photoId
+      ? hostedProductPhotoUrl(photoId)
+      : hostedProductPhotoUrl(format === 'upc' ? '648415' : '593324'),
     detectedAt: `${spec.releaseDate}T12:00:00.000Z`,
     tags: [
       'tcg',

@@ -80,6 +80,9 @@ services:
         source: /droplinq-icon-512.png
         destination: /droplinq-icon-512.png
       - type: rewrite
+        source: /product-photos/*
+        destination: /product-photos/*
+      - type: rewrite
         source: /product-art/*
         destination: /product-art/*
       - type: rewrite

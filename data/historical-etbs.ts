@@ -1,4 +1,5 @@
 import { pcCategorySeedProducts } from '@/data/pc-category-seeds';
+import { hostedProductPhotoUrl } from '@/lib/product-photo';
 import { normalizeSearchText } from '@/lib/product-search';
 import { Product, ProductFormat } from '@/types/dropdex';
 
@@ -9,12 +10,12 @@ const formatTags: Record<ProductFormat, string[]> = {
   upc: ['ultra premium collection', 'upc'],
 };
 
-/** Hosted format art (also shipped in /public/product-art). Prefer live PC photos when available. */
+/** Last-resort format art when a SKU has no curated packshot id. */
 const FORMAT_ART: Record<ProductFormat, string> = {
-  etb: 'https://droplinq-web.onrender.com/product-art/etb.png',
-  'booster-bundle': 'https://droplinq-web.onrender.com/product-art/booster-bundle.png',
-  'booster-box': 'https://droplinq-web.onrender.com/product-art/booster-box.png',
-  upc: 'https://droplinq-web.onrender.com/product-art/upc.png',
+  etb: 'https://getdroplinq.com/product-art/etb.png',
+  'booster-bundle': 'https://getdroplinq.com/product-art/booster-bundle.png',
+  'booster-box': 'https://getdroplinq.com/product-art/booster-box.png',
+  upc: 'https://getdroplinq.com/product-art/upc.png',
 };
 
 const makeProduct = (
@@ -23,8 +24,8 @@ const makeProduct = (
   title: string,
   releaseDate: string,
   url: string,
-  // Kept for stable product ids (tcg-bundle-*, etc.) — never used as an image source.
-  _imageId?: string,
+  /** Curated packshot file id under /public/product-photos/{id}.jpg */
+  photoId?: string,
   imageUrl?: string,
 ): Product => ({
   id,
@@ -37,9 +38,8 @@ const makeProduct = (
   historical: false,
   releaseDate,
   url,
-  // Format art until Pokémon Center / monitor sync supplies a retailer photo.
-  // Never guess TCGplayer CDN ids — wrong IDs have shown Magic cards.
-  imageUrl: imageUrl ?? FORMAT_ART[format],
+  // Hosted packshots first. Never hotlink TCGplayer CDN ids at runtime.
+  imageUrl: imageUrl ?? (photoId ? hostedProductPhotoUrl(photoId) : FORMAT_ART[format]),
   detectedAt: new Date().toISOString(),
   tags: ['tcg', ...formatTags[format], ...normalizeSearchText(title).split(' ').filter(Boolean)],
 });
@@ -414,8 +414,7 @@ export const watchedSoldOutProducts: Product[] = [
     historical: false,
     releaseDate: '2026-09-16',
     url: 'https://www.pokemoncenter.com/en-ca/product/10-10447-111/pokemon-tcg-30th-celebration-pokemon-center-elite-trainer-box',
-    imageUrl:
-      'https://pokemonblog.com/wp-content/uploads/2026/07/pokemon_tcg_30th_celebration_pokemon_center_elite_trainer_box.jpg',
+    imageUrl: hostedProductPhotoUrl('30th-celebration-etb'),
     soldOutAt: undefined,
     detectedAt: new Date().toISOString(),
     tags: [

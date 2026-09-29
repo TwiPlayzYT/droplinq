@@ -1,11 +1,15 @@
+import { isHostedProductPhotoUrl } from '@/lib/product-photo';
+
 /**
  * Product imagery rules:
  * Prefer Pokémon Center / retailer photos. Never show TCGplayer CDN packshots as
  * seeds — those IDs collide across games and can load Magic cards for Pokémon SKUs.
+ * DropLinq-hosted /product-photos/*.jpg are curated Pokémon packshots (safe).
  */
 
 export function isPokemonRetailerImageUrl(url?: string | null): boolean {
   if (!url) return false;
+  if (isHostedProductPhotoUrl(url)) return true;
   const value = url.toLowerCase();
   return (
     value.includes('pokemoncenter.com') ||
