@@ -169,11 +169,15 @@ services:
     buildCommand: npm ci
     startCommand: npm run monitor
     healthCheckPath: /health
+    disk:
+      name: droplinq-monitor-data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: NODE_VERSION
         value: "22"
       - key: DATA_FILE
-        value: /tmp/droplinq-state.json
+        value: /var/data/droplinq-state.json
       - key: POLL_INTERVAL_MS
         value: "30000"
       - key: VAPID_PUBLIC_KEY
