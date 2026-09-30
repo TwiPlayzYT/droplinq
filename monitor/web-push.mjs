@@ -71,7 +71,7 @@ export async function sendMatchingWebPushes(product, registrations) {
           ...alertCopy(product),
           product,
         }),
-        { TTL: 86400, urgency: 'high' },
+        { TTL: 604800, urgency: 'high' },
       );
       sent += 1;
       if (registration.installationId) sentInstallationIds.push(registration.installationId);

@@ -104,6 +104,8 @@ export function headlineProduct(title, { detectedAt, url, assumeStore = false } 
     detectedAt: detectedAt ?? new Date().toISOString(),
     tags: ['tcg', 'headline'],
     inStock: true,
+    availability: 'in-stock',
+    releaseDate: detectedAt ?? new Date().toISOString(),
   };
 }
 
@@ -149,6 +151,8 @@ export function productsFromPostHtml(html, { releaseType = 'new', detectedAt } =
       detectedAt: detectedAt ?? new Date().toISOString(),
       tags: ['tcg', format],
       inStock: true,
+      availability: 'in-stock',
+      releaseDate: detectedAt ?? new Date().toISOString(),
     });
   }
 

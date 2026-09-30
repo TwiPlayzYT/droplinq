@@ -138,7 +138,7 @@ export async function saveRecentDrops(drops) {
         'Content-Type': 'application/json',
         'x-upsert': 'true',
       }),
-      body: JSON.stringify({ drops: drops.slice(-40) }),
+      body: JSON.stringify({ drops: drops.slice(-80) }),
     });
     if (!response.ok) {
       const detail = await response.text().catch(() => '');

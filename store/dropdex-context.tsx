@@ -529,7 +529,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
             showFeedback(
               'error',
               'Lock-screen alerts need permission',
-              'Turn Alerts off, then on, and allow notifications. That is what sends the product name when a drop goes live.',
+              'Allow notifications for this device. Alerts stay on after that, and a drop notifies you when it goes live.',
             );
           }
         } else {
@@ -564,8 +564,24 @@ export function DropDexProvider({ children }: PropsWithChildren) {
     };
 
     register();
+    const keepAlive = setInterval(() => {
+      if (!stateRef.current.monitoring || stateRef.current.alerts.push === false) return;
+      void register();
+    }, 10 * 60 * 1000);
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      if (!stateRef.current.monitoring) return;
+      void register();
+    };
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisible);
+    }
     return () => {
       cancelled = true;
+      clearInterval(keepAlive);
+      if (Platform.OS === 'web' && typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisible);
+      }
       if (retryTimer) clearTimeout(retryTimer);
     };
   }, [
@@ -641,10 +657,17 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       monitorProducts.forEach((product) => {
         if (!product?.id) return;
         const existing = byId.get(product.id);
+        const availability =
+          product.availability ??
+          ((product as Product & { inStock?: boolean }).inStock === false
+            ? 'sold-out'
+            : 'in-stock');
         if (!existing) {
           byId.set(product.id, {
             ...product,
             historical: false,
+            availability,
+            releaseDate: product.releaseDate ?? product.detectedAt,
             imageUrl: sanitizeProductImageUrl(product.imageUrl),
             retailerName: regionConfig.storefront,
             regionName: regionConfig.label,
@@ -653,9 +676,13 @@ export function DropDexProvider({ children }: PropsWithChildren) {
         }
         byId.set(product.id, {
           ...existing,
+          title: product.title || existing.title,
+          url: product.url || existing.url,
+          releaseType: product.releaseType ?? existing.releaseType,
+          availability,
           imageUrl: preferProductImageUrl(existing.imageUrl, product.imageUrl),
-          availability: product.availability ?? existing.availability,
           lastSeenAt: product.lastSeenAt ?? existing.lastSeenAt,
+          detectedAt: product.detectedAt ?? existing.detectedAt,
         });
       });
 

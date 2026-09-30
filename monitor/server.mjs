@@ -136,7 +136,7 @@ const store = new JsonStore(config.dataFile, {
     const next = JSON.stringify(state.registrations ?? {});
     if (next === store.lastRegistrationBackup) return;
     store.lastRegistrationBackup = next;
-    void saveRegistrationsBackup(state.registrations ?? {});
+    return saveRegistrationsBackup(state.registrations ?? {});
   },
 });
 await store.load();
@@ -173,7 +173,7 @@ if (recentDrops.length > 0) {
     mergeRecentDropsIntoSnapshot(state);
     return state;
   });
-  console.log(`[monitor] Restored ${recentDrops.length} recent drop(s) for late registrations`);
+  console.log(`[monitor] Restored ${recentDrops.length} drop(s) for devices that already have alerts on`);
 }
 const scheduledPushes = createScheduledPushRunner(store);
 await scheduledPushes.restore();

@@ -5,7 +5,16 @@ import { saveNotifiedDropIds, saveRecentDrops } from './registration-backup.mjs'
 import { sendMatchingWebPushes } from './web-push.mjs';
 
 const snapshotKey = (product) => `${product.region ?? 'ca'}:${product.id}`;
-const REMEMBER_MS = 48 * 60 * 60 * 1000;
+const REMEMBER_LIMIT = 80;
+/** How long a missed push is retried. An alerts-on device is notified when the drop is detected. */
+const RETRY_MS = 14 * 24 * 60 * 60 * 1000;
+
+const listedProduct = (product, seenAt) => ({
+  ...product,
+  availability: product.availability ?? (product.inStock === false ? 'sold-out' : 'in-stock'),
+  releaseDate: product.releaseDate ?? product.detectedAt ?? seenAt,
+  inStock: product.inStock !== false,
+});
 
 export function mergeRecentDropsIntoSnapshot(state) {
   for (const drop of state.recentDrops ?? []) {
@@ -13,22 +22,22 @@ export function mergeRecentDropsIntoSnapshot(state) {
     if (!product?.id) continue;
     const key = snapshotKey(product);
     if (state.snapshot[key]) continue;
+    const seenAt = drop.detectedAt ?? product.detectedAt ?? new Date().toISOString();
     state.snapshot[key] = {
-      ...product,
-      inStock: true,
+      ...listedProduct(product, seenAt),
       missingPolls: 0,
-      lastSeenAt: drop.detectedAt ?? product.detectedAt ?? new Date().toISOString(),
+      lastSeenAt: seenAt,
     };
   }
 }
 
 const rememberDrop = (state, product, detectedAt) => {
-  const cutoff = Date.now() - REMEMBER_MS;
+  const cutoff = Date.now() - RETRY_MS;
   const drops = (Array.isArray(state.recentDrops) ? state.recentDrops : []).filter(
     (drop) => Date.parse(drop.detectedAt) >= cutoff && drop.product?.id !== product.id,
   );
-  drops.push({ product, detectedAt });
-  state.recentDrops = drops.slice(-40);
+  drops.push({ product: listedProduct(product, detectedAt), detectedAt });
+  state.recentDrops = drops.slice(-REMEMBER_LIMIT);
 };
 
 export class MonitorEngine {
@@ -36,8 +45,6 @@ export class MonitorEngine {
   #timer;
   #urlCursor = 0;
   #recentDropsJson = '';
-  #alreadyBroadcastIds = null;
-  #registrationsAtBroadcast = null;
 
   constructor({ store, urls, pollIntervalMs, requestTimeoutMs }) {
     this.store = store;
@@ -207,10 +214,6 @@ export class MonitorEngine {
 
     await this.store.update((state) => {
       const notified = new Set(state.notifiedDropIds ?? []);
-      if (!this.#alreadyBroadcastIds) {
-        this.#alreadyBroadcastIds = new Set(notified);
-        this.#registrationsAtBroadcast = new Set(Object.keys(state.registrations ?? {}));
-      }
       for (const product of products) {
         if (!product?.id) continue;
         rememberDrop(state, product, product.detectedAt ?? now);
@@ -218,24 +221,13 @@ export class MonitorEngine {
         const alreadyListed = Boolean(state.snapshot[key]);
         if (!alreadyListed) {
           state.snapshot[key] = {
-            ...product,
-            inStock: true,
+            ...listedProduct(product, now),
             missingPolls: 0,
             lastSeenAt: now,
           };
         }
         if (notified.has(product.id) || alreadyListed) {
           notified.add(product.id);
-          if (this.#alreadyBroadcastIds.has(product.id)) {
-            for (const installationId of this.#registrationsAtBroadcast ?? []) {
-              const registration = state.registrations?.[installationId];
-              if (!registration) continue;
-              const seen = new Set(registration.deliveredDropIds ?? []);
-              if (seen.has(product.id)) continue;
-              seen.add(product.id);
-              registration.deliveredDropIds = [...seen].slice(-100);
-            }
-          }
           continue;
         }
         notified.add(product.id);
@@ -246,8 +238,7 @@ export class MonitorEngine {
           attempts: 0,
         });
         state.snapshot[key] = {
-          ...product,
-          inStock: true,
+          ...listedProduct(product, now),
           missingPolls: 0,
           lastSeenAt: now,
         };
@@ -268,15 +259,18 @@ export class MonitorEngine {
     return freshIds.length;
   }
 
-  /** A phone that registers after the drop still gets the product name. */
+  /** If a push was missed, deliver it the next time this alerts-on device checks in. */
   async replayRecentDrops(installationId) {
     const state = this.store.getState();
     const registration = state.registrations?.[installationId];
     if (!registration?.enabled || registration.alerts?.push === false) return 0;
-    const cutoff = Date.now() - REMEMBER_MS;
     const delivered = new Set(registration.deliveredDropIds ?? []);
+    const cutoff = Date.now() - RETRY_MS;
     const due = (state.recentDrops ?? []).filter(
-      (drop) => drop?.product?.id && Date.parse(drop.detectedAt) >= cutoff && !delivered.has(drop.product.id),
+      (drop) =>
+        drop?.product?.id &&
+        Date.parse(drop.detectedAt) >= cutoff &&
+        !delivered.has(drop.product.id),
     );
     let sent = 0;
     for (const drop of due) {

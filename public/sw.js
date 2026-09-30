@@ -1,4 +1,4 @@
-const CACHE_NAME = 'droplinq-shell-v28';
+const CACHE_NAME = 'droplinq-shell-v29';
 const PUSH_CONTEXT_CACHE = 'droplinq-push-context-v1';
 const PUSH_CONTEXT_URL = '/__droplinq/push-context';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/droplinq-icon.png'];
@@ -25,6 +25,7 @@ self.addEventListener('activate', (event) => {
           ),
         ),
       self.clients.claim(),
+      refreshStoredRegistration(),
     ]),
   );
 });
@@ -97,6 +98,23 @@ const writePushContext = async (value) => {
   await cache.put(PUSH_CONTEXT_URL, new Response(JSON.stringify(value), {
     headers: { 'Content-Type': 'application/json' },
   }));
+};
+
+const refreshStoredRegistration = async () => {
+  const context = await readPushContext();
+  if (!context?.monitorUrl || !context.installationId || !self.registration.pushManager) return;
+  const subscription = await self.registration.pushManager.getSubscription();
+  if (!subscription) return;
+  await fetch(`${String(context.monitorUrl).replace(/\/$/, '')}/v1/registrations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      installationId: context.installationId,
+      enabled: true,
+      webPushSubscription: subscription.toJSON(),
+      alerts: { push: true },
+    }),
+  });
 };
 
 self.addEventListener('message', (event) => {

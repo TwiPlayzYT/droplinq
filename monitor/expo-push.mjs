@@ -35,7 +35,7 @@ export async function sendMatchingPushes(product, registrations) {
       channelId: 'drop-alerts',
       categoryId: 'dropalert',
       badge: 1,
-      ttl: 300,
+      ttl: 604800,
       data: { product },
       };
     });
