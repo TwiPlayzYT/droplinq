@@ -7,6 +7,21 @@ import { sendMatchingWebPushes } from './web-push.mjs';
 const snapshotKey = (product) => `${product.region ?? 'ca'}:${product.id}`;
 const REMEMBER_MS = 48 * 60 * 60 * 1000;
 
+export function mergeRecentDropsIntoSnapshot(state) {
+  for (const drop of state.recentDrops ?? []) {
+    const product = drop?.product;
+    if (!product?.id) continue;
+    const key = snapshotKey(product);
+    if (state.snapshot[key]) continue;
+    state.snapshot[key] = {
+      ...product,
+      inStock: true,
+      missingPolls: 0,
+      lastSeenAt: drop.detectedAt ?? product.detectedAt ?? new Date().toISOString(),
+    };
+  }
+}
+
 const rememberDrop = (state, product, detectedAt) => {
   const cutoff = Date.now() - REMEMBER_MS;
   const drops = (Array.isArray(state.recentDrops) ? state.recentDrops : []).filter(
@@ -22,6 +37,7 @@ export class MonitorEngine {
   #urlCursor = 0;
   #recentDropsJson = '';
   #alreadyBroadcastIds = null;
+  #registrationsAtBroadcast = null;
 
   constructor({ store, urls, pollIntervalMs, requestTimeoutMs }) {
     this.store = store;
@@ -53,6 +69,13 @@ export class MonitorEngine {
   async runOnce() {
     if (this.#running) return;
     this.#running = true;
+    const signalPromise = fetchRecentDropProducts(this.requestTimeoutMs).then(
+      (products) => ({ products, error: null }),
+      (error) => ({
+        products: [],
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
 
     try {
       const { urls, completeSweep } = this.#nextUrlBatch();
@@ -137,15 +160,34 @@ export class MonitorEngine {
         return state;
       });
     } finally {
+      let signalCount = 0;
+      let signalError = null;
       try {
-        const signaled = await fetchRecentDropProducts(this.requestTimeoutMs);
-        const added = await this.ingestUnseenProducts(signaled);
-        if (added > 0) {
-          console.log(`[monitor] Drop signal: notifying ${added} new product(s)`);
+        const signaled = await signalPromise;
+        signalCount = signaled.products.length;
+        signalError = signaled.error;
+        if (!signalError) {
+          const added = await this.ingestUnseenProducts(signaled.products);
+          if (added > 0) {
+            console.log(`[monitor] Drop signal: notifying ${added} new product(s)`);
+          }
+        } else {
+          console.warn('[monitor] Drop signal failed:', signalError);
         }
       } catch (error) {
+        signalError = error instanceof Error ? error.message : String(error);
+        console.warn('[monitor] Drop signal failed:', signalError);
+      }
+      try {
+        await this.store.update((state) => {
+          state.lastDropSignalAt = new Date().toISOString();
+          state.lastDropSignalCount = signalCount;
+          state.lastDropSignalError = signalError;
+          return state;
+        });
+      } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        console.warn('[monitor] Drop signal failed:', message);
+        console.warn('[monitor] Could not record drop-signal status:', message);
       }
       try {
         await this.#flushPendingEvents();
@@ -167,15 +209,27 @@ export class MonitorEngine {
       const notified = new Set(state.notifiedDropIds ?? []);
       if (!this.#alreadyBroadcastIds) {
         this.#alreadyBroadcastIds = new Set(notified);
+        this.#registrationsAtBroadcast = new Set(Object.keys(state.registrations ?? {}));
       }
       for (const product of products) {
         if (!product?.id) continue;
         rememberDrop(state, product, product.detectedAt ?? now);
         const key = snapshotKey(product);
-        if (notified.has(product.id) || state.snapshot[key]) {
+        const alreadyListed = Boolean(state.snapshot[key]);
+        if (!alreadyListed) {
+          state.snapshot[key] = {
+            ...product,
+            inStock: true,
+            missingPolls: 0,
+            lastSeenAt: now,
+          };
+        }
+        if (notified.has(product.id) || alreadyListed) {
           notified.add(product.id);
           if (this.#alreadyBroadcastIds.has(product.id)) {
-            for (const registration of Object.values(state.registrations ?? {})) {
+            for (const installationId of this.#registrationsAtBroadcast ?? []) {
+              const registration = state.registrations?.[installationId];
+              if (!registration) continue;
               const seen = new Set(registration.deliveredDropIds ?? []);
               if (seen.has(product.id)) continue;
               seen.add(product.id);
@@ -205,11 +259,11 @@ export class MonitorEngine {
     const serialized = JSON.stringify(this.store.getState().recentDrops ?? []);
     if (serialized !== this.#recentDropsJson) {
       this.#recentDropsJson = serialized;
-      void saveRecentDrops(this.store.getState().recentDrops ?? []);
+      await saveRecentDrops(this.store.getState().recentDrops ?? []);
     }
     if (freshIds.length > 0) {
       await this.#flushPendingEvents();
-      void saveNotifiedDropIds(this.store.getState().notifiedDropIds ?? []);
+      await saveNotifiedDropIds(this.store.getState().notifiedDropIds ?? []);
     }
     return freshIds.length;
   }

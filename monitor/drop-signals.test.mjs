@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { productsFromBlogCollection, productsFromFeedXml, productsFromPostHtml } from './drop-signals.mjs';
+import {
+  headlineProduct,
+  preferLinkedProducts,
+  productsFromBlogCollection,
+  productsFromFeedXml,
+  productsFromPostHtml,
+} from './drop-signals.mjs';
 
 const html = `
   <a href="https://www.pokemoncenter.com/product/10-10438-111">Delta Reign Elite Trainer Box</a>
@@ -68,4 +74,60 @@ test('reads product links out of a recent feed entry and ignores an old one', ()
   assert.equal(products.length, 1);
   assert.equal(products[0].title, 'Delta Reign Elite Trainer Box');
   assert.equal(products[0].id, '10-10438-111');
+});
+
+test('keeps other sealed products and skips plush', () => {
+  const products = productsFromPostHtml(`
+    <a href="https://www.pokemoncenter.com/product/10-10440-120">Delta Reign 3-Pack Blister</a>
+    <a href="https://www.pokemoncenter.com/product/10-9">Knock Out Collection Alakazam</a>
+    <a href="https://www.pokemoncenter.com/product/10-8">Pikachu Plush</a>
+  `);
+  assert.deepEqual(
+    products.map((product) => product.title).sort(),
+    ['Delta Reign 3-Pack Blister', 'Knock Out Collection Alakazam'],
+  );
+  assert.equal(products.find((product) => product.id === '10-9').format, 'other');
+});
+
+test('a drop headline still alerts when the post has no product link', () => {
+  const now = Date.parse('2026-09-30T18:00:00.000Z');
+  const xml = `
+    <item>
+      <title>The Pokémon Center Opens Pre-Orders For Delta Reign</title>
+      <link>https://www.polygon.com/delta-reign</link>
+      <pubDate>Wed, 30 Sep 2026 16:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>WoW Forever New Race</title>
+      <pubDate>Wed, 30 Sep 2026 16:00:00 GMT</pubDate>
+    </item>
+  `;
+  const products = productsFromFeedXml(xml, now);
+  assert.equal(products.length, 1);
+  assert.equal(products[0].title, 'The Pokémon Center Opens Pre-Orders For Delta Reign');
+  assert.equal(products[0].releaseType, 'preorder');
+  assert.equal(products[0].url, 'https://www.polygon.com/delta-reign');
+  assert.equal(headlineProduct('Tips on how to not get banned'), null);
+});
+
+test('product links win over a headline so the alert names the product', () => {
+  const now = Date.parse('2026-09-30T18:00:00.000Z');
+  const linked = productsFromFeedXml(
+    `
+    <item>
+      <title>The Pokémon Center Opens Pre-Orders For Delta Reign</title>
+      <pubDate>Wed, 30 Sep 2026 16:00:00 GMT</pubDate>
+      <description>&lt;a href="https://www.pokemoncenter.com/product/10-10438-111"&gt;Delta Reign Elite Trainer Box&lt;/a&gt;</description>
+    </item>
+  `,
+    now,
+  );
+  const headline = headlineProduct('The Pokémon Center Opens Pre-Orders For Delta Reign', {
+    detectedAt: '2026-09-30T16:00:00.000Z',
+  });
+  const chosen = preferLinkedProducts([...linked, headline]);
+  assert.deepEqual(
+    chosen.map((product) => product.id),
+    ['10-10438-111'],
+  );
 });

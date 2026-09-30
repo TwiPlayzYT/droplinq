@@ -20,8 +20,20 @@ const SOURCES = [
   {
     kind: 'feed',
     url: 'https://www.reddit.com/r/pokemoncenter/.rss',
+    assumeStore: true,
+  },
+  {
+    kind: 'feed',
+    url: 'https://www.polygon.com/rss/index.xml',
   },
 ];
+
+const BROWSER_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
+
+const DROP_HEADLINE = /pok[eé]mon\s+center|pokemoncenter/i;
+const DROP_ACTION =
+  /pre-?orders?|now live|goes live|in stock|restock|back in stock|available now|queue\b.{0,24}(?:live|up)|listings?\b.{0,16}live/i;
 
 const LOCALE_TO_REGION = {
   'en-ca': 'ca',
@@ -42,7 +54,64 @@ const decodeText = (value) =>
     .trim();
 
 const skipTitle = (title) =>
-  /\b(case|code card|booster pack|sleeved booster|half booster)\b/i.test(title);
+  /\b(case|code card|booster pack|sleeved booster|half booster|plush|squishmallow)\b/i.test(title);
+
+/** ETB / box / bundle / UPC, plus the other sealed products the catalog alerts on. */
+const sealedFormat = (title) => {
+  const known = classifyFormat(title);
+  if (known) return known;
+  const value = title.toLowerCase();
+  if (
+    /\b(collection|tin|deck|blister|calendar|build & battle|build and battle)\b/.test(value)
+  ) {
+    return 'other';
+  }
+  return undefined;
+};
+
+const headlineId = (title) =>
+  `headline-${title
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80)}`;
+
+export function headlineProduct(title, { detectedAt, url, assumeStore = false } = {}) {
+  const heading = decodeText(String(title ?? ''));
+  if (!heading || !DROP_ACTION.test(heading)) return null;
+  const namesStore = DROP_HEADLINE.test(heading);
+  if (!namesStore && !assumeStore) return null;
+  if (
+    !namesStore &&
+    !/\b(etb|booster|bundle|tin|upc|collection|pre-?order|queue|listing)\b/i.test(heading)
+  ) {
+    return null;
+  }
+
+  return {
+    id: headlineId(heading),
+    title: heading,
+    category: 'Trading Card Game',
+    format: 'other',
+    region: 'us',
+    releaseType: /pre-?order/i.test(heading)
+      ? 'preorder'
+      : /restock|in stock/i.test(heading)
+        ? 'restock'
+        : 'new',
+    url: typeof url === 'string' && /^https?:/i.test(url) ? url : 'https://www.pokemoncenter.com',
+    detectedAt: detectedAt ?? new Date().toISOString(),
+    tags: ['tcg', 'headline'],
+    inStock: true,
+  };
+}
+
+/** Product-page links name the SKU. A headline is only the backup when no link was found. */
+export function preferLinkedProducts(products) {
+  const linked = products.filter((product) => !String(product?.id ?? '').startsWith('headline-'));
+  return linked.length > 0 ? linked : products;
+}
 
 export function productsFromPostHtml(html, { releaseType = 'new', detectedAt } = {}) {
   const products = new Map();
@@ -58,7 +127,7 @@ export function productsFromPostHtml(html, { releaseType = 'new', detectedAt } =
 
     const title = decodeText(match[2].replace(/<[^>]+>/g, ' '));
     if (!title || skipTitle(title)) continue;
-    const format = classifyFormat(title);
+    const format = sealedFormat(title);
     if (!format) continue;
 
     const locale = urlMatch[1];
@@ -98,15 +167,31 @@ export function productsFromBlogCollection(payload, now = Date.now()) {
     const heading = String(item?.title ?? '');
     const releaseType = /pre-?order/i.test(heading) ? 'preorder' : 'new';
     const detectedAt = new Date(published).toISOString();
-    for (const product of productsFromPostHtml(item?.body ?? '', { releaseType, detectedAt })) {
+    const linked = productsFromPostHtml(item?.body ?? '', { releaseType, detectedAt });
+    for (const product of linked) {
       products.set(`${product.region}:${product.id}`, product);
+    }
+    if (linked.length === 0) {
+      const headline = headlineProduct(heading, {
+        detectedAt,
+        url: typeof item?.fullUrl === 'string' ? item.fullUrl : item?.url,
+      });
+      if (headline) products.set(headline.id, headline);
     }
   }
 
   return [...products.values()];
 }
 
-export function productsFromFeedXml(xml, now = Date.now()) {
+const articleUrlFromBlock = (block) => {
+  const href = block.match(/<link\b[^>]*\bhref=["']([^"']+)["']/i)?.[1];
+  if (href && /^https?:/i.test(href)) return href;
+  const text = block.match(/<link>([^<]+)<\/link>/i)?.[1]?.trim();
+  if (text && /^https?:/i.test(text)) return text;
+  return undefined;
+};
+
+export function productsFromFeedXml(xml, now = Date.now(), { assumeStore = false } = {}) {
   const markup = String(xml ?? '')
     .replaceAll('\\/', '/')
     .replaceAll('&lt;', '<')
@@ -125,7 +210,7 @@ export function productsFromFeedXml(xml, now = Date.now()) {
     if (now - published > RECENT_MS || published > now + 5 * 60_000) continue;
 
     const heading = decodeText(
-      (block.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i)?.[1] ?? '').replace(
+      (block.match(/<title\b[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i)?.[1] ?? '').replace(
         /<!\[CDATA\[|\]\]>/g,
         '',
       ),
@@ -135,11 +220,18 @@ export function productsFromFeedXml(xml, now = Date.now()) {
       : /restock|in stock/i.test(heading)
         ? 'restock'
         : 'new';
-    for (const product of productsFromPostHtml(block, {
-      releaseType,
-      detectedAt: new Date(published).toISOString(),
-    })) {
+    const detectedAt = new Date(published).toISOString();
+    const linked = productsFromPostHtml(block, { releaseType, detectedAt });
+    for (const product of linked) {
       products.set(`${product.region}:${product.id}`, product);
+    }
+    if (linked.length === 0) {
+      const headline = headlineProduct(heading, {
+        detectedAt,
+        url: articleUrlFromBlock(block),
+        assumeStore,
+      });
+      if (headline) products.set(headline.id, headline);
     }
   }
 
@@ -149,8 +241,12 @@ export function productsFromFeedXml(xml, now = Date.now()) {
 async function readSource(source, timeoutMs) {
   const response = await fetch(source.url, {
     headers: {
-      accept: source.kind === 'blog-json' ? 'application/json' : 'application/rss+xml, application/atom+xml, text/xml',
-      'user-agent': 'Mozilla/5.0 (compatible; DropLinq/1.0; +https://getdroplinq.com)',
+      accept:
+        source.kind === 'blog-json'
+          ? 'application/json'
+          : 'application/rss+xml, application/atom+xml, text/xml, */*',
+      'accept-language': 'en-US,en;q=0.9',
+      'user-agent': BROWSER_UA,
     },
     signal: AbortSignal.timeout(timeoutMs),
   });
@@ -158,7 +254,9 @@ async function readSource(source, timeoutMs) {
   if (source.kind === 'blog-json') {
     return productsFromBlogCollection(await response.json());
   }
-  return productsFromFeedXml(await response.text());
+  return productsFromFeedXml(await response.text(), Date.now(), {
+    assumeStore: source.assumeStore === true,
+  });
 }
 
 export async function fetchRecentDropProducts(timeoutMs = 15_000) {
@@ -183,5 +281,5 @@ export async function fetchRecentDropProducts(timeoutMs = 15_000) {
   if (errors.length > 0) {
     console.warn('[monitor] Drop source missed:', errors.join(' | '));
   }
-  return [...products.values()];
+  return preferLinkedProducts([...products.values()]);
 }

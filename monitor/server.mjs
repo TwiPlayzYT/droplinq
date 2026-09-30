@@ -4,7 +4,7 @@ import { extname, resolve } from 'node:path';
 
 import { config } from './config.mjs';
 import { ALLOWED_FORMATS, normalizeCoverageFilters } from './coverage-match.mjs';
-import { MonitorEngine } from './monitor-engine.mjs';
+import { mergeRecentDropsIntoSnapshot, MonitorEngine } from './monitor-engine.mjs';
 import {
   productsFromPageCrawl,
   verifyIngestToken,
@@ -170,6 +170,7 @@ const recentDrops = await loadRecentDrops();
 if (recentDrops.length > 0) {
   await store.update((state) => {
     state.recentDrops = recentDrops;
+    mergeRecentDropsIntoSnapshot(state);
     return state;
   });
   console.log(`[monitor] Restored ${recentDrops.length} recent drop(s) for late registrations`);
@@ -213,6 +214,10 @@ const server = createServer(async (request, response) => {
         ).length,
       pendingEvents: state.pendingEvents.length,
       scheduledPushes: (state.scheduledPushes ?? []).length,
+      recentDrops: (state.recentDrops ?? []).length,
+      lastDropSignalAt: state.lastDropSignalAt ?? null,
+      lastDropSignalCount: state.lastDropSignalCount ?? 0,
+      lastDropSignalError: state.lastDropSignalError ?? null,
       lastCheckAt: state.lastCheckAt ?? null,
       lastError: state.lastError ?? null,
       sourceBlocked: state.sourceBlocked === true,
