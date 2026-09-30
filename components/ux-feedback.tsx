@@ -24,8 +24,16 @@ const brandIcon = require('../assets/images/icon.png');
 
 export function AppBootScreen() {
   const pulse = useRef(new Animated.Value(0.35)).current;
+  // Avoid a flash on fast boots — only show the branded loader after 3s.
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    const showTimer = setTimeout(() => setVisible(true), 3000);
+    return () => clearTimeout(showTimer);
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, {
@@ -44,7 +52,11 @@ export function AppBootScreen() {
     );
     animation.start();
     return () => animation.stop();
-  }, [pulse]);
+  }, [pulse, visible]);
+
+  if (!visible) {
+    return <View style={[styles.bootRoot, { backgroundColor: palette.black }]} />;
+  }
 
   return (
     <View
@@ -235,6 +247,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 28,
+  },
+  bootRoot: {
+    backgroundColor: palette.black,
+    flex: 1,
   },
   bootIconWrap: {
     shadowColor: palette.red,

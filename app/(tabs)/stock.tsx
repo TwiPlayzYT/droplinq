@@ -51,6 +51,7 @@ import {
 } from '@/lib/filter-matcher';
 import { matchesProductSearch } from '@/lib/product-search';
 import { resolveProductImageSource } from '@/lib/product-placeholder';
+import { useDelayedFlag } from '@/hooks/use-delayed-flag';
 import { useDropDex } from '@/store/dropdex-context';
 import { CatalogStockEvent, StockEventKind } from '@/types/catalog';
 import { Product, ProductAvailability, RegionId } from '@/types/dropdex';
@@ -629,7 +630,9 @@ export default function StockScreen() {
   }, [refreshCatalog]);
 
   const openDetails = (product: Product) => router.push(`/product/${product.id}`);
-  const showSkeletons = catalogLoading && coverageProducts.length === 0 && !customEmpty;
+  const waitingOnEmptyCatalog = catalogLoading && coverageProducts.length === 0 && !customEmpty;
+  // Only flash skeletons when a load actually takes 3+ seconds.
+  const showSkeletons = useDelayedFlag(waitingOnEmptyCatalog, 3000);
 
   return (
     <Screen wide onRefresh={onRefresh} refreshing={refreshing}>

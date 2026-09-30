@@ -1,4 +1,5 @@
 import { productMatchesCoverage } from './coverage-match.mjs';
+import { regionsCompatible } from './web-push.mjs';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
@@ -6,7 +7,7 @@ const matchesRegistration = (product, registration) => {
   if (!registration.enabled || !registration.alerts?.push || !registration.expoPushToken) {
     return false;
   }
-  if (product.region && registration.region !== product.region) return false;
+  if (!regionsCompatible(product.region, registration.region)) return false;
   return productMatchesCoverage(product, registration.filters);
 };
 

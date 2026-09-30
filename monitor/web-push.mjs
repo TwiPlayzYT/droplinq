@@ -34,9 +34,18 @@ const matchesRegistration = (product, registration) => {
     return false;
   }
   if (product?.id === 'droplinq-test-alert') return true;
-  if (product.region && registration.region !== product.region) return false;
+  if (!regionsCompatible(product.region, registration.region)) return false;
   return productMatchesCoverage(product, registration.filters);
 };
+
+/** CA/US often share drop waves; missing region matches everyone. */
+export function regionsCompatible(productRegion, registrationRegion) {
+  if (!productRegion) return true;
+  if (!registrationRegion) return true;
+  if (productRegion === registrationRegion) return true;
+  const northAmerica = new Set(['us', 'ca']);
+  return northAmerica.has(productRegion) && northAmerica.has(registrationRegion);
+}
 
 export const getWebPushPublicConfig = () => ({
   enabled: configured,

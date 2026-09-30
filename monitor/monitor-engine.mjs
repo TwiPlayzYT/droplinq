@@ -147,12 +147,18 @@ export class MonitorEngine {
               : (previous?.inStock ?? true);
         let releaseType;
 
-        if (state.baselineReady && emitEvents) {
-          if (!previous) {
-            releaseType = product.releaseType ?? 'new';
-          } else if (!previous.inStock && observedInStock) {
+        // Restocks always notify (even before baseline) so a blocked scrape
+        // cannot silence customers when a device later confirms stock.
+        if (emitEvents) {
+          if (previous && !previous.inStock && observedInStock) {
             releaseType = 'restock';
-          } else if (previous.title !== product.title || previous.url !== product.url) {
+          } else if (state.baselineReady && !previous) {
+            releaseType = product.releaseType ?? 'new';
+          } else if (
+            state.baselineReady &&
+            previous &&
+            (previous.title !== product.title || previous.url !== product.url)
+          ) {
             releaseType = 'new';
           }
         }
@@ -234,14 +240,25 @@ export class MonitorEngine {
 
   async #flushPendingEvents() {
     const state = this.store.getState();
+    const MAX_ATTEMPTS = 8;
 
     for (const event of state.pendingEvents) {
+      if ((event.attempts ?? 0) >= MAX_ATTEMPTS) {
+        console.error(`[push] Giving up on ${event.product?.id} after ${MAX_ATTEMPTS} attempts`);
+        await this.store.update((current) => {
+          current.pendingEvents = current.pendingEvents.filter((item) => item.id !== event.id);
+          return current;
+        });
+        continue;
+      }
+
       try {
         const expoSent = await sendMatchingPushes(event.product, state.registrations);
         const webResult = await sendMatchingWebPushes(event.product, state.registrations);
         const sent = expoSent + webResult.sent;
         console.log(
-          `[push] ${event.product.title}: sent ${sent} matching notification(s)`,
+          `[push] ${event.product.title}: sent ${sent} matching notification(s) ` +
+            `(expo=${expoSent}, web=${webResult.sent}, regs=${Object.keys(state.registrations).length})`,
         );
         await this.store.update((current) => {
           current.pendingEvents = current.pendingEvents.filter((item) => item.id !== event.id);
@@ -256,7 +273,7 @@ export class MonitorEngine {
         console.error(`[push] ${event.product.id} failed:`, error.message);
         await this.store.update((current) => {
           current.pendingEvents = current.pendingEvents.map((item) =>
-            item.id === event.id ? { ...item, attempts: item.attempts + 1 } : item,
+            item.id === event.id ? { ...item, attempts: (item.attempts ?? 0) + 1 } : item,
           );
           return current;
         });
