@@ -177,7 +177,7 @@ services:
       - key: NODE_VERSION
         value: "22"
       - key: DATA_FILE
-        value: /var/data/droplinq-state.json
+        value: /opt/render/project/src/monitor/data/state.json
       - key: POLL_INTERVAL_MS
         value: "30000"
       - key: VAPID_PUBLIC_KEY
