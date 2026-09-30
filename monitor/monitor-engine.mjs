@@ -1,5 +1,7 @@
+import { fetchRecentDropProducts } from './drop-signals.mjs';
 import { sendMatchingPushes } from './expo-push.mjs';
 import { fetchPokemonCenterProducts } from './pokemon-center-source.mjs';
+import { saveNotifiedDropIds } from './registration-backup.mjs';
 import { sendMatchingWebPushes } from './web-push.mjs';
 
 const snapshotKey = (product) => `${product.region ?? 'ca'}:${product.id}`;
@@ -123,8 +125,64 @@ export class MonitorEngine {
         return state;
       });
     } finally {
+      try {
+        const signaled = await fetchRecentDropProducts(this.requestTimeoutMs);
+        const added = await this.ingestUnseenProducts(signaled);
+        if (added > 0) {
+          console.log(`[monitor] Drop signal: notifying ${added} new product(s)`);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn('[monitor] Drop signal failed:', message);
+      }
+      try {
+        await this.#flushPendingEvents();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn('[monitor] Push flush failed:', message);
+      }
       this.#running = false;
     }
+  }
+
+  /** Push products the storefront scrape has never seen. Each id alerts once. */
+  async ingestUnseenProducts(products) {
+    if (!Array.isArray(products) || products.length === 0) return 0;
+    const now = new Date().toISOString();
+    const freshIds = [];
+
+    await this.store.update((state) => {
+      const notified = new Set(state.notifiedDropIds ?? []);
+      for (const product of products) {
+        if (!product?.id || notified.has(product.id)) continue;
+        const key = snapshotKey(product);
+        if (state.snapshot[key]) {
+          notified.add(product.id);
+          continue;
+        }
+        notified.add(product.id);
+        freshIds.push(product.id);
+        state.pendingEvents.push({
+          id: `signal-${product.id}-${Date.now()}`,
+          product: { ...product, detectedAt: product.detectedAt ?? now },
+          attempts: 0,
+        });
+        state.snapshot[key] = {
+          ...product,
+          inStock: true,
+          missingPolls: 0,
+          lastSeenAt: now,
+        };
+      }
+      state.notifiedDropIds = [...notified].slice(-500);
+      return state;
+    });
+
+    if (freshIds.length > 0) {
+      await this.#flushPendingEvents();
+      void saveNotifiedDropIds(this.store.getState().notifiedDropIds ?? []);
+    }
+    return freshIds.length;
   }
 
   async ingestObservations(products, { complete = true, emitEvents = true } = {}) {

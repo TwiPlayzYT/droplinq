@@ -133,7 +133,7 @@ export function PokemonCenterLiveScanner({
         observedCount,
         lastCheckedAt: status.lastCheckAt ?? status.lastObservationAt ?? new Date().toISOString(),
         message: blocked
-          ? 'Alert server connected. Storefront scrape is blocked; lock-screen delivery is still armed.'
+          ? 'Pokémon Center is blocking the direct check. Drop listings are still watched, and lock-screen alerts stay armed.'
           : `Alert server connected · ${observedCount} products`,
         progress: 100,
       });

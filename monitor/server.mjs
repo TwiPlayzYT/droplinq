@@ -14,7 +14,7 @@ import { mergeRegistration, sanitizeSubscription } from './registration.mjs';
 import { createScheduledPushRunner } from './scheduled-push.mjs';
 import { ensureSeedCatalog } from './seed-catalog.mjs';
 import { JsonStore } from './storage.mjs';
-import { loadRegistrationsBackup, saveRegistrationsBackup } from './registration-backup.mjs';
+import { loadRegistrationsBackup, loadNotifiedDropIds, saveRegistrationsBackup } from './registration-backup.mjs';
 import {
   getWebPushPublicConfig,
   isValidWebPushSubscription,
@@ -156,6 +156,16 @@ if (
   );
 }
 await ensureSeedCatalog(store);
+const notifiedDropIds = await loadNotifiedDropIds();
+if (notifiedDropIds.length > 0) {
+  await store.update((state) => {
+    state.notifiedDropIds = [
+      ...new Set([...(state.notifiedDropIds ?? []), ...notifiedDropIds]),
+    ].slice(-500);
+    return state;
+  });
+  console.log(`[monitor] Restored ${notifiedDropIds.length} already-sent drop id(s)`);
+}
 const scheduledPushes = createScheduledPushRunner(store);
 await scheduledPushes.restore();
 
@@ -186,6 +196,13 @@ const server = createServer(async (request, response) => {
       baselineReady: state.baselineReady,
       observedProducts: Object.keys(state.snapshot).length,
       registrations: Object.keys(state.registrations).length,
+      deliverable:
+        Object.values(state.registrations).filter(
+          (registration) =>
+            registration?.enabled &&
+            registration?.alerts?.push !== false &&
+            (registration?.webPushSubscription || registration?.expoPushToken),
+        ).length,
       pendingEvents: state.pendingEvents.length,
       scheduledPushes: (state.scheduledPushes ?? []).length,
       lastCheckAt: state.lastCheckAt ?? null,

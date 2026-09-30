@@ -68,3 +68,43 @@ export async function saveRegistrationsBackup(registrations) {
     console.warn('[monitor] Registration backup failed:', error.message);
   }
 }
+
+const NOTIFIED_PATH = 'notified-drops.json';
+
+export async function loadNotifiedDropIds() {
+  if (!configured()) return [];
+  try {
+    await ensureBucket();
+    const response = await fetch(`${root()}/storage/v1/object/${BUCKET}/${NOTIFIED_PATH}`, {
+      headers: headers(),
+    });
+    if (!response.ok) return [];
+    const payload = await response.json();
+    return Array.isArray(payload?.ids) ? payload.ids.filter((id) => typeof id === 'string') : [];
+  } catch (error) {
+    console.warn('[monitor] Could not load notified drops:', error.message);
+    return [];
+  }
+}
+
+export async function saveNotifiedDropIds(ids) {
+  if (!configured()) return;
+  if (!Array.isArray(ids) || ids.length === 0) return;
+  try {
+    await ensureBucket();
+    const response = await fetch(`${root()}/storage/v1/object/${BUCKET}/${NOTIFIED_PATH}`, {
+      method: 'POST',
+      headers: headers({
+        'Content-Type': 'application/json',
+        'x-upsert': 'true',
+      }),
+      body: JSON.stringify({ ids: ids.slice(-500) }),
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      console.warn('[monitor] Notified-drop backup failed:', response.status, detail.slice(0, 180));
+    }
+  } catch (error) {
+    console.warn('[monitor] Notified-drop backup failed:', error.message);
+  }
+}

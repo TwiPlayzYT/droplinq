@@ -198,6 +198,10 @@ export function DropDexProvider({ children }: PropsWithChildren) {
   const [webPushPublicKey, setWebPushPublicKey] = useState<string>();
   const [webPushSubscription, setWebPushSubscription] =
     useState<WebPushSubscriptionPayload>();
+  const webPushKeyRef = useRef(webPushPublicKey);
+  const webPushSubRef = useRef(webPushSubscription);
+  webPushKeyRef.current = webPushPublicKey;
+  webPushSubRef.current = webPushSubscription;
   const [scannerSession, setScannerSession] = useState(0);
   const stateRef = useRef(state);
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -890,6 +894,43 @@ export function DropDexProvider({ children }: PropsWithChildren) {
     if (monitoring) {
       void unlockAlertAudio();
       if (isTutorialSessionActive()) emitTourAction('home-power');
+      if (Platform.OS === 'web' && typeof Notification !== 'undefined') {
+        const ask =
+          Notification.permission === 'granted'
+            ? Promise.resolve<NotificationPermission>('granted')
+            : Notification.permission === 'denied'
+              ? Promise.resolve<NotificationPermission>('denied')
+              : Notification.requestPermission();
+        void ask.then(async (permission) => {
+          if (permission !== 'granted' || webPushSubRef.current) return;
+          const publicKey =
+            webPushKeyRef.current ||
+            (await monitorService.getWebPushPublicKey().catch(() => undefined));
+          if (!publicKey) return;
+          try {
+            const subscription = await subscribeToWebPush(publicKey);
+            setWebPushSubscription(subscription);
+            setWebPushPublicKey(publicKey);
+            setWebPushState('subscribed');
+            await monitorService.register({
+              installationId: stateRef.current.installationId,
+              enabled: true,
+              region: stateRef.current.region,
+              filters: stateRef.current.filters,
+              alerts: { ...stateRef.current.alerts, push: true },
+              webPushSubscription: subscription,
+            });
+            rememberPushContext({
+              installationId: stateRef.current.installationId,
+              monitorUrl:
+                process.env.EXPO_PUBLIC_MONITOR_API_URL ?? 'https://droplinq-monitor.onrender.com',
+              publicKey,
+            });
+          } catch {
+            // The registration effect retries while alerts stay on.
+          }
+        });
+      }
     }
     setState((previous) => ({ ...previous, monitoring }));
   }, []);

@@ -1,3 +1,4 @@
+import { alertCopy } from './alert-copy.mjs';
 import { productMatchesCoverage } from './coverage-match.mjs';
 import { regionsCompatible } from './web-push.mjs';
 
@@ -19,10 +20,12 @@ export async function sendMatchingPushes(product, registrations) {
   const messages = Object.values(registrations)
     .filter((registration) => matchesRegistration(product, registration))
     .filter((registration) => isExpoToken(registration.expoPushToken))
-    .map((registration) => ({
+    .map((registration) => {
+      const copy = alertCopy(product);
+      return {
       to: registration.expoPushToken,
-      title: product.releaseType === 'restock' ? 'TCG RESTOCK DETECTED' : 'NEW TCG DROP',
-      body: product.title,
+      title: copy.title,
+      body: copy.body,
       sound: registration.alerts.sound ? 'default' : undefined,
       priority: 'high',
       // Delivered even while the phone is in a Focus mode / Do Not Disturb,
@@ -33,7 +36,8 @@ export async function sendMatchingPushes(product, registrations) {
       badge: 1,
       ttl: 300,
       data: { product },
-    }));
+      };
+    });
 
   for (let index = 0; index < messages.length; index += 100) {
     const response = await fetch(EXPO_PUSH_URL, {

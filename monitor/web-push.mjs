@@ -1,5 +1,6 @@
 import webPush from 'web-push';
 
+import { alertCopy } from './alert-copy.mjs';
 import { productMatchesCoverage } from './coverage-match.mjs';
 
 const publicKey = process.env.VAPID_PUBLIC_KEY;
@@ -66,8 +67,7 @@ export async function sendMatchingWebPushes(product, registrations) {
       await webPush.sendNotification(
         registration.webPushSubscription,
         JSON.stringify({
-          title: product.releaseType === 'restock' ? 'TCG RESTOCK DETECTED' : 'NEW TCG DROP',
-          body: product.title,
+          ...alertCopy(product),
           product,
         }),
         { TTL: 86400, urgency: 'high' },
