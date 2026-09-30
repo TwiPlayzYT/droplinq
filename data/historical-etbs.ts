@@ -384,7 +384,7 @@ export const historicalProducts: Product[] = [
       '10-10422-109',
       'pokemon-tcg-mega-evolution-pitch-black-booster-bundle-6-packs',
     ),
-    '692949',
+    '692942',
   ),
   makeProduct(
     'booster-box',
@@ -395,7 +395,7 @@ export const historicalProducts: Product[] = [
       '10-10425-120',
       'pokemon-tcg-mega-evolution-pitch-black-booster-display-box-36-packs',
     ),
-    '692949',
+    '692939',
   ),
 ];
 

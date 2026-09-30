@@ -40,7 +40,7 @@ function animateLayout() {
   });
 }
 import { palette } from '@/constants/dropdex';
-import { coverageModeCopy } from '@/data/pokemon-center-filters';
+import { allPokemonCenterLeafCategories, coverageModeCopy } from '@/data/pokemon-center-filters';
 import { getRegion } from '@/data/regions';
 import { useWebLayout } from '@/hooks/use-web-layout';
 import {
@@ -65,6 +65,32 @@ type StockProduct = Product & {
   regionName?: string;
   lastCheckedAt?: string;
 };
+
+/** One product from every category first, then the rest. All TCG otherwise looks like only ETBs. */
+function spreadCatalogByCategory(products: StockProduct[]): StockProduct[] {
+  const buckets = new Map<string, StockProduct[]>();
+  for (const product of products) {
+    const categoryId = signalsFromLegacyProduct(product).primaryCategoryId;
+    const list = buckets.get(categoryId);
+    if (list) list.push(product);
+    else buckets.set(categoryId, [product]);
+  }
+  const orderedIds = [
+    ...allPokemonCenterLeafCategories.map((category) => category.id).filter((id) => buckets.has(id)),
+    ...[...buckets.keys()].filter(
+      (id) => !allPokemonCenterLeafCategories.some((category) => category.id === id),
+    ),
+  ];
+  const heads: StockProduct[] = [];
+  const rest: StockProduct[] = [];
+  for (const id of orderedIds) {
+    const items = buckets.get(id) ?? [];
+    if (items.length === 0) continue;
+    heads.push(items[0]);
+    rest.push(...items.slice(1));
+  }
+  return [...heads, ...rest];
+}
 
 const REGION_FLAG: Record<RegionId, string> = {
   us: '🇺🇸',
@@ -584,7 +610,7 @@ export default function StockScreen() {
           if (aCovered !== bCovered) return aCovered - bCovered;
           return a.title.localeCompare(b.title);
         })
-      : pool;
+      : spreadCatalogByCategory(pool);
     if (viewFilter === 'in-stock') {
       list = list.filter((product) => product.availability === 'in-stock');
     } else if (viewFilter === 'sold-out') {

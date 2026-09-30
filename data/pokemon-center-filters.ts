@@ -83,6 +83,15 @@ export const pokemonCenterFilterGroups: FilterCategoryGroup[] = [
         isOtherFallback: false,
       }),
       leaf({
+        id: 'pokemon-knockout-collections',
+        name: 'Knock Out Collections',
+        slug: 'knockout-collections',
+        parentId: 'pokemon-group-collections',
+        groupKey: 'COLLECTIONS',
+        isPopular: false,
+        isOtherFallback: false,
+      }),
+      leaf({
         id: 'pokemon-poster-collections',
         name: 'Poster Collections',
         slug: 'poster-collections',
