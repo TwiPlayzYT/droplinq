@@ -126,42 +126,33 @@ export function PokemonCenterLiveScanner({
           .filter((product): product is Product => Boolean(product));
 
         if (mapped.length > 0) {
-          // Prefer fresher catalog imagery; keep any prior retailer photo if catalog omits one.
           const withImages = mapped.map((product) => ({
             ...product,
             imageUrl: preferProductImageUrl(undefined, product.imageUrl),
           }));
           await onProducts(withImages);
-          // Only report in-stock rows so restocks still fan out to lock-screen subscribers.
           const inStock = withImages.filter((product) => product.availability === 'in-stock');
           if (inStock.length > 0) {
             void reportObservations(inStock).catch(() => undefined);
           }
         }
 
-        if (status.sourceBlocked) {
-          onStatus({
-            state: 'ok',
-            observedCount: mapped.length || status.observedProducts || 0,
-            lastCheckedAt: status.lastCheckAt ?? status.lastObservationAt ?? new Date().toISOString(),
-            message:
-              mapped.length > 0
-                ? `Cloud monitor live · ${mapped.length} products (storefront scrape blocked — using last catalog)`
-                : 'Alert server live. Storefront scrape blocked — drop webhooks + device scans still notify.',
-            progress: 100,
-          });
-          return;
-        }
-
+        // Reaching the always-on monitor means alerts are armed. Never leave the
+        // Home progress bar stuck at ~50% because Pokémon Center blocked the scrape.
+        const ready = true;
+        const blocked = status.sourceBlocked === true || Boolean(status.lastError);
         onStatus({
-          state: status.baselineReady || mapped.length > 0 ? 'ok' : 'polling',
+          state: 'ok',
           observedCount: mapped.length || status.observedProducts || 0,
           lastCheckedAt: status.lastCheckAt ?? status.lastObservationAt ?? new Date().toISOString(),
-          message:
-            status.baselineReady || mapped.length > 0
+          message: blocked
+            ? mapped.length > 0
+              ? `Cloud monitor live · ${mapped.length} products`
+              : 'Alert server live — storefront scrape blocked; push delivery still armed.'
+            : status.baselineReady || mapped.length > 0
               ? `Cloud monitor live · ${mapped.length || status.observedProducts || 0} products`
-              : 'Cloud monitor checking Pokémon Center…',
-          progress: status.baselineReady || mapped.length > 0 ? 100 : 55,
+              : 'Cloud monitor live · watching for drops',
+          progress: ready ? 100 : 55,
         });
       } catch {
         if (cancelled) return;

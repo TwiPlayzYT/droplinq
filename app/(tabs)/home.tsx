@@ -20,7 +20,7 @@ import { isTutorialSessionActive } from '@/services/tour-session';
 import { palette } from '@/constants/dropdex';
 import { getRegion } from '@/data/regions';
 import { useWebLayout } from '@/hooks/use-web-layout';
-import { productPlaceholderSource } from '@/lib/product-placeholder';
+import { resolveProductImageSource } from '@/lib/product-placeholder';
 import { useDropDex } from '@/store/dropdex-context';
 import { RecentVisit, WatchedItem } from '@/types/dropdex';
 
@@ -107,11 +107,7 @@ const RecentBubble = memo(function RecentBubble({
               accessibilityLabel={`Product photo of ${visit.product.title}. Image belongs to the retailer.`}
               alt={`Product photo of ${visit.product.title}`}
               contentFit="cover"
-              source={
-                visit.product.imageUrl
-                  ? { uri: visit.product.imageUrl }
-                  : productPlaceholderSource(visit.product.format)
-              }
+              source={resolveProductImageSource(visit.product.imageUrl, visit.product.format)}
               style={styles.recentImage}
               transition={0}
             />
@@ -160,25 +156,14 @@ const WatchBubble = memo(function WatchBubble({
         style={({ pressed }) => [styles.recentShadow, pressed && styles.recentPressed]}>
         <View style={styles.recentCard}>
           <View style={styles.recentThumb}>
-            {item.product.imageUrl ? (
-              <Image
-                accessibilityLabel={`Product photo of ${item.product.title}. Image belongs to the retailer.`}
-                alt={`Product photo of ${item.product.title}`}
-                contentFit="cover"
-                source={{ uri: item.product.imageUrl }}
-                style={styles.recentImage}
-                transition={0}
-              />
-            ) : (
-              <Image
-                accessibilityLabel={`Product photo of ${item.product.title}`}
-                alt={`Product photo of ${item.product.title}`}
-                contentFit="cover"
-                source={productPlaceholderSource(item.product.format)}
-                style={styles.recentImage}
-                transition={0}
-              />
-            )}
+            <Image
+              accessibilityLabel={`Product photo of ${item.product.title}. Image belongs to the retailer.`}
+              alt={`Product photo of ${item.product.title}`}
+              contentFit="cover"
+              source={resolveProductImageSource(item.product.imageUrl, item.product.format)}
+              style={styles.recentImage}
+              transition={0}
+            />
           </View>
           <View style={styles.recentCopy}>
             <Text numberOfLines={2} style={styles.recentTitle}>
@@ -228,7 +213,14 @@ export default function HomeScreen() {
     (item: WatchedItem) => removeFromWatchlist(item.product.id),
     [removeFromWatchlist],
   );
-  const progress = !hydrated ? 5 : monitoring ? (liveStatus.progress ?? 10) : 0;
+  const progress = !hydrated
+    ? 5
+    : !monitoring
+      ? 0
+      : // Once the monitor reports ok/error, fill the bar — never leave Home stuck at ~50%.
+        liveStatus.state === 'ok' || liveStatus.state === 'error'
+        ? 100
+        : Math.min(Math.max(liveStatus.progress ?? 10, 10), 90);
   const animatedProgress = useRef(new Animated.Value(progress)).current;
   const [displayPercent, setDisplayPercent] = useState(Math.round(progress));
 

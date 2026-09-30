@@ -3,7 +3,6 @@ import { Image } from 'expo-image';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import {
-  ActivityIndicator,
   Animated,
   Easing,
   LayoutAnimation,
@@ -51,7 +50,7 @@ import {
   signalsFromLegacyProduct,
 } from '@/lib/filter-matcher';
 import { matchesProductSearch } from '@/lib/product-search';
-import { productPlaceholderSource } from '@/lib/product-placeholder';
+import { resolveProductImageSource } from '@/lib/product-placeholder';
 import { useDropDex } from '@/store/dropdex-context';
 import { CatalogStockEvent, StockEventKind } from '@/types/catalog';
 import { Product, ProductAvailability, RegionId } from '@/types/dropdex';
@@ -119,35 +118,33 @@ function eventCopy(kind: StockEventKind) {
 }
 
 function ProductThumbnail({ product, size = 72 }: { product: Product; size?: number }) {
-  const [loaded, setLoaded] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const remote = Boolean(product.imageUrl) && !failed;
-  const source = remote
-    ? { uri: product.imageUrl as string }
-    : productPlaceholderSource(product.format);
+  const [failedRemote, setFailedRemote] = useState(false);
+  const source = resolveProductImageSource(
+    failedRemote ? undefined : product.imageUrl,
+    product.format,
+  );
+  const isRemoteUri = Boolean(
+    product.imageUrl &&
+      !failedRemote &&
+      typeof source === 'object' &&
+      source !== null &&
+      'uri' in source,
+  );
 
   return (
-    <>
-      {remote && !loaded ? (
-        <View style={styles.thumbLoader}>
-          <ActivityIndicator color={palette.red} size="small" />
-        </View>
-      ) : null}
-      <Image
-        accessibilityLabel={`Product photo of ${product.title}. Image belongs to the retailer.`}
-        alt={`Product photo of ${product.title}`}
-        cachePolicy="memory-disk"
-        contentFit="cover"
-        onError={() => {
-          if (remote) setFailed(true);
-        }}
-        onLoad={() => setLoaded(true)}
-        recyclingKey={`${product.id}-${remote ? 'remote' : 'local'}`}
-        source={source}
-        style={[{ height: size, width: size }, remote && !loaded && styles.thumbHidden]}
-        transition={0}
-      />
-    </>
+    <Image
+      accessibilityLabel={`Product photo of ${product.title}. Image belongs to the retailer.`}
+      alt={`Product photo of ${product.title}`}
+      cachePolicy="memory-disk"
+      contentFit="cover"
+      onError={() => {
+        if (isRemoteUri) setFailedRemote(true);
+      }}
+      recyclingKey={`${product.id}-${failedRemote ? 'local' : 'primary'}`}
+      source={source}
+      style={{ height: size, width: size }}
+      transition={0}
+    />
   );
 }
 

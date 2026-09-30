@@ -4,12 +4,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWebLayout } from '@/hooks/use-web-layout';
 
 /** Icon row + label inside the bottom tab bar (excluding home-indicator inset). */
-export const MOBILE_TAB_BAR_CONTENT_HEIGHT = 56;
+export const MOBILE_TAB_BAR_CONTENT_HEIGHT = 58;
 
-/** Use real safe-area only — no artificial 34px floor (that left a black gap). */
+/**
+ * Keep labels clear of the iOS home indicator.
+ * Some WebViews report inset 0 briefly — use a small floor on iOS only.
+ */
 export function mobileWebBottomInset(insetFromHook: number) {
-  if (Platform.OS !== 'web') return Math.max(insetFromHook, 0);
-  return Math.max(insetFromHook, 0);
+  const inset = Math.max(insetFromHook, 0);
+  if (Platform.OS === 'ios') return Math.max(inset, 20);
+  if (Platform.OS === 'web') return Math.max(inset, 0);
+  return inset;
 }
 
 export function mobileTabBarHeight(bottomInset: number) {
@@ -24,7 +29,9 @@ export function mobileWebScrollBottomPad(bottomInset: number) {
 export function useMobileWebChrome() {
   const { isMobileWeb } = useWebLayout();
   const insets = useSafeAreaInsets();
-  const bottomInset = isMobileWeb ? mobileWebBottomInset(insets.bottom) : insets.bottom;
+  const bottomInset = isMobileWeb || Platform.OS !== 'web'
+    ? mobileWebBottomInset(insets.bottom)
+    : 0;
   const tabBarHeight = mobileTabBarHeight(bottomInset);
   const scrollBottomPad = mobileWebScrollBottomPad(bottomInset);
 

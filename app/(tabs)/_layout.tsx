@@ -7,7 +7,10 @@ import { HapticTab } from '@/components/haptic-tab';
 import { TourAnchor } from '@/components/tour-anchor';
 import { WebTopNav } from '@/components/web-top-nav';
 import { palette } from '@/constants/dropdex';
-import { useMobileWebChrome } from '@/hooks/use-mobile-web-chrome';
+import {
+  MOBILE_TAB_BAR_CONTENT_HEIGHT,
+  useMobileWebChrome,
+} from '@/hooks/use-mobile-web-chrome';
 import { useWebLayout } from '@/hooks/use-web-layout';
 
 export default function TabLayout() {
@@ -20,26 +23,24 @@ export default function TabLayout() {
         height: 0,
         overflow: 'hidden' as const,
       }
-    : Platform.OS === 'web' && isMobileWeb
-      ? ({
-          backgroundColor: palette.blackRaised,
-          borderTopColor: palette.blackSoft,
-          borderTopWidth: 1,
-          // Keep height + safe-area padding in sync via CSS so iOS never clips labels.
-          height: 'calc(56px + env(safe-area-inset-bottom, 0px))' as unknown as number,
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)' as unknown as number,
-          paddingTop: 6,
-          zIndex: 50,
-        } as object)
-      : {
-          backgroundColor: palette.blackRaised,
-          borderTopColor: palette.blackSoft,
-          borderTopWidth: 1,
-          // Explicit numeric height so React Navigation's getTabBarHeight picks it up.
-          height: tabBarHeight,
-          paddingBottom: bottomInset,
-          paddingTop: 6,
-        };
+    : {
+        backgroundColor: palette.blackRaised,
+        borderTopColor: palette.blackSoft,
+        borderTopWidth: 1,
+        height: tabBarHeight,
+        paddingBottom: bottomInset,
+        paddingTop: 6,
+        zIndex: 50,
+        ...(Platform.OS === 'web'
+          ? ({
+              // Pin to the visual viewport on mobile Safari so labels clear the home indicator.
+              position: 'fixed' as unknown as 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+            } as object)
+          : null),
+      };
 
   return (
     <View
@@ -55,10 +56,8 @@ export default function TabLayout() {
         safeAreaInsets={
           isDesktopWeb
             ? { top: 0, right: 0, bottom: 0, left: 0 }
-            : isMobileWeb
-              ? // Padding already comes from tabBarStyle env(safe-area-inset-bottom).
-                { top: 0, right: 0, bottom: 0, left: 0 }
-              : undefined
+            : // Padding already applied via tabBarStyle.paddingBottom from real insets.
+              { top: 0, right: 0, bottom: 0, left: 0 }
         }
         screenOptions={{
           animation: 'none',
@@ -69,16 +68,23 @@ export default function TabLayout() {
           tabBarStyle,
           tabBarItemStyle: {
             paddingVertical: 0,
+            height: MOBILE_TAB_BAR_CONTENT_HEIGHT,
           },
           tabBarLabelStyle: {
-            fontSize: 9,
-            fontWeight: '900',
-            letterSpacing: 0.6,
-            marginBottom: 0,
-            marginTop: 1,
+            fontSize: 10,
+            fontWeight: '800',
+            letterSpacing: 0.4,
+            marginBottom: 2,
+            marginTop: 2,
           },
           headerShown: false,
           tabBarButton: HapticTab,
+          sceneStyle: isDesktopWeb
+            ? undefined
+            : {
+                // Keep tab scenes clear of the fixed/web or padded native tab bar.
+                paddingBottom: Platform.OS === 'web' ? tabBarHeight : 0,
+              },
         } as object}>
         <Tabs.Screen
           name="home"
