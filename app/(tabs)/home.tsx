@@ -389,7 +389,15 @@ export default function HomeScreen() {
                 </View>
               ) : (
                 <Text style={styles.powerHint}>
-                  {monitoring ? 'Checking Pokémon Center stock' : 'Alerts are off'}
+                  {monitoring
+                    ? webPushState === 'subscribed'
+                      ? 'Checking Pokémon Center stock'
+                      : webPushState === 'install-required'
+                        ? 'Add DropLinq to your Home Screen, then allow notifications'
+                        : webPushState === 'denied'
+                          ? 'Notifications are blocked. Allow them in browser settings'
+                          : 'Tap Alerts off, then on, and allow notifications'
+                    : 'Alerts are off'}
                 </Text>
               )}
             </View>

@@ -14,7 +14,7 @@ import { mergeRegistration, sanitizeSubscription } from './registration.mjs';
 import { createScheduledPushRunner } from './scheduled-push.mjs';
 import { ensureSeedCatalog } from './seed-catalog.mjs';
 import { JsonStore } from './storage.mjs';
-import { loadRegistrationsBackup, loadNotifiedDropIds, saveRegistrationsBackup } from './registration-backup.mjs';
+import { loadNotifiedDropIds, loadRecentDrops, loadRegistrationsBackup, saveRegistrationsBackup } from './registration-backup.mjs';
 import {
   getWebPushPublicConfig,
   isValidWebPushSubscription,
@@ -166,6 +166,14 @@ if (notifiedDropIds.length > 0) {
   });
   console.log(`[monitor] Restored ${notifiedDropIds.length} already-sent drop id(s)`);
 }
+const recentDrops = await loadRecentDrops();
+if (recentDrops.length > 0) {
+  await store.update((state) => {
+    state.recentDrops = recentDrops;
+    return state;
+  });
+  console.log(`[monitor] Restored ${recentDrops.length} recent drop(s) for late registrations`);
+}
 const scheduledPushes = createScheduledPushRunner(store);
 await scheduledPushes.restore();
 
@@ -288,7 +296,11 @@ const server = createServer(async (request, response) => {
         );
         return state;
       });
-      sendJson(response, 200, { ok: true, monitoring: registration.enabled });
+      const replayed = await engine.replayRecentDrops(registration.installationId).catch((error) => {
+        console.warn('[monitor] Replay failed:', error.message);
+        return 0;
+      });
+      sendJson(response, 200, { ok: true, monitoring: registration.enabled, replayed });
     } catch (error) {
       sendJson(response, 422, { ok: false, error: error.message });
     }

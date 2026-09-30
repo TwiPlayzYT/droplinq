@@ -1,15 +1,27 @@
 import { fetchRecentDropProducts } from './drop-signals.mjs';
 import { sendMatchingPushes } from './expo-push.mjs';
 import { fetchPokemonCenterProducts } from './pokemon-center-source.mjs';
-import { saveNotifiedDropIds } from './registration-backup.mjs';
+import { saveNotifiedDropIds, saveRecentDrops } from './registration-backup.mjs';
 import { sendMatchingWebPushes } from './web-push.mjs';
 
 const snapshotKey = (product) => `${product.region ?? 'ca'}:${product.id}`;
+const REMEMBER_MS = 48 * 60 * 60 * 1000;
+
+const rememberDrop = (state, product, detectedAt) => {
+  const cutoff = Date.now() - REMEMBER_MS;
+  const drops = (Array.isArray(state.recentDrops) ? state.recentDrops : []).filter(
+    (drop) => Date.parse(drop.detectedAt) >= cutoff && drop.product?.id !== product.id,
+  );
+  drops.push({ product, detectedAt });
+  state.recentDrops = drops.slice(-40);
+};
 
 export class MonitorEngine {
   #running = false;
   #timer;
   #urlCursor = 0;
+  #recentDropsJson = '';
+  #alreadyBroadcastIds = null;
 
   constructor({ store, urls, pollIntervalMs, requestTimeoutMs }) {
     this.store = store;
@@ -153,11 +165,23 @@ export class MonitorEngine {
 
     await this.store.update((state) => {
       const notified = new Set(state.notifiedDropIds ?? []);
+      if (!this.#alreadyBroadcastIds) {
+        this.#alreadyBroadcastIds = new Set(notified);
+      }
       for (const product of products) {
-        if (!product?.id || notified.has(product.id)) continue;
+        if (!product?.id) continue;
+        rememberDrop(state, product, product.detectedAt ?? now);
         const key = snapshotKey(product);
-        if (state.snapshot[key]) {
+        if (notified.has(product.id) || state.snapshot[key]) {
           notified.add(product.id);
+          if (this.#alreadyBroadcastIds.has(product.id)) {
+            for (const registration of Object.values(state.registrations ?? {})) {
+              const seen = new Set(registration.deliveredDropIds ?? []);
+              if (seen.has(product.id)) continue;
+              seen.add(product.id);
+              registration.deliveredDropIds = [...seen].slice(-100);
+            }
+          }
           continue;
         }
         notified.add(product.id);
@@ -178,11 +202,49 @@ export class MonitorEngine {
       return state;
     });
 
+    const serialized = JSON.stringify(this.store.getState().recentDrops ?? []);
+    if (serialized !== this.#recentDropsJson) {
+      this.#recentDropsJson = serialized;
+      void saveRecentDrops(this.store.getState().recentDrops ?? []);
+    }
     if (freshIds.length > 0) {
       await this.#flushPendingEvents();
       void saveNotifiedDropIds(this.store.getState().notifiedDropIds ?? []);
     }
     return freshIds.length;
+  }
+
+  /** A phone that registers after the drop still gets the product name. */
+  async replayRecentDrops(installationId) {
+    const state = this.store.getState();
+    const registration = state.registrations?.[installationId];
+    if (!registration?.enabled || registration.alerts?.push === false) return 0;
+    const cutoff = Date.now() - REMEMBER_MS;
+    const delivered = new Set(registration.deliveredDropIds ?? []);
+    const due = (state.recentDrops ?? []).filter(
+      (drop) => drop?.product?.id && Date.parse(drop.detectedAt) >= cutoff && !delivered.has(drop.product.id),
+    );
+    let sent = 0;
+    for (const drop of due) {
+      const one = { [installationId]: this.store.getState().registrations[installationId] };
+      if (!one[installationId]) break;
+      const expoResult = await sendMatchingPushes(drop.product, one);
+      const webResult = await sendMatchingWebPushes(drop.product, one);
+      if (expoResult.count + webResult.sent > 0) {
+        delivered.add(drop.product.id);
+        sent += 1;
+      }
+    }
+    if (sent > 0) {
+      await this.store.update((current) => {
+        const currentRegistration = current.registrations[installationId];
+        if (currentRegistration) {
+          currentRegistration.deliveredDropIds = [...delivered].slice(-100);
+        }
+        return current;
+      });
+    }
+    return sent;
   }
 
   async ingestObservations(products, { complete = true, emitEvents = true } = {}) {
@@ -311,12 +373,13 @@ export class MonitorEngine {
       }
 
       try {
-        const expoSent = await sendMatchingPushes(event.product, state.registrations);
+        const expoResult = await sendMatchingPushes(event.product, state.registrations);
         const webResult = await sendMatchingWebPushes(event.product, state.registrations);
-        const sent = expoSent + webResult.sent;
+        const sent = expoResult.count + webResult.sent;
+        const deliveredTo = [...expoResult.installationIds, ...(webResult.sentInstallationIds ?? [])];
         console.log(
           `[push] ${event.product.title}: sent ${sent} matching notification(s) ` +
-            `(expo=${expoSent}, web=${webResult.sent}, regs=${Object.keys(state.registrations).length})`,
+            `(expo=${expoResult.count}, web=${webResult.sent}, regs=${Object.keys(state.registrations).length})`,
         );
         await this.store.update((current) => {
           current.pendingEvents = current.pendingEvents.filter((item) => item.id !== event.id);
@@ -324,6 +387,13 @@ export class MonitorEngine {
             if (current.registrations[installationId]) {
               delete current.registrations[installationId].webPushSubscription;
             }
+          }
+          for (const installationId of deliveredTo) {
+            const registration = current.registrations[installationId];
+            if (!registration || !event.product?.id) continue;
+            const seen = new Set(registration.deliveredDropIds ?? []);
+            seen.add(event.product.id);
+            registration.deliveredDropIds = [...seen].slice(-100);
           }
           return current;
         });

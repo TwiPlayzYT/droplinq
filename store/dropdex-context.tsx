@@ -466,12 +466,36 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       setSyncState(remoteConfigured ? 'syncing' : 'local');
       const expoPushToken =
         state.monitoring && state.alerts.push ? await getExpoPushToken() : undefined;
+      let subscription = webPushSubscription;
+      if (
+        Platform.OS === 'web' &&
+        state.monitoring &&
+        state.alerts.push &&
+        !subscription &&
+        typeof Notification !== 'undefined' &&
+        Notification.permission === 'granted'
+      ) {
+        const publicKey =
+          webPushPublicKey || (await monitorService.getWebPushPublicKey().catch(() => undefined));
+        if (publicKey) {
+          try {
+            subscription = await subscribeToWebPush(publicKey);
+            if (!cancelled) {
+              setWebPushSubscription(subscription);
+              setWebPushPublicKey(publicKey);
+              setWebPushState('subscribed');
+            }
+          } catch {
+            subscription = undefined;
+          }
+        }
+      }
       const remotePushUnavailable =
         remoteConfigured &&
         state.monitoring &&
         state.alerts.push &&
         !expoPushToken &&
-        !webPushSubscription;
+        !subscription;
       let registrationFailed = false;
 
       try {
@@ -482,9 +506,9 @@ export function DropDexProvider({ children }: PropsWithChildren) {
           filters: state.filters,
           alerts: state.alerts,
           expoPushToken,
-          webPushSubscription,
+          webPushSubscription: subscription,
         });
-        if (webPushSubscription && webPushPublicKey) {
+        if (subscription && (webPushPublicKey || subscription)) {
           rememberPushContext({
             installationId: state.installationId,
             monitorUrl:
@@ -505,7 +529,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
             showFeedback(
               'error',
               'Lock-screen alerts need permission',
-              'On iPhone, install the web app from Safari, then enable lock-screen alerts in Settings.',
+              'Turn Alerts off, then on, and allow notifications. That is what sends the product name when a drop goes live.',
             );
           }
         } else {

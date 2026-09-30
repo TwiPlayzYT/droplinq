@@ -23,6 +23,7 @@ export async function sendMatchingPushes(product, registrations) {
     .map((registration) => {
       const copy = alertCopy(product);
       return {
+      installationId: registration.installationId,
       to: registration.expoPushToken,
       title: copy.title,
       body: copy.body,
@@ -40,13 +41,16 @@ export async function sendMatchingPushes(product, registrations) {
     });
 
   for (let index = 0; index < messages.length; index += 100) {
+    const batch = messages.slice(index, index + 100);
     const response = await fetch(EXPO_PUSH_URL, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(messages.slice(index, index + 100)),
+      body: JSON.stringify(batch.map(({ to, title, body, sound, priority, interruptionLevel, channelId, categoryId, badge, ttl, data }) => ({
+        to, title, body, sound, priority, interruptionLevel, channelId, categoryId, badge, ttl, data,
+      }))),
       signal: AbortSignal.timeout(15_000),
     });
 
@@ -61,5 +65,5 @@ export async function sendMatchingPushes(product, registrations) {
     }
   }
 
-  return messages.length;
+  return { count: messages.length, installationIds: messages.map((message) => message.installationId).filter(Boolean) };
 }

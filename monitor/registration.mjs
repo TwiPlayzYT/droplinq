@@ -11,6 +11,7 @@ export function mergeRegistration(previous, incoming) {
     ...incoming,
     webPushSubscription,
     expoPushToken,
+    deliveredDropIds: Array.isArray(previous?.deliveredDropIds) ? previous.deliveredDropIds : [],
     alerts: {
       ...incoming.alerts,
       push: incoming.alerts?.push !== false && (canPush || incoming.alerts?.push === true),

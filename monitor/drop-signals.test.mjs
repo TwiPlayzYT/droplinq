@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { productsFromBlogCollection, productsFromPostHtml } from './drop-signals.mjs';
+import { productsFromBlogCollection, productsFromFeedXml, productsFromPostHtml } from './drop-signals.mjs';
 
 const html = `
   <a href="https://www.pokemoncenter.com/product/10-10438-111">Delta Reign Elite Trainer Box</a>
@@ -48,4 +48,24 @@ test('only recent posts become drop alerts', () => {
   );
   assert.equal(products.length, 3);
   assert.ok(products.every((product) => product.title.startsWith('Delta Reign')));
+});
+
+test('reads product links out of a recent feed entry and ignores an old one', () => {
+  const now = Date.parse('2026-09-30T18:00:00.000Z');
+  const xml = `
+    <item>
+      <title>Delta Reign queue</title>
+      <pubDate>Wed, 30 Sep 2026 16:00:00 GMT</pubDate>
+      <description>&lt;a href="https://www.pokemoncenter.com/product/10-10438-111"&gt;Delta Reign Elite Trainer Box&lt;/a&gt;</description>
+    </item>
+    <item>
+      <title>Old</title>
+      <pubDate>Mon, 01 Sep 2026 16:00:00 GMT</pubDate>
+      <description>&lt;a href="https://www.pokemoncenter.com/product/99"&gt;Ancient Elite Trainer Box&lt;/a&gt;</description>
+    </item>
+  `;
+  const products = productsFromFeedXml(xml, now);
+  assert.equal(products.length, 1);
+  assert.equal(products[0].title, 'Delta Reign Elite Trainer Box');
+  assert.equal(products[0].id, '10-10438-111');
 });

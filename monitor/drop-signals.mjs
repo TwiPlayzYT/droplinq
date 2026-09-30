@@ -6,8 +6,22 @@ import { classifyFormat } from './pokemon-center-source.mjs';
  * was announced) are readable and name the SKU. Only recent posts are used so
  * old articles do not replay as new alerts.
  */
-const DROP_LISTING_URL = 'https://www.josephwriteranderson.com/blog?format=json';
-const RECENT_MS = 36 * 60 * 60 * 1000;
+const RECENT_MS = 72 * 60 * 60 * 1000;
+
+const SOURCES = [
+  {
+    kind: 'blog-json',
+    url: 'https://www.josephwriteranderson.com/blog?format=json',
+  },
+  {
+    kind: 'feed',
+    url: 'https://pokemonblog.com/feed/',
+  },
+  {
+    kind: 'feed',
+    url: 'https://www.reddit.com/r/pokemoncenter/.rss',
+  },
+];
 
 const LOCALE_TO_REGION = {
   'en-ca': 'ca',
@@ -92,15 +106,82 @@ export function productsFromBlogCollection(payload, now = Date.now()) {
   return [...products.values()];
 }
 
-export async function fetchRecentDropProducts(timeoutMs = 15_000) {
-  const response = await fetch(DROP_LISTING_URL, {
+export function productsFromFeedXml(xml, now = Date.now()) {
+  const markup = String(xml ?? '')
+    .replaceAll('\\/', '/')
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&#39;', "'")
+    .replaceAll('&amp;', '&');
+  const blocks = markup.match(/<(?:item|entry)\b[\s\S]*?<\/(?:item|entry)>/gi) ?? [];
+  const products = new Map();
+
+  for (const block of blocks) {
+    const published = Date.parse(
+      block.match(/<(?:pubDate|updated|published)>([^<]+)<\//i)?.[1] ?? '',
+    );
+    if (!Number.isFinite(published)) continue;
+    if (now - published > RECENT_MS || published > now + 5 * 60_000) continue;
+
+    const heading = decodeText(
+      (block.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i)?.[1] ?? '').replace(
+        /<!\[CDATA\[|\]\]>/g,
+        '',
+      ),
+    );
+    const releaseType = /pre-?order/i.test(heading)
+      ? 'preorder'
+      : /restock|in stock/i.test(heading)
+        ? 'restock'
+        : 'new';
+    for (const product of productsFromPostHtml(block, {
+      releaseType,
+      detectedAt: new Date(published).toISOString(),
+    })) {
+      products.set(`${product.region}:${product.id}`, product);
+    }
+  }
+
+  return [...products.values()];
+}
+
+async function readSource(source, timeoutMs) {
+  const response = await fetch(source.url, {
     headers: {
-      accept: 'application/json',
-      'user-agent': 'DropLinq/1.0',
+      accept: source.kind === 'blog-json' ? 'application/json' : 'application/rss+xml, application/atom+xml, text/xml',
+      'user-agent': 'Mozilla/5.0 (compatible; DropLinq/1.0; +https://getdroplinq.com)',
     },
     signal: AbortSignal.timeout(timeoutMs),
   });
-  if (!response.ok) throw new Error(`Drop listing returned ${response.status}`);
-  const payload = await response.json();
-  return productsFromBlogCollection(payload);
+  if (!response.ok) throw new Error(`${source.url} returned ${response.status}`);
+  if (source.kind === 'blog-json') {
+    return productsFromBlogCollection(await response.json());
+  }
+  return productsFromFeedXml(await response.text());
+}
+
+export async function fetchRecentDropProducts(timeoutMs = 15_000) {
+  const results = await Promise.allSettled(SOURCES.map((source) => readSource(source, timeoutMs)));
+  const products = new Map();
+  const errors = [];
+
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      for (const product of result.value) {
+        products.set(`${product.region}:${product.id}`, product);
+      }
+      return;
+    }
+    const message = result.reason instanceof Error ? result.reason.message : String(result.reason);
+    errors.push(`${SOURCES[index].url}: ${message}`);
+  });
+
+  if (products.size === 0 && errors.length === SOURCES.length) {
+    throw new Error(errors.join(' | '));
+  }
+  if (errors.length > 0) {
+    console.warn('[monitor] Drop source missed:', errors.join(' | '));
+  }
+  return [...products.values()];
 }

@@ -60,6 +60,7 @@ export async function sendMatchingWebPushes(product, registrations) {
     matchesRegistration(product, registration),
   );
   const expiredInstallationIds = [];
+  const sentInstallationIds = [];
   let sent = 0;
 
   for (const registration of matches) {
@@ -73,6 +74,7 @@ export async function sendMatchingWebPushes(product, registrations) {
         { TTL: 86400, urgency: 'high' },
       );
       sent += 1;
+      if (registration.installationId) sentInstallationIds.push(registration.installationId);
     } catch (error) {
       if (error.statusCode === 404 || error.statusCode === 410) {
         expiredInstallationIds.push(registration.installationId);
@@ -85,7 +87,7 @@ export async function sendMatchingWebPushes(product, registrations) {
     }
   }
 
-  return { expiredInstallationIds, sent };
+  return { expiredInstallationIds, sentInstallationIds, sent };
 }
 
 /** Send one lock-screen notification to a single subscription (Settings → Test). */

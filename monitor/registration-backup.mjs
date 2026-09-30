@@ -108,3 +108,43 @@ export async function saveNotifiedDropIds(ids) {
     console.warn('[monitor] Notified-drop backup failed:', error.message);
   }
 }
+
+const RECENT_PATH = 'recent-drops.json';
+
+export async function loadRecentDrops() {
+  if (!configured()) return [];
+  try {
+    await ensureBucket();
+    const response = await fetch(`${root()}/storage/v1/object/${BUCKET}/${RECENT_PATH}`, {
+      headers: headers(),
+    });
+    if (!response.ok) return [];
+    const payload = await response.json();
+    return Array.isArray(payload?.drops) ? payload.drops : [];
+  } catch (error) {
+    console.warn('[monitor] Could not load recent drops:', error.message);
+    return [];
+  }
+}
+
+export async function saveRecentDrops(drops) {
+  if (!configured()) return;
+  if (!Array.isArray(drops) || drops.length === 0) return;
+  try {
+    await ensureBucket();
+    const response = await fetch(`${root()}/storage/v1/object/${BUCKET}/${RECENT_PATH}`, {
+      method: 'POST',
+      headers: headers({
+        'Content-Type': 'application/json',
+        'x-upsert': 'true',
+      }),
+      body: JSON.stringify({ drops: drops.slice(-40) }),
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      console.warn('[monitor] Recent-drop backup failed:', response.status, detail.slice(0, 180));
+    }
+  } catch (error) {
+    console.warn('[monitor] Recent-drop backup failed:', error.message);
+  }
+}
