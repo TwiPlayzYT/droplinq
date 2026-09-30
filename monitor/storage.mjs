@@ -19,8 +19,9 @@ export class JsonStore {
   #state = emptyState();
   #writeQueue = Promise.resolve();
 
-  constructor(filePath) {
+  constructor(filePath, options = {}) {
     this.filePath = filePath;
+    this.onPersist = options.onPersist;
   }
 
   async load() {
@@ -60,6 +61,7 @@ export class JsonStore {
         await mkdir(dirname(this.filePath), { recursive: true });
         await writeFile(temporaryPath, serialized, 'utf8');
         await rename(temporaryPath, this.filePath);
+        await this.onPersist?.(this.#state);
       } catch (error) {
         console.error('[store] Persist failed:', error instanceof Error ? error.message : error);
       }

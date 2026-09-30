@@ -63,9 +63,13 @@ export function resolveProductImageSource(
   format?: ProductFormat | string | null,
 ): ImageSourcePropType {
   if (imageUrl) {
-    const match = imageUrl.match(/\/product-photos\/([^/?#]+)\.jpe?g$/i);
-    if (match?.[1] && LOCAL_PRODUCT_PHOTOS[match[1]]) {
-      return LOCAL_PRODUCT_PHOTOS[match[1]];
+    const photo = imageUrl.match(/\/product-photos\/([^/?#]+)\.jpe?g$/i);
+    if (photo?.[1] && LOCAL_PRODUCT_PHOTOS[photo[1]]) {
+      return LOCAL_PRODUCT_PHOTOS[photo[1]];
+    }
+    const art = imageUrl.match(/\/product-art\/([^/?#]+)\.png$/i);
+    if (art?.[1] && formatPlaceholders[art[1]]) {
+      return formatPlaceholders[art[1]];
     }
     return { uri: imageUrl };
   }

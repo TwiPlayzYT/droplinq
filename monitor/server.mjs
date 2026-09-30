@@ -14,6 +14,7 @@ import { mergeRegistration, sanitizeSubscription } from './registration.mjs';
 import { createScheduledPushRunner } from './scheduled-push.mjs';
 import { ensureSeedCatalog } from './seed-catalog.mjs';
 import { JsonStore } from './storage.mjs';
+import { loadRegistrationsBackup, saveRegistrationsBackup } from './registration-backup.mjs';
 import {
   getWebPushPublicConfig,
   isValidWebPushSubscription,
@@ -130,8 +131,30 @@ const validateRegistration = (input) => {
   };
 };
 
-const store = new JsonStore(config.dataFile);
+const store = new JsonStore(config.dataFile, {
+  onPersist: (state) => {
+    const next = JSON.stringify(state.registrations ?? {});
+    if (next === store.lastRegistrationBackup) return;
+    store.lastRegistrationBackup = next;
+    void saveRegistrationsBackup(state.registrations ?? {});
+  },
+});
 await store.load();
+const backedUp = await loadRegistrationsBackup();
+const localRegs = store.getState().registrations ?? {};
+if (
+  backedUp &&
+  typeof backedUp === 'object' &&
+  Object.keys(backedUp).length > Object.keys(localRegs).length
+) {
+  await store.update((state) => {
+    state.registrations = { ...backedUp, ...state.registrations };
+    return state;
+  });
+  console.log(
+    `[monitor] Restored push registrations from Supabase (${Object.keys(store.getState().registrations).length})`,
+  );
+}
 await ensureSeedCatalog(store);
 const scheduledPushes = createScheduledPushRunner(store);
 await scheduledPushes.restore();

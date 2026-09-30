@@ -571,7 +571,6 @@ export function DropDexProvider({ children }: PropsWithChildren) {
           ...seed,
           historical: false,
           availability: seed.availability ?? 'sold-out',
-          // Only keep a real sold-out timestamp — never invent "just now".
           soldOutAt: seed.soldOutAt,
           lastSeenAt: seed.lastSeenAt,
           detectedAt: seed.detectedAt || now,
@@ -580,6 +579,10 @@ export function DropDexProvider({ children }: PropsWithChildren) {
           lastCheckedAt: now,
         } as Product & { retailerName: string; regionName: string; lastCheckedAt: string };
       });
+
+      // Paint the local catalog immediately. Remote rows only update it — they must not delay photos.
+      setLiveProducts(seedProducts);
+      setCatalogLoading(false);
 
       const [remoteProducts, remoteEvents, updatedAt, monitorProducts] = await Promise.all([
         catalogRepository.listProducts({

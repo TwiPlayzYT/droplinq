@@ -169,10 +169,6 @@ services:
     buildCommand: npm ci
     startCommand: npm run monitor
     healthCheckPath: /health
-    disk:
-      name: droplinq-monitor-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: NODE_VERSION
         value: "22"

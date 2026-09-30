@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { RegionConfig } from '@/data/regions';
 import { preferProductImageUrl, sanitizeProductImageUrl } from '@/lib/product-image';
@@ -88,7 +88,22 @@ export function PokemonCenterLiveScanner({
   onProducts,
   reportObservations,
 }: Props) {
+  const onStatusRef = useRef(onStatus);
+  const onProductsRef = useRef(onProducts);
+  const reportRef = useRef(reportObservations);
+  onStatusRef.current = onStatus;
+  onProductsRef.current = onProducts;
+  reportRef.current = reportObservations;
+  const regionRef = useRef(region);
+  regionRef.current = region;
+  const regionId = region.id;
+
   useEffect(() => {
+    const region = regionRef.current;
+    const onStatus = (status: Parameters<Props['onStatus']>[0]) => onStatusRef.current(status);
+    const onProducts = (products: Product[]) => onProductsRef.current(products);
+    const reportObservations = (products: Product[]) => reportRef.current(products);
+
     if (!enabled) {
       onStatus({
         state: 'idle',
@@ -111,49 +126,46 @@ export function PokemonCenterLiveScanner({
 
     let cancelled = false;
 
+    const applyReady = (status: MonitorStatus, observedCount: number) => {
+      const blocked = status.sourceBlocked === true;
+      onStatus({
+        state: 'ok',
+        observedCount,
+        lastCheckedAt: status.lastCheckAt ?? status.lastObservationAt ?? new Date().toISOString(),
+        message: blocked
+          ? 'Alert server connected. Storefront scrape is blocked; lock-screen delivery is still armed.'
+          : `Alert server connected · ${observedCount} products`,
+        progress: 100,
+      });
+    };
+
     const pull = async () => {
       try {
-        const [statusRes, catalogRes] = await Promise.all([
-          fetch(`${monitorBase()}/v1/status`),
-          fetch(`${monitorBase()}/v1/catalog`),
-        ]);
+        const statusRes = await fetch(`${monitorBase()}/v1/status`);
+        if (!statusRes.ok) throw new Error(`status ${statusRes.status}`);
         const status = (await statusRes.json()) as MonitorStatus;
-        const catalog = (await catalogRes.json()) as CatalogPayload;
         if (cancelled) return;
+        // Bar means the alert server answered — don't wait on the product catalog for that.
+        applyReady(status, status.observedProducts ?? 0);
 
+        const catalogRes = await fetch(`${monitorBase()}/v1/catalog`);
+        if (cancelled || !catalogRes.ok) return;
+        const catalog = (await catalogRes.json()) as CatalogPayload;
         const mapped = (catalog.products ?? [])
           .map((row) => toClientProduct(row, region))
           .filter((product): product is Product => Boolean(product));
-
         if (mapped.length > 0) {
           const withImages = mapped.map((product) => ({
             ...product,
             imageUrl: preferProductImageUrl(undefined, product.imageUrl),
           }));
           await onProducts(withImages);
+          if (!cancelled) applyReady(status, mapped.length);
           const inStock = withImages.filter((product) => product.availability === 'in-stock');
           if (inStock.length > 0) {
             void reportObservations(inStock).catch(() => undefined);
           }
         }
-
-        // Reaching the always-on monitor means alerts are armed. Never leave the
-        // Home progress bar stuck at ~50% because Pokémon Center blocked the scrape.
-        const ready = true;
-        const blocked = status.sourceBlocked === true || Boolean(status.lastError);
-        onStatus({
-          state: 'ok',
-          observedCount: mapped.length || status.observedProducts || 0,
-          lastCheckedAt: status.lastCheckAt ?? status.lastObservationAt ?? new Date().toISOString(),
-          message: blocked
-            ? mapped.length > 0
-              ? `Cloud monitor live · ${mapped.length} products`
-              : 'Alert server live — storefront scrape blocked; push delivery still armed.'
-            : status.baselineReady || mapped.length > 0
-              ? `Cloud monitor live · ${mapped.length || status.observedProducts || 0} products`
-              : 'Cloud monitor live · watching for drops',
-          progress: ready ? 100 : 55,
-        });
       } catch {
         if (cancelled) return;
         onStatus({
@@ -169,7 +181,7 @@ export function PokemonCenterLiveScanner({
       state: 'polling',
       observedCount: 0,
       message: 'Connecting to the always-on alert server…',
-      progress: 20,
+      progress: 12,
     });
     void pull();
     const timer = setInterval(() => void pull(), 30_000);
@@ -177,7 +189,7 @@ export function PokemonCenterLiveScanner({
       cancelled = true;
       clearInterval(timer);
     };
-  }, [enabled, onProducts, onStatus, region, reportObservations]);
+  }, [enabled, regionId]);
 
   return null;
 }

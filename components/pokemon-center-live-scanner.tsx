@@ -315,7 +315,6 @@ export function PokemonCenterLiveScanner({
   const pageErrorRef = useRef(false);
   const handledRef = useRef(false);
   const cycleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const readyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const publishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seededRef = useRef(false);
@@ -417,23 +416,8 @@ export function PokemonCenterLiveScanner({
 
     if (!seededRef.current) {
       seededRef.current = true;
-      void publishNow('Loading stock…', 'polling', 25);
+      void publishNow('Catalog ready', 'ok', 100);
     }
-
-    // Seeds are enough for Stock UI — don't leave Home progress stuck mid-scan
-    // when Pokémon Center challenges the WebView for a long time.
-    if (readyTimerRef.current) clearTimeout(readyTimerRef.current);
-    readyTimerRef.current = setTimeout(() => {
-      if (initialLoadCompleteRef.current) return;
-      onStatus({
-        state: 'ok',
-        observedCount: productsRef.current.size,
-        lastCheckedAt: new Date().toISOString(),
-        message: `Catalog ready · still refreshing ${region.storefront}…`,
-        progress: 100,
-      });
-    }, 6_000);
-  };
 
   // Region switch: drop everything from the old storefront and rescan fresh.
   const regionRef = useRef(region.id);
@@ -463,7 +447,6 @@ export function PokemonCenterLiveScanner({
     startCycle();
     return () => {
       if (cycleTimerRef.current) clearTimeout(cycleTimerRef.current);
-      if (readyTimerRef.current) clearTimeout(readyTimerRef.current);
       if (publishTimerRef.current) clearTimeout(publishTimerRef.current);
       clearPageTimeout();
     };

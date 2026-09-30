@@ -213,14 +213,7 @@ export default function HomeScreen() {
     (item: WatchedItem) => removeFromWatchlist(item.product.id),
     [removeFromWatchlist],
   );
-  const progress = !hydrated
-    ? 5
-    : !monitoring
-      ? 0
-      : // Once the monitor reports ok/error, fill the bar — never leave Home stuck at ~50%.
-        liveStatus.state === 'ok' || liveStatus.state === 'error'
-        ? 100
-        : Math.min(Math.max(liveStatus.progress ?? 10, 10), 90);
+  const progress = !hydrated ? 8 : !monitoring ? 0 : liveStatus.progress ?? 0;
   const animatedProgress = useRef(new Animated.Value(progress)).current;
   const [displayPercent, setDisplayPercent] = useState(Math.round(progress));
 
@@ -232,46 +225,14 @@ export default function HomeScreen() {
   }, [animatedProgress]);
 
   useEffect(() => {
-    animatedProgress.stopAnimation((current) => {
-      if (progress <= 0) {
-        Animated.timing(animatedProgress, {
-          duration: 300,
-          easing: Easing.out(Easing.quad),
-          toValue: 0,
-          useNativeDriver: true,
-        }).start();
-        return;
-      }
-
-      if (progress >= 100) {
-        Animated.timing(animatedProgress, {
-          duration: 700,
-          easing: Easing.out(Easing.cubic),
-          toValue: 100,
-          useNativeDriver: true,
-        }).start();
-        return;
-      }
-
-      // Never move backwards mid-scan; ease up to the reported checkpoint,
-      // then keep creeping toward (but not past) the next one so the bar
-      // rises steadily instead of jumping between checkpoints.
-      const checkpoint = Math.max(progress, current);
-      const creepCeiling = Math.min(progress + 30, 96);
-      Animated.sequence([
-        Animated.timing(animatedProgress, {
-          duration: 500,
-          easing: Easing.out(Easing.quad),
-          toValue: checkpoint,
-          useNativeDriver: true,
-        }),
-        Animated.timing(animatedProgress, {
-          duration: 9000,
-          easing: Easing.out(Easing.quad),
-          toValue: Math.max(checkpoint, creepCeiling),
-          useNativeDriver: true,
-        }),
-      ]).start();
+    // Track the real monitor status only. No extra creep — that was holding the bar near 50%.
+    animatedProgress.stopAnimation(() => {
+      Animated.timing(animatedProgress, {
+        duration: progress >= 100 ? 220 : 180,
+        easing: Easing.out(Easing.quad),
+        toValue: progress,
+        useNativeDriver: true,
+      }).start();
     });
   }, [animatedProgress, progress]);
 
