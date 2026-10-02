@@ -116,6 +116,12 @@ export function queueProduct(title, { detectedAt, assumeStore = false } = {}) {
   };
 }
 
+/** A public listing is not a live stock check. Preorders stay unconfirmed until the product page is seen. */
+function listingStock(releaseType) {
+  if (releaseType === 'preorder') return { inStock: false, availability: 'unknown' };
+  return { inStock: true, availability: 'in-stock' };
+}
+
 const headlineId = (title) =>
   `headline-${title
     .toLowerCase()
@@ -153,8 +159,9 @@ export function headlineProduct(title, { detectedAt, url, assumeStore = false } 
     url: typeof url === 'string' && /^https?:/i.test(url) ? url : 'https://www.pokemoncenter.com',
     detectedAt: detectedAt ?? new Date().toISOString(),
     tags: ['tcg', 'headline'],
-    inStock: true,
-    availability: 'in-stock',
+    ...listingStock(
+      /pre-?order/i.test(heading) ? 'preorder' : /restock|in stock/i.test(heading) ? 'restock' : 'new',
+    ),
     releaseDate: detectedAt ?? new Date().toISOString(),
   };
 }
@@ -200,8 +207,7 @@ export function productsFromPostHtml(html, { releaseType = 'new', detectedAt } =
       url,
       detectedAt: detectedAt ?? new Date().toISOString(),
       tags: ['tcg', format],
-      inStock: true,
-      availability: 'in-stock',
+      ...listingStock(releaseType),
       releaseDate: detectedAt ?? new Date().toISOString(),
     });
   }

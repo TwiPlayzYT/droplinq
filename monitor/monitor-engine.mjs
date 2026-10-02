@@ -234,8 +234,16 @@ export class MonitorEngine {
             missingPolls: 0,
             lastSeenAt: now,
           };
-        } else if (product.imageUrl && !state.snapshot[key].imageUrl) {
-          state.snapshot[key] = { ...state.snapshot[key], imageUrl: product.imageUrl };
+        } else {
+          const current = state.snapshot[key];
+          const preorderListing = product.releaseType === 'preorder' && product.availability !== 'in-stock';
+          state.snapshot[key] = {
+            ...current,
+            imageUrl: product.imageUrl || current.imageUrl,
+            ...(preorderListing && current.availability === 'in-stock'
+              ? { availability: 'unknown', inStock: false, releaseType: 'preorder' }
+              : {}),
+          };
         }
         if (notified.has(product.id) || alreadyListed) {
           notified.add(product.id);

@@ -32,6 +32,8 @@ test('reads slugless Pokémon Center links and keeps the link text as the produc
   const etb = products.find((product) => product.id === '10-10438-111');
   assert.equal(etb.format, 'etb');
   assert.equal(etb.releaseType, 'preorder');
+  assert.equal(etb.availability, 'unknown');
+  assert.equal(etb.inStock, false);
   assert.equal(etb.url, 'https://www.pokemoncenter.com/product/10-10438-111');
 });
 

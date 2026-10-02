@@ -55,11 +55,13 @@ function toClientProduct(
 ): Product | null {
   if (!row?.id || !row.title || !row.url) return null;
   const availability: ProductAvailability =
-    row.availability === 'in-stock' || row.inStock === true
-      ? 'in-stock'
-      : row.availability === 'sold-out' || row.inStock === false
-        ? 'sold-out'
-        : row.availability ?? 'unknown';
+    row.availability === 'unknown'
+      ? 'unknown'
+      : row.availability === 'in-stock' || row.inStock === true
+        ? 'in-stock'
+        : row.availability === 'sold-out' || row.inStock === false
+          ? 'sold-out'
+          : row.availability ?? 'unknown';
 
   return {
     id: row.id,

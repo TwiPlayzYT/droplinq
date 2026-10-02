@@ -69,6 +69,12 @@ type StockProduct = Product & {
 const isQueueNotice = (product: { releaseType?: string; tags?: string[] }) =>
   product.releaseType === 'queue' || Boolean(product.tags?.includes('queue'));
 
+const isPreorderListing = (product: { releaseType?: string }) => product.releaseType === 'preorder';
+
+/** In stock means the product page was seen as buyable. A preorder listing is not that. */
+const isConfirmedInStock = (product: { availability?: string; releaseType?: string; tags?: string[] }) =>
+  product.availability === 'in-stock' && !isPreorderListing(product) && !isQueueNotice(product);
+
 /** One product from every category first, then the rest. All TCG otherwise looks like only ETBs. */
 function spreadCatalogByCategory(products: StockProduct[]): StockProduct[] {
   const buckets = new Map<string, StockProduct[]>();
@@ -246,7 +252,8 @@ const CatalogProductCard = memo(function CatalogProductCard({
   onOpen: (product: Product) => void;
   product: StockProduct;
 }) {
-  const inStock = product.availability === 'in-stock';
+  const inStock = isConfirmedInStock(product);
+  const preorder = isPreorderListing(product);
   const category = categoryNamesForProduct(product)[0] ?? product.category;
   const lastSeenStamp = product.lastSeenAt ?? product.soldOutAt;
   const lastSeen = formatRelativeTime(lastSeenStamp);
@@ -273,18 +280,32 @@ const CatalogProductCard = memo(function CatalogProductCard({
             <Text numberOfLines={2} style={styles.cardTitleSm}>
               {product.title}
             </Text>
-            <View style={[styles.statusPill, inStock ? styles.statusLive : styles.statusSold]}>
-              <View style={[styles.statusDot, inStock ? styles.liveDot : styles.soldDot]} />
-              <Text style={styles.statusPillText}>{inStock ? 'IN STOCK' : 'SOLD OUT'}</Text>
+            <View
+              style={[
+                styles.statusPill,
+                preorder ? styles.statusPreorder : inStock ? styles.statusLive : styles.statusSold,
+              ]}>
+              <View
+                style={[
+                  styles.statusDot,
+                  preorder ? styles.preorderDot : inStock ? styles.liveDot : styles.soldDot,
+                ]}
+              />
+              <Text style={styles.statusPillText}>
+                {preorder ? 'PREORDER' : inStock ? 'IN STOCK' : 'SOLD OUT'}
+              </Text>
             </View>
             {inStock && price ? <Text style={styles.price}>{price}</Text> : null}
+            {preorder ? (
+              <Text style={styles.subtle}>Listed for preorder. Pokémon Center stock is not confirmed.</Text>
+            ) : null}
             {inStock && checked ? (
               <Text style={styles.subtle}>Last updated {checked}</Text>
             ) : null}
-            {!inStock && lastSeen ? (
+            {!inStock && !preorder && lastSeen ? (
               <Text style={styles.subtle}>Last seen in stock {lastSeen}</Text>
             ) : null}
-            {!inStock && !lastSeen ? (
+            {!inStock && !preorder && !lastSeen ? (
               <Text style={styles.subtle}>Not observed in stock yet</Text>
             ) : null}
           </View>
@@ -521,7 +542,7 @@ export default function StockScreen() {
   const liveNow = useMemo(
     () =>
       matchingProducts.filter(
-        (product) => product.availability === 'in-stock' && !isQueueNotice(product),
+        (product) => isConfirmedInStock(product),
       ),
     [matchingProducts],
   );
@@ -563,7 +584,7 @@ export default function StockScreen() {
         if (signals.isPopular) heat += 120;
         if (product.format === 'etb' || product.format === 'upc') heat += 50;
         if (product.format === 'booster-box') heat += 25;
-        if (product.availability === 'in-stock') heat += 70;
+        if (isConfirmedInStock(product)) heat += 70;
         if (isRecentlySoldOut(product)) heat += 90;
         const stamp = product.soldOutAt ?? product.lastSeenAt ?? product.detectedAt;
         const ageHours = Math.max(0, (Date.now() - new Date(stamp).getTime()) / 3_600_000);
@@ -576,11 +597,10 @@ export default function StockScreen() {
       .slice(0, 6);
 
     return ranked.map(({ product, stamp }) => {
-      const kind: StockEventKind =
-        product.availability === 'in-stock'
-          ? product.releaseType === 'preorder'
-            ? 'preorder'
-            : 'restock'
+      const kind: StockEventKind = isPreorderListing(product)
+        ? 'preorder'
+        : isConfirmedInStock(product)
+          ? 'restock'
           : 'sold_out';
       return {
         id: `heat-${product.id}`,
@@ -589,8 +609,11 @@ export default function StockScreen() {
         retailerName: product.retailerName ?? regionConfig.storefront,
         regionName: product.regionName ?? regionConfig.label,
         kind: eventAllowed(kind, filters) ? kind : 'sold_out',
-        newStatus:
-          product.availability === 'in-stock' ? ('in-stock' as const) : ('out-of-stock' as const),
+        newStatus: isPreorderListing(product)
+          ? ('preorder' as const)
+          : isConfirmedInStock(product)
+            ? ('in-stock' as const)
+            : ('out-of-stock' as const),
         detectedAt: stamp,
         verificationStatus: 'unverified' as const,
         confidenceScore: 0,
@@ -627,9 +650,11 @@ export default function StockScreen() {
         })
       : spreadCatalogByCategory(pool);
     if (viewFilter === 'in-stock') {
-      list = list.filter((product) => product.availability === 'in-stock');
+      list = list.filter((product) => isConfirmedInStock(product));
     } else if (viewFilter === 'sold-out') {
-      list = list.filter((product) => product.availability !== 'in-stock');
+      list = list.filter(
+        (product) => !isConfirmedInStock(product) && !isPreorderListing(product),
+      );
     } else if (viewFilter === 'new') {
       list = list.filter((product) => product.releaseType === 'new');
     } else if (viewFilter === 'preorder') {
@@ -1221,6 +1246,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   liveDot: { backgroundColor: palette.card, borderRadius: 4, height: 8, width: 8 },
+  preorderDot: { backgroundColor: palette.white, borderRadius: 4, height: 8, width: 8 },
   soldDot: { backgroundColor: palette.red, borderRadius: 4, height: 8, width: 8 },
   liveBadgeText: {
     color: palette.white,
@@ -1289,6 +1315,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   statusLive: { backgroundColor: palette.red, borderColor: palette.redDark },
+  statusPreorder: { backgroundColor: palette.black, borderColor: palette.blackSoft },
   statusSold: { backgroundColor: palette.black, borderColor: palette.blackSoft },
   statusPillText: {
     color: palette.white,
