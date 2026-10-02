@@ -703,36 +703,10 @@ export function DropDexProvider({ children }: PropsWithChildren) {
         });
       }
 
-      // Local notifier: compare catalog snapshots and backend stock events while alerts are on.
-      const changeEvents = await detectLiveChanges(products);
-      if (stateRef.current.monitoring) {
-        changeEvents.forEach((product) => processProduct(product));
-      }
-
-      if (!stockEventsBaselineReadyRef.current) {
-        remoteEvents.forEach((event) => seenStockEventIdsRef.current.add(event.id));
-        stockEventsBaselineReadyRef.current = true;
-      } else {
-        const alertKinds = new Set(['restock', 'new_product', 'preorder']);
-        for (const event of remoteEvents) {
-          if (seenStockEventIdsRef.current.has(event.id)) continue;
-          seenStockEventIdsRef.current.add(event.id);
-          if (!stateRef.current.monitoring || !alertKinds.has(event.kind)) continue;
-          const matched = products.find((product) => product.id === event.productId);
-          if (!matched) continue;
-          processProduct({
-            ...matched,
-            availability: 'in-stock',
-            detectedAt: event.detectedAt,
-            releaseType:
-              event.kind === 'preorder'
-                ? 'preorder'
-                : event.kind === 'new_product'
-                  ? 'new'
-                  : 'restock',
-          });
-        }
-      }
+      // Remember what the catalog already contains so opening the app does not
+      // turn those rows into a pile of local notifications. The alert server
+      // pushes while the app is closed.
+      await detectLiveChanges(products);
     } catch {
       // Network / Supabase failure — still surface local seeds.
       const regionConfig = getRegion(stateRef.current.region);
@@ -762,7 +736,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
     } finally {
       setCatalogLoading(false);
     }
-  }, [processProduct]);
+  }, []);
 
   useEffect(() => {
     seenStockEventIdsRef.current = new Set();
@@ -831,11 +805,9 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       const next = [...byId.values()];
       liveProductsRef.current = next;
       setLiveProducts(next);
-
-      const events = await detectLiveChanges(products);
-      events.forEach((product) => processProduct(product));
+      await detectLiveChanges(products);
     },
-    [processProduct],
+    [],
   );
 
   // Region change: everything on screen belongs to the old storefront, so

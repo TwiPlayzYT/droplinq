@@ -1,4 +1,4 @@
-const CACHE_NAME = 'droplinq-shell-v29';
+const CACHE_NAME = 'droplinq-shell-v30';
 const PUSH_CONTEXT_CACHE = 'droplinq-push-context-v1';
 const PUSH_CONTEXT_URL = '/__droplinq/push-context';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/droplinq-icon.png'];
@@ -54,11 +54,16 @@ const showDropNotification = (payload) => {
   const title = payload.title ?? 'DROP DETECTED';
   const body = payload.body ?? product?.title ?? 'A matching product is available.';
 
+  const productImage =
+    typeof product?.imageUrl === 'string' && product.imageUrl.startsWith('https://')
+      ? product.imageUrl
+      : '/droplinq-icon.png';
+
   return self.registration
     .showNotification(title, {
       body,
       badge: '/droplinq-icon.png',
-      icon: '/droplinq-icon.png',
+      icon: productImage,
       tag: product?.id ? `droplinq-${product.id}` : 'droplinq-alert',
       renotify: true,
       data: {

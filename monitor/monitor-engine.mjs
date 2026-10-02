@@ -1,10 +1,18 @@
 import { fetchRecentDropProducts } from './drop-signals.mjs';
 import { sendMatchingPushes } from './expo-push.mjs';
 import { fetchPokemonCenterProducts } from './pokemon-center-source.mjs';
+import { attachPackshots } from './product-photo-lookup.mjs';
 import { saveNotifiedDropIds, saveRecentDrops } from './registration-backup.mjs';
 import { sendMatchingWebPushes } from './web-push.mjs';
 
 const snapshotKey = (product) => `${product.region ?? 'ca'}:${product.id}`;
+
+const snapshotEntryKey = (state, product) => {
+  const direct = snapshotKey(product);
+  if (state.snapshot[direct]?.id === product.id) return direct;
+  const existing = Object.keys(state.snapshot).find((key) => state.snapshot[key]?.id === product.id);
+  return existing ?? direct;
+};
 const REMEMBER_LIMIT = 80;
 /** How long a missed push is retried. An alerts-on device is notified when the drop is detected. */
 const RETRY_MS = 14 * 24 * 60 * 60 * 1000;
@@ -209,15 +217,16 @@ export class MonitorEngine {
   /** Push products the storefront scrape has never seen. Each id alerts once. */
   async ingestUnseenProducts(products) {
     if (!Array.isArray(products) || products.length === 0) return 0;
+    const prepared = await attachPackshots(products);
     const now = new Date().toISOString();
     const freshIds = [];
 
     await this.store.update((state) => {
       const notified = new Set(state.notifiedDropIds ?? []);
-      for (const product of products) {
+      for (const product of prepared) {
         if (!product?.id) continue;
         rememberDrop(state, product, product.detectedAt ?? now);
-        const key = snapshotKey(product);
+        const key = snapshotEntryKey(state, product);
         const alreadyListed = Boolean(state.snapshot[key]);
         if (!alreadyListed) {
           state.snapshot[key] = {
@@ -225,6 +234,8 @@ export class MonitorEngine {
             missingPolls: 0,
             lastSeenAt: now,
           };
+        } else if (product.imageUrl && !state.snapshot[key].imageUrl) {
+          state.snapshot[key] = { ...state.snapshot[key], imageUrl: product.imageUrl };
         }
         if (notified.has(product.id) || alreadyListed) {
           notified.add(product.id);
@@ -302,11 +313,13 @@ export class MonitorEngine {
 
     const now = new Date().toISOString();
     const updated = await this.store.update((state) => {
-      const observedIds = new Set(products.map((product) => snapshotKey(product)));
+      const observedIds = new Set();
       const newEvents = [];
 
       for (const product of products) {
-        const previous = state.snapshot[snapshotKey(product)];
+        const key = snapshotEntryKey(state, product);
+        observedIds.add(key);
+        const previous = state.snapshot[key];
         const observedInStock =
           product.availability === 'in-stock'
             ? true
@@ -318,28 +331,23 @@ export class MonitorEngine {
         // Restocks always notify (even before baseline) so a blocked scrape
         // cannot silence customers when a device later confirms stock.
         if (emitEvents) {
+          const alreadyAlerted = (state.notifiedDropIds ?? []).includes(product.id);
           if (previous && !previous.inStock && observedInStock) {
             releaseType = 'restock';
-          } else if (state.baselineReady && !previous) {
+          } else if (state.baselineReady && !previous && !alreadyAlerted) {
             releaseType = product.releaseType ?? 'new';
-          } else if (
-            state.baselineReady &&
-            previous &&
-            (previous.title !== product.title || previous.url !== product.url)
-          ) {
-            releaseType = 'new';
           }
         }
 
         if (releaseType) {
           newEvents.push({
-            id: `${snapshotKey(product)}-${Date.now()}-${releaseType}`,
+            id: `${key}-${Date.now()}-${releaseType}`,
             product: { ...product, releaseType, detectedAt: now },
             attempts: 0,
           });
         }
 
-        state.snapshot[snapshotKey(product)] = {
+        state.snapshot[key] = {
           ...previous,
           ...product,
           imageUrl: product.imageUrl || previous?.imageUrl,
@@ -425,6 +433,16 @@ export class MonitorEngine {
         const webResult = await sendMatchingWebPushes(event.product, state.registrations);
         const sent = expoResult.count + webResult.sent;
         const deliveredTo = [...expoResult.installationIds, ...(webResult.sentInstallationIds ?? [])];
+        if (sent === 0) {
+          console.warn(`[push] ${event.product?.title}: no device accepted the alert yet, retrying`);
+          await this.store.update((current) => {
+            current.pendingEvents = current.pendingEvents.map((item) =>
+              item.id === event.id ? { ...item, attempts: (item.attempts ?? 0) + 1 } : item,
+            );
+            return current;
+          });
+          continue;
+        }
         console.log(
           `[push] ${event.product.title}: sent ${sent} matching notification(s) ` +
             `(expo=${expoResult.count}, web=${webResult.sent}, regs=${Object.keys(state.registrations).length})`,

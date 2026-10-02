@@ -86,14 +86,11 @@ export function PokemonCenterLiveScanner({
   region,
   onStatus,
   onProducts,
-  reportObservations,
 }: Props) {
   const onStatusRef = useRef(onStatus);
   const onProductsRef = useRef(onProducts);
-  const reportRef = useRef(reportObservations);
   onStatusRef.current = onStatus;
   onProductsRef.current = onProducts;
-  reportRef.current = reportObservations;
   const regionRef = useRef(region);
   regionRef.current = region;
   const regionId = region.id;
@@ -102,7 +99,6 @@ export function PokemonCenterLiveScanner({
     const region = regionRef.current;
     const onStatus = (status: Parameters<Props['onStatus']>[0]) => onStatusRef.current(status);
     const onProducts = (products: Product[]) => onProductsRef.current(products);
-    const reportObservations = (products: Product[]) => reportRef.current(products);
 
     if (!enabled) {
       onStatus({
@@ -161,10 +157,6 @@ export function PokemonCenterLiveScanner({
           }));
           await onProducts(withImages);
           if (!cancelled) applyReady(status, mapped.length);
-          const inStock = withImages.filter((product) => product.availability === 'in-stock');
-          if (inStock.length > 0) {
-            void reportObservations(inStock).catch(() => undefined);
-          }
         }
       } catch {
         if (cancelled) return;

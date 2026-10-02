@@ -293,18 +293,35 @@ const server = createServer(async (request, response) => {
   if (request.method === 'POST' && request.url === '/v1/registrations') {
     try {
       const registration = validateRegistration(JSON.parse(await readBody(request)));
+      const previous = store.getState().registrations?.[registration.installationId];
+      const wasDeliverable = Boolean(
+        previous?.enabled &&
+          previous?.alerts?.push !== false &&
+          (previous.webPushSubscription || previous.expoPushToken),
+      );
       await store.update((state) => {
-        const previous = state.registrations[registration.installationId];
+        const stored = state.registrations[registration.installationId];
         state.registrations[registration.installationId] = mergeRegistration(
-          previous,
+          stored,
           registration,
         );
         return state;
       });
-      const replayed = await engine.replayRecentDrops(registration.installationId).catch((error) => {
-        console.warn('[monitor] Replay failed:', error.message);
-        return 0;
-      });
+      const current = store.getState().registrations?.[registration.installationId];
+      const nowDeliverable = Boolean(
+        current?.enabled &&
+          current?.alerts?.push !== false &&
+          (current.webPushSubscription || current.expoPushToken),
+      );
+      // Opening the app re-registers. Only the first time a device becomes
+      // deliverable should catch up. After that, drops are pushed while it is closed.
+      const replayed =
+        nowDeliverable && !wasDeliverable
+          ? await engine.replayRecentDrops(registration.installationId).catch((error) => {
+              console.warn('[monitor] Replay failed:', error.message);
+              return 0;
+            })
+          : 0;
       sendJson(response, 200, { ok: true, monitoring: registration.enabled, replayed });
     } catch (error) {
       sendJson(response, 422, { ok: false, error: error.message });
