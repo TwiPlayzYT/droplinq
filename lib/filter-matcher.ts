@@ -46,6 +46,7 @@ export function signalsFromLegacyProduct(product: Product): ClassifiedProductSig
 
 function matchesReleaseType(product: ClassifiedProductSignals, filters: FilterPreferences) {
   if (!product.releaseType) return true;
+  if (product.releaseType === 'queue') return true;
   if (product.releaseType === 'new') return filters.includeNewReleases;
   if (product.releaseType === 'restock') return filters.includeRestocks;
   return filters.includePreorders;

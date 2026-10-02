@@ -182,6 +182,7 @@ export default function HomeScreen() {
   const { isDesktopWeb } = useWebLayout();
   const {
     hydrated,
+    liveProducts,
     liveStatus,
     monitoring,
     openProductBrowser,
@@ -197,6 +198,10 @@ export default function HomeScreen() {
   } = useDropDex();
   const [testPickerOpen, setTestPickerOpen] = useState(false);
   const regionConfig = getRegion(region);
+  const activeQueues = liveProducts
+    .filter((product) => product.releaseType === 'queue' || product.tags?.includes('queue'))
+    .filter((product) => product.availability !== 'sold-out')
+    .slice(0, 2);
   const handleOpenRecent = useCallback(
     (visit: RecentVisit) => openProductBrowser(visit.product),
     [openProductBrowser],
@@ -391,7 +396,7 @@ export default function HomeScreen() {
                 <Text style={styles.powerHint}>
                   {monitoring
                     ? webPushState === 'subscribed'
-                      ? 'Alerts are on. A new product notifies this device'
+                      ? 'Alerts are on. A queue pings first, then each product'
                       : webPushState === 'install-required'
                         ? 'Add DropLinq to your Home Screen, then allow notifications'
                         : webPushState === 'denied'
@@ -400,6 +405,19 @@ export default function HomeScreen() {
                     : 'Alerts are off'}
                 </Text>
               )}
+              {activeQueues.map((queue) => (
+                <Pressable
+                  key={queue.id}
+                  accessibilityRole="button"
+                  onPress={() => openProductBrowser(queue)}
+                  style={({ pressed }) => [styles.queueBanner, pressed && styles.subNavPressed]}>
+                  <Text style={styles.queueEyebrow}>QUEUE IS LIVE</Text>
+                  <Text style={styles.queueTitle}>{queue.title}</Text>
+                  <Text style={styles.queueBody}>
+                    Get in line. Product names arrive as their own alerts, even if DropLinq is closed.
+                  </Text>
+                </Pressable>
+              ))}
             </View>
 
             <View style={styles.sideCol}>
@@ -733,6 +751,33 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 4,
     textAlign: 'center',
+  },
+  queueBanner: {
+    backgroundColor: 'rgba(210, 13, 30, 0.16)',
+    borderColor: palette.red,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  queueEyebrow: {
+    color: palette.red,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+  queueTitle: {
+    color: palette.white,
+    fontSize: 18,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  queueBody: {
+    color: palette.whiteShadow,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 6,
   },
   sideCol: {
     flexBasis: '32%',

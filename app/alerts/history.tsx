@@ -25,7 +25,7 @@ export default function AlertHistoryScreen() {
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>No alerts yet</Text>
           <Text style={styles.emptyBody}>
-            When monitoring catches a matching product, it shows up here.
+            When a Pokémon Center queue opens, that ping arrives first. Each product name follows as its own alert, including while DropLinq is closed.
           </Text>
         </View>
       ) : (

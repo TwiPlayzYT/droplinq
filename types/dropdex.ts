@@ -1,6 +1,6 @@
 import type { FilterPreferences } from '@/types/filters';
 
-export type ReleaseType = 'new' | 'restock' | 'preorder';
+export type ReleaseType = 'new' | 'restock' | 'preorder' | 'queue';
 export type ProductFormat = 'etb' | 'booster-bundle' | 'booster-box' | 'upc';
 export type ProductAvailability = 'in-stock' | 'sold-out' | 'unknown';
 export type RegionId = 'us' | 'ca' | 'uk' | 'de' | 'au' | 'nz' | 'jp';

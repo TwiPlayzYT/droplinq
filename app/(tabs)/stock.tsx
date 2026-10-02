@@ -66,6 +66,9 @@ type StockProduct = Product & {
   lastCheckedAt?: string;
 };
 
+const isQueueNotice = (product: { releaseType?: string; tags?: string[] }) =>
+  product.releaseType === 'queue' || Boolean(product.tags?.includes('queue'));
+
 /** One product from every category first, then the rest. All TCG otherwise looks like only ETBs. */
 function spreadCatalogByCategory(products: StockProduct[]): StockProduct[] {
   const buckets = new Map<string, StockProduct[]>();
@@ -506,7 +509,7 @@ export default function StockScreen() {
   const coverageProducts = useMemo(
     () =>
       (liveProducts as StockProduct[])
-        .filter((product) => matchesCatalogCoverage(product, filters))
+        .filter((product) => matchesCatalogCoverage(product, filters) && !isQueueNotice(product))
         .sort((a, b) => {
           const dateCmp = (b.releaseDate ?? '').localeCompare(a.releaseDate ?? '');
           if (dateCmp) return dateCmp;
@@ -516,8 +519,20 @@ export default function StockScreen() {
   );
 
   const liveNow = useMemo(
-    () => matchingProducts.filter((product) => product.availability === 'in-stock'),
+    () =>
+      matchingProducts.filter(
+        (product) => product.availability === 'in-stock' && !isQueueNotice(product),
+      ),
     [matchingProducts],
+  );
+
+  const activeQueues = useMemo(
+    () =>
+      (liveProducts as StockProduct[])
+        .filter((product) => isQueueNotice(product) && product.availability !== 'sold-out')
+        .sort((a, b) => (b.detectedAt ?? '').localeCompare(a.detectedAt ?? ''))
+        .slice(0, 2),
+    [liveProducts],
   );
 
   const activity = useMemo(() => {
@@ -620,7 +635,7 @@ export default function StockScreen() {
     } else if (viewFilter === 'preorder') {
       list = list.filter((product) => product.releaseType === 'preorder');
     }
-    return list;
+    return list.filter((product) => !isQueueNotice(product));
   }, [coverageProducts, filters, liveProducts, query, viewFilter]);
 
   const watchedCountLabel = customEmpty
@@ -784,6 +799,20 @@ export default function StockScreen() {
           </View>
         </Reanimated.View>
       )}
+
+      {activeQueues.map((queue) => (
+        <Pressable
+          key={queue.id}
+          accessibilityRole="button"
+          onPress={() => openProductBrowser(queue)}
+          style={({ pressed }) => [styles.queueBanner, pressed && styles.pressed]}>
+          <Text style={styles.queueEyebrow}>QUEUE IS LIVE</Text>
+          <Text style={styles.queueTitle}>{queue.title}</Text>
+          <Text style={styles.queueBody}>
+            Get in line on Pokémon Center. Each product name arrives as its own alert.
+          </Text>
+        </Pressable>
+      ))}
 
       <CollapsibleSection
         count={liveNow.length}
@@ -1220,6 +1249,33 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1,
+  },
+  queueBanner: {
+    backgroundColor: palette.card,
+    borderColor: palette.red,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  queueEyebrow: {
+    color: palette.red,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+  queueTitle: {
+    color: palette.cardInk,
+    fontSize: 18,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  queueBody: {
+    color: palette.cardMuted,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 6,
   },
   statusPill: {
     alignItems: 'center',

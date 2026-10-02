@@ -4,6 +4,12 @@ export function alertCopy(product) {
     ? product.title.trim()
     : 'Pokémon Center product';
 
+  if (product?.releaseType === 'queue') {
+    return {
+      title: name,
+      body: 'Get in line on Pokémon Center. Product names follow.',
+    };
+  }
   if (product?.releaseType === 'restock') {
     return { title: name, body: 'Back in stock on Pokémon Center' };
   }

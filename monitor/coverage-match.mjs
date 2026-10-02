@@ -51,6 +51,7 @@ export function normalizeCoverageFilters(input) {
 
 export function productMatchesCoverage(product, filters) {
   if (!filters) return false;
+  if (product.releaseType === 'queue') return true;
   if (product.releaseType === 'new' && !filters.includeNewReleases) return false;
   if (product.releaseType === 'restock' && !filters.includeRestocks) return false;
   if (product.releaseType === 'preorder' && !filters.includePreorders) return false;

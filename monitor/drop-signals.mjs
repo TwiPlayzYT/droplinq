@@ -69,6 +69,53 @@ const sealedFormat = (title) => {
   return undefined;
 };
 
+const isQueueHeading = (heading) => /queue/i.test(heading) && /\b(live|up|open|opened|start)/i.test(heading);
+
+const dropSlug = (value) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80) || 'pokemon-center';
+
+/** Set name pulled out of a headline, such as "Delta Reign" from a queue title. */
+export function dropNameFromHeading(heading) {
+  const cleaned = decodeText(String(heading ?? ''))
+    .replace(/pok[eé]mon\s+center/gi, ' ')
+    .replace(
+      /\b(queue|pre-?orders?|now|goes|going|is|are|live|up|open|opens|opened|start|restock|stock|available|listing|listings|the|and|for|from|this|week|next|big|tcg|set|select|products|product|expected|virtual)\b/gi,
+      ' ',
+    )
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleaned.length >= 3 ? cleaned : '';
+}
+
+export function queueProduct(title, { detectedAt, assumeStore = false } = {}) {
+  const heading = decodeText(String(title ?? ''));
+  if (!heading || !isQueueHeading(heading)) return null;
+  const namesStore = DROP_HEADLINE.test(heading);
+  if (!namesStore && !assumeStore) return null;
+
+  const name = dropNameFromHeading(heading);
+  const detected = detectedAt ?? new Date().toISOString();
+  return {
+    id: `queue-${dropSlug(name || 'pokemon-center')}`,
+    title: name ? `${name} queue is live` : 'Pokémon Center queue is live',
+    category: 'Trading Card Game',
+    format: 'other',
+    region: 'us',
+    releaseType: 'queue',
+    url: 'https://www.pokemoncenter.com',
+    detectedAt: detected,
+    tags: ['tcg', 'queue'],
+    inStock: true,
+    availability: 'in-stock',
+    releaseDate: detected,
+  };
+}
+
 const headlineId = (title) =>
   `headline-${title
     .toLowerCase()
@@ -78,6 +125,9 @@ const headlineId = (title) =>
     .slice(0, 80)}`;
 
 export function headlineProduct(title, { detectedAt, url, assumeStore = false } = {}) {
+  const queued = queueProduct(title, { detectedAt, assumeStore });
+  if (queued) return queued;
+
   const heading = decodeText(String(title ?? ''));
   if (!heading || !DROP_ACTION.test(heading)) return null;
   const namesStore = DROP_HEADLINE.test(heading);
@@ -109,9 +159,9 @@ export function headlineProduct(title, { detectedAt, url, assumeStore = false } 
   };
 }
 
-/** Product-page links name the SKU. A headline is only the backup when no link was found. */
+/** SKUs win over a queue or headline in the same check, so the alert names the product. */
 export function preferLinkedProducts(products) {
-  const linked = products.filter((product) => !String(product?.id ?? '').startsWith('headline-'));
+  const linked = products.filter((product) => !/^(headline|queue)-/.test(String(product?.id ?? '')));
   return linked.length > 0 ? linked : products;
 }
 

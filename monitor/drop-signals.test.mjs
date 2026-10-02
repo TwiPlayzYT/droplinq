@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  dropNameFromHeading,
   headlineProduct,
   preferLinkedProducts,
   productsFromBlogCollection,
   productsFromFeedXml,
   productsFromPostHtml,
+  queueProduct,
 } from './drop-signals.mjs';
 
 const html = `
@@ -126,6 +128,46 @@ test('product links win over a headline so the alert names the product', () => {
     detectedAt: '2026-09-30T16:00:00.000Z',
   });
   const chosen = preferLinkedProducts([...linked, headline]);
+  assert.deepEqual(
+    chosen.map((product) => product.id),
+    ['10-10438-111'],
+  );
+});
+
+test('a queue with no product names alerts with the drop name', () => {
+  const now = Date.parse('2026-09-30T18:00:00.000Z');
+  const xml = `
+    <item>
+      <title>Delta Reign Pokémon Center queue is live</title>
+      <link>https://www.pokemoncenter.com</link>
+      <pubDate>Wed, 30 Sep 2026 16:00:00 GMT</pubDate>
+    </item>
+  `;
+  const products = productsFromFeedXml(xml, now);
+  assert.equal(products.length, 1);
+  assert.equal(products[0].releaseType, 'queue');
+  assert.equal(products[0].title, 'Delta Reign queue is live');
+  assert.equal(products[0].url, 'https://www.pokemoncenter.com');
+  assert.equal(dropNameFromHeading(products[0].title), 'Delta Reign');
+  assert.equal(queueProduct('Tips on the queue for checkout'), null);
+});
+
+test('product links in the same check skip the queue alert', () => {
+  const now = Date.parse('2026-09-30T18:00:00.000Z');
+  const linked = productsFromFeedXml(
+    `
+    <item>
+      <title>Delta Reign Pokémon Center queue is live</title>
+      <pubDate>Wed, 30 Sep 2026 16:00:00 GMT</pubDate>
+      <description>&lt;a href="https://www.pokemoncenter.com/product/10-10438-111"&gt;Delta Reign Elite Trainer Box&lt;/a&gt;</description>
+    </item>
+  `,
+    now,
+  );
+  const queued = queueProduct('Delta Reign Pokémon Center queue is live', {
+    detectedAt: '2026-09-30T16:00:00.000Z',
+  });
+  const chosen = preferLinkedProducts([...linked, queued]);
   assert.deepEqual(
     chosen.map((product) => product.id),
     ['10-10438-111'],
