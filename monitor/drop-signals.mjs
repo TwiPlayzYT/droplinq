@@ -53,7 +53,21 @@ const decodeText = (value) =>
     .replace(/\s+/g, ' ')
     .trim();
 
+const MERCHANDISE =
+  /\b(game ?boys?|jukebox|plush(?:es)?|squishmallows?|funko|amiibo|hoodies?|t-?shirts?|keychains?|sneakers?|socks?|hats?|backpacks?|mugs?)\b/i;
+
+/** Sealed Pokémon TCG. A headline that only says Pokémon Center is not enough. */
+const TCG_SIGNAL =
+  /\b(elite trainers?|etbs?|boosters?|ultra[- ]?premium|\bupc\b|tins?|blisters?|build & battle|build and battle|decks?|collections?|pre-?orders?|trading cards?|\btcg\b)\b/i;
+
+export function isMerchandiseTitle(title) {
+  return MERCHANDISE.test(decodeText(String(title ?? '')));
+}
+
+const isTcgSignal = (title) => TCG_SIGNAL.test(decodeText(String(title ?? '')));
+
 const skipTitle = (title) =>
+  isMerchandiseTitle(title) ||
   /\b(case|code card|booster pack|sleeved booster|half booster|plush|squishmallow)\b/i.test(title);
 
 /** ETB / box / bundle / UPC, plus the other sealed products the catalog alerts on. */
@@ -94,7 +108,7 @@ export function dropNameFromHeading(heading) {
 
 export function queueProduct(title, { detectedAt, assumeStore = false } = {}) {
   const heading = decodeText(String(title ?? ''));
-  if (!heading || !isQueueHeading(heading)) return null;
+  if (!heading || isMerchandiseTitle(heading) || !isQueueHeading(heading)) return null;
   const namesStore = DROP_HEADLINE.test(heading);
   if (!namesStore && !assumeStore) return null;
 
@@ -131,19 +145,16 @@ const headlineId = (title) =>
     .slice(0, 80)}`;
 
 export function headlineProduct(title, { detectedAt, url, assumeStore = false } = {}) {
-  const queued = queueProduct(title, { detectedAt, assumeStore });
+  const heading = decodeText(String(title ?? ''));
+  if (!heading || isMerchandiseTitle(heading)) return null;
+
+  const queued = queueProduct(heading, { detectedAt, assumeStore });
   if (queued) return queued;
 
-  const heading = decodeText(String(title ?? ''));
-  if (!heading || !DROP_ACTION.test(heading)) return null;
+  if (!DROP_ACTION.test(heading)) return null;
   const namesStore = DROP_HEADLINE.test(heading);
   if (!namesStore && !assumeStore) return null;
-  if (
-    !namesStore &&
-    !/\b(etb|booster|bundle|tin|upc|collection|pre-?order|queue|listing)\b/i.test(heading)
-  ) {
-    return null;
-  }
+  if (!isTcgSignal(heading)) return null;
 
   return {
     id: headlineId(heading),

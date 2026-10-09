@@ -1,4 +1,4 @@
-import { fetchRecentDropProducts } from './drop-signals.mjs';
+import { fetchRecentDropProducts, isMerchandiseTitle } from './drop-signals.mjs';
 import { sendMatchingPushes } from './expo-push.mjs';
 import { fetchPokemonCenterProducts } from './pokemon-center-source.mjs';
 import { attachPackshots } from './product-photo-lookup.mjs';
@@ -14,6 +14,8 @@ const snapshotEntryKey = (state, product) => {
   return existing ?? direct;
 };
 const REMEMBER_LIMIT = 80;
+/** A post older than this on first sight is recorded and not pushed. Stops a deploy from replaying hours-old headlines. */
+const STALE_SIGNAL_MS = 45 * 60 * 1000;
 /** How long a missed push is retried. An alerts-on device is notified when the drop is detected. */
 const RETRY_MS = 14 * 24 * 60 * 60 * 1000;
 
@@ -194,6 +196,12 @@ export class MonitorEngine {
         console.warn('[monitor] Drop signal failed:', signalError);
       }
       try {
+        await this.#dropMerchandise();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn('[monitor] Could not drop merchandise:', message);
+      }
+      try {
         await this.store.update((state) => {
           state.lastDropSignalAt = new Date().toISOString();
           state.lastDropSignalCount = signalCount;
@@ -212,6 +220,36 @@ export class MonitorEngine {
       }
       this.#running = false;
     }
+  }
+
+  /** Remove non-TCG merchandise already stored. Does not create or send an alert. */
+  async #dropMerchandise() {
+    let removed = false;
+    await this.store.update((state) => {
+      for (const [key, product] of Object.entries(state.snapshot ?? {})) {
+        if (isMerchandiseTitle(product?.title)) {
+          delete state.snapshot[key];
+          removed = true;
+        }
+      }
+      const drops = state.recentDrops ?? [];
+      const kept = drops.filter((drop) => !isMerchandiseTitle(drop?.product?.title));
+      if (kept.length !== drops.length) {
+        state.recentDrops = kept;
+        removed = true;
+      }
+      const pending = state.pendingEvents ?? [];
+      const keptPending = pending.filter((event) => !isMerchandiseTitle(event?.product?.title));
+      if (keptPending.length !== pending.length) {
+        state.pendingEvents = keptPending;
+        removed = true;
+      }
+      return state;
+    });
+    if (!removed) return;
+    const serialized = JSON.stringify(this.store.getState().recentDrops ?? []);
+    this.#recentDropsJson = serialized;
+    await saveRecentDrops(this.store.getState().recentDrops ?? []);
   }
 
   /** Push products the storefront scrape has never seen. Each id alerts once. */
@@ -245,7 +283,10 @@ export class MonitorEngine {
               : {}),
           };
         }
-        if (notified.has(product.id) || alreadyListed) {
+        const publishedAt = Date.parse(product.detectedAt ?? '');
+        const stale =
+          Number.isFinite(publishedAt) && Date.parse(now) - publishedAt > STALE_SIGNAL_MS;
+        if (notified.has(product.id) || alreadyListed || stale) {
           notified.add(product.id);
           continue;
         }

@@ -114,6 +114,56 @@ test('a drop headline still alerts when the post has no product link', () => {
   assert.equal(headlineProduct('Tips on how to not get banned'), null);
 });
 
+test('a Game Boy restock is not a TCG alert', () => {
+  const now = Date.parse('2026-10-09T22:10:00.000Z');
+  const fromBlog = productsFromFeedXml(
+    `
+    <item>
+      <title>Pokémon Red and Blue Game Boy Jukebox restocked at Pokémon Center</title>
+      <link>https://pokemonblog.com/2026/10/09/pokemon-red-and-blue-game-boy-jukebox-restocked-at-pokemon-center/</link>
+      <pubDate>Fri, 09 Oct 2026 22:02:46 GMT</pubDate>
+    </item>
+  `,
+    now,
+  );
+  const fromReddit = productsFromFeedXml(
+    `
+    <item>
+      <title>Gameboy Jukebox back in stock</title>
+      <link>https://www.reddit.com/r/pokemoncenter/comments/example</link>
+      <pubDate>Fri, 09 Oct 2026 17:28:57 GMT</pubDate>
+    </item>
+  `,
+    now,
+    { assumeStore: true },
+  );
+  assert.equal(fromBlog.length, 0);
+  assert.equal(fromReddit.length, 0);
+  assert.equal(
+    headlineProduct('Pokémon Red and Blue Game Boy Jukebox restocked at Pokémon Center'),
+    null,
+  );
+  assert.equal(queueProduct('Game Boy queue is live'), null);
+});
+
+test('a subreddit TCG restock alerts without waiting for a later blog', () => {
+  const now = Date.parse('2026-10-09T14:31:00.000Z');
+  const products = productsFromFeedXml(
+    `
+    <item>
+      <title>Delta Reign Elite Trainer Box back in stock</title>
+      <link>https://www.reddit.com/r/pokemoncenter/comments/example</link>
+      <pubDate>Fri, 09 Oct 2026 14:30:30 GMT</pubDate>
+    </item>
+  `,
+    now,
+    { assumeStore: true },
+  );
+  assert.equal(products.length, 1);
+  assert.equal(products[0].title, 'Delta Reign Elite Trainer Box back in stock');
+  assert.equal(products[0].releaseType, 'restock');
+});
+
 test('product links win over a headline so the alert names the product', () => {
   const now = Date.parse('2026-09-30T18:00:00.000Z');
   const linked = productsFromFeedXml(
