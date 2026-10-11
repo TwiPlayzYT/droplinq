@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
@@ -12,7 +11,6 @@ import { useAuth } from '@/store/auth-context';
 
 export default function SignInScreen() {
   const { signIn, signInWithProvider, requestPasswordReset } = useAuth();
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -43,7 +41,7 @@ export default function SignInScreen() {
   const locked = busy || !!oauthBusy;
 
   return (
-    <AuthShell tagline="Monitor · Alert · Check">
+    <AuthShell mode="login" tagline="Monitor · Alert · Check">
       <Text style={authStyles.sectionLabel}>Recommended</Text>
 
       {!emailMode ? (
@@ -104,7 +102,7 @@ export default function SignInScreen() {
           />
           {message ? <Text style={authStyles.error}>{message}</Text> : null}
           <Pressable
-            accessibilityLabel="Sign in"
+            accessibilityLabel="Log in"
             accessibilityRole="button"
             unstable_pressDelay={0}
             disabled={locked}
@@ -115,7 +113,7 @@ export default function SignInScreen() {
               locked && authStyles.disabled,
             ]}>
             <Ionicons color={palette.controlInk} name="log-in" size={18} />
-            <Text style={authStyles.submitText}>{busy ? 'Signing in…' : 'Sign in'}</Text>
+            <Text style={authStyles.submitText}>{busy ? 'Logging in…' : 'Log in'}</Text>
           </Pressable>
           <Pressable
             accessibilityLabel="Send password reset email"
@@ -164,21 +162,6 @@ export default function SignInScreen() {
       </Pressable>
 
       {!emailMode && message ? <Text style={authStyles.error}>{message}</Text> : null}
-
-      <Pressable
-        accessibilityLabel="Go to create account"
-        accessibilityRole="button"
-        unstable_pressDelay={0}
-        onPress={() => router.replace('/start' as never)}
-        style={({ pressed }) => [authStyles.footerBox, pressed && authStyles.pressed]}>
-        <Ionicons color={palette.whiteDim} name="information-circle-outline" size={20} />
-        <View style={authStyles.footerCopy}>
-          <Text style={authStyles.footerTitle}>
-            Need an account? <Text style={authStyles.footerLink}>Sign up</Text>
-          </Text>
-          <Text style={authStyles.footerSecondary}>Create your DropLinq monitoring account.</Text>
-        </View>
-      </Pressable>
     </AuthShell>
   );
 }

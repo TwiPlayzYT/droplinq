@@ -1,8 +1,10 @@
 import { Image } from 'expo-image';
-import { PropsWithChildren } from 'react';
+import { useRouter } from 'expo-router';
+import { PropsWithChildren, useEffect } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,23 +19,104 @@ import { useWebLayout } from '@/hooks/use-web-layout';
 
 const brandIcon = require('../assets/images/icon.png');
 
-/** Collectr-style teal for the recommended email CTA */
-export const authAccent = '#3ECFBE';
+/** DropLinq red. Light text sits on it. */
+export const authAccent = '#D20D1E';
+
+export type AuthMode = 'login' | 'signup';
 
 type AuthShellProps = PropsWithChildren<{
+  mode?: AuthMode;
   tagline: string;
 }>;
+
+const MODE_COPY: Record<AuthMode, { title: string; line: string }> = {
+  login: { title: 'Log in', line: 'Open your command center.' },
+  signup: { title: 'Sign up', line: 'Create your DropLinq account.' },
+};
+
+function installOrbMotion() {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+  if (document.getElementById('dl-auth-motion')) return;
+  const style = document.createElement('style');
+  style.id = 'dl-auth-motion';
+  style.textContent = `
+    @keyframes dl-auth-drift {
+      0%, 100% { transform: translate3d(0, 0, 0); }
+      50% { transform: translate3d(22px, -28px, 0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      [data-dl-orb] { animation: none !important; }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 /**
  * Centered auth card on black — constrained width on web so the form
  * doesn't stretch edge-to-edge like a full app page.
  */
-export function AuthShell({ tagline, children }: AuthShellProps) {
-  const { isWeb } = useWebLayout();
+function Atmosphere({ wide }: { wide: boolean }) {
+  useEffect(() => {
+    installOrbMotion();
+  }, []);
+
+  const drift =
+    Platform.OS === 'web'
+      ? ({ animation: 'dl-auth-drift 18s ease-in-out infinite' } as object)
+      : null;
+
+  return (
+    <View pointerEvents="none" style={styles.atmosphere}>
+      <View
+        dataSet={{ dlOrb: '1' }}
+        style={[styles.orb, styles.orbRed, wide && styles.orbRedWide, drift]}
+      />
+      <View style={[styles.orb, styles.orbDim, wide && styles.orbDimWide]} />
+    </View>
+  );
+}
+
+function ModeSwitch({ mode }: { mode: AuthMode }) {
+  const router = useRouter();
+  const copy = MODE_COPY[mode];
+
+  return (
+    <View style={styles.modeBlock}>
+      <View accessibilityRole="tablist" style={styles.switchTrack}>
+        <Pressable
+          accessibilityLabel="Log in"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: mode === 'login' }}
+          onPress={() => {
+            if (mode !== 'login') router.replace('/sign-in' as never);
+          }}
+          style={[styles.switchBubble, mode === 'login' && styles.switchBubbleOn]}>
+          <Text style={[styles.switchLabel, mode === 'login' && styles.switchLabelOn]}>Log in</Text>
+        </Pressable>
+        <Pressable
+          accessibilityLabel="Sign up"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: mode === 'signup' }}
+          onPress={() => {
+            if (mode !== 'signup') router.replace('/start' as never);
+          }}
+          style={[styles.switchBubble, mode === 'signup' && styles.switchBubbleOn]}>
+          <Text style={[styles.switchLabel, mode === 'signup' && styles.switchLabelOn]}>Sign up</Text>
+        </Pressable>
+      </View>
+      <Text style={styles.modeTitle}>{copy.title}</Text>
+      <Text style={styles.modeLine}>{copy.line}</Text>
+    </View>
+  );
+}
+
+export function AuthShell({ mode, tagline, children }: AuthShellProps) {
+  const { isWeb, isDesktopWeb } = useWebLayout();
   const { needsBanner } = useCookieConsent();
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safe}>
+      <Atmosphere wide={isDesktopWeb} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.fill}>
@@ -45,12 +128,13 @@ export function AuthShell({ tagline, children }: AuthShellProps) {
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          <View style={[styles.card, isWeb && styles.cardWeb]}>
+          <View style={[styles.card, isWeb && styles.cardWeb, isDesktopWeb && styles.cardDesktop]}>
             <View style={styles.brandBlock}>
               <Image accessibilityIgnoresInvertColors contentFit="cover" source={brandIcon} style={styles.brandIcon} />
               <Text style={styles.brand}>DROPLINQ</Text>
               <Text style={styles.tagline}>{tagline}</Text>
             </View>
+            {mode ? <ModeSwitch mode={mode} /> : null}
             {children}
             <AuthLegalLinks />
           </View>
@@ -78,7 +162,7 @@ export const authStyles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   emailCtaText: {
-    color: '#0A0A0A',
+    color: '#F7F5F2',
     fontSize: 15,
     fontWeight: '800',
   },
@@ -153,7 +237,7 @@ export const authStyles = StyleSheet.create({
     minHeight: 48,
   },
   submitText: {
-    color: '#0A0A0A',
+    color: '#F7F5F2',
     fontSize: 15,
     fontWeight: '800',
   },
@@ -210,8 +294,79 @@ export const authStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  safe: { backgroundColor: '#000000', flex: 1 },
+  safe: { backgroundColor: '#070707', flex: 1, overflow: 'hidden' },
+  atmosphere: { ...StyleSheet.absoluteFillObject },
+  orb: {
+    borderRadius: 999,
+    position: 'absolute',
+  },
+  orbRed: {
+    backgroundColor: 'rgba(210, 13, 30, 0.42)',
+    height: 280,
+    left: -80,
+    top: -40,
+    width: 280,
+  },
+  orbRedWide: {
+    height: 420,
+    left: -60,
+    top: -80,
+    width: 420,
+  },
+  orbDim: {
+    backgroundColor: 'rgba(210, 13, 30, 0.22)',
+    bottom: -90,
+    height: 320,
+    right: -110,
+    width: 320,
+  },
+  orbDimWide: {
+    height: 460,
+    right: -40,
+    width: 460,
+  },
   fill: { flex: 1 },
+  modeBlock: {
+    marginBottom: 22,
+  },
+  switchTrack: {
+    backgroundColor: '#0C0C0C',
+    borderColor: '#3A3A3A',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    padding: 4,
+  },
+  switchBubble: {
+    alignItems: 'center',
+    borderRadius: 999,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  switchBubbleOn: {
+    backgroundColor: authAccent,
+  },
+  switchLabel: {
+    color: '#A9A6A2',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  switchLabelOn: {
+    color: '#F7F5F2',
+  },
+  modeTitle: {
+    color: '#F7F5F2',
+    fontSize: 28,
+    fontWeight: '900',
+    marginTop: 18,
+  },
+  modeLine: {
+    color: '#C2BEB8',
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 4,
+  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',

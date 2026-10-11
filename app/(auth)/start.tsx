@@ -54,7 +54,7 @@ export default function SignUpScreen() {
     }
     if (result.pendingEmailConfirm) {
       setBusy(false);
-      setMessage('Check your email to confirm this account, then sign in. Your profile will be waiting.');
+      setMessage('Check your email to confirm this account, then log in. Your profile will be waiting.');
       return;
     }
     await finishStartAuth();
@@ -100,7 +100,7 @@ export default function SignUpScreen() {
   const locked = busy || !!oauthBusy || guestBusy;
 
   return (
-    <AuthShell tagline="Monitor · Alert · Check">
+    <AuthShell mode="signup" tagline="Monitor · Alert · Check">
       <Pressable
         accessibilityLabel="Back to DropLinq marketing site"
         onPress={() => router.push('/' as never)}
@@ -235,23 +235,6 @@ export default function SignUpScreen() {
       </ConsentCheckbox>
 
       {!emailMode && message ? <Text style={authStyles.error}>{message}</Text> : null}
-
-      <Pressable
-        accessibilityLabel="Go to sign in"
-        accessibilityRole="button"
-        unstable_pressDelay={0}
-        onPress={() => router.push('/sign-in' as never)}
-        style={({ pressed }) => [authStyles.footerBox, pressed && authStyles.pressed]}>
-        <Ionicons color={palette.whiteDim} name="information-circle-outline" size={20} />
-        <View style={authStyles.footerCopy}>
-          <Text style={authStyles.footerTitle}>
-            Have an account? <Text style={authStyles.footerLink}>Sign in</Text>
-          </Text>
-          <Text style={authStyles.footerSecondary}>
-            Use email or Google to open your command center.
-          </Text>
-        </View>
-      </Pressable>
     </AuthShell>
   );
 }
