@@ -18,7 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SiteFooter } from '@/components/site-footer';
-import { pressGhost } from '@/components/button-press';
+import { pressGhost, pressTab } from '@/components/button-press';
 import { palette } from '@/constants/dropdex';
 import { useMobileWebChrome } from '@/hooks/use-mobile-web-chrome';
 import { useWebLayout } from '@/hooks/use-web-layout';
@@ -267,10 +267,12 @@ export function ChoiceChip({
     <InstantPressable
       accessibilityRole="checkbox"
       accessibilityState={{ checked: selected }}
+      dataSet={pressTab(selected)}
       onPress={onPress}
       style={[styles.choiceChip, selected && styles.choiceChipSelected]}>
       <View style={[styles.choiceLamp, selected && styles.choiceLampSelected]} />
       <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>{label}</Text>
+      {Platform.OS !== 'web' && selected ? <View pointerEvents="none" style={styles.choiceBar} /> : null}
     </InstantPressable>
   );
 }
@@ -498,6 +500,16 @@ const styles = StyleSheet.create({
     gap: 7,
     paddingHorizontal: 11,
     paddingVertical: 9,
+    position: 'relative',
+  },
+  choiceBar: {
+    backgroundColor: palette.red,
+    borderRadius: 1,
+    bottom: 3,
+    height: 2,
+    left: 12,
+    position: 'absolute',
+    right: 12,
   },
   choiceChipSelected: { backgroundColor: palette.control, borderColor: palette.red, borderWidth: 2 },
   choiceLamp: { backgroundColor: palette.cardMuted, borderRadius: 4, height: 8, width: 8 },

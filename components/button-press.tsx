@@ -5,6 +5,11 @@ import { Platform } from 'react-native';
 export const pressSolid = { dlPress: 'solid' } as const;
 export const pressGhost = { dlPress: 'ghost' } as const;
 
+/** Subtab: a soft fill on hover, and a red line that grows when it is on. */
+export function pressTab(on: boolean) {
+  return { dlPress: 'tab' as const, dlOn: on ? '1' : '0' };
+}
+
 const CSS = `
 [data-dl-press="solid"],
 [data-dl-press="ghost"] {
@@ -38,13 +43,46 @@ const CSS = `
 [data-dl-press="ghost"]:active {
   transform: scale(0.96);
 }
+[data-dl-press="tab"] {
+  position: relative;
+  transition: background-color 0.45s cubic-bezier(0.4, 0, 0.2, 1), transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+[data-dl-press="tab"]:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+[data-dl-press="tab"]::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 1px;
+  background: #D20D1E;
+  transform: scaleX(0);
+  transform-origin: left center;
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
+}
+[data-dl-press="tab"]:hover::after,
+[data-dl-press="tab"][data-dl-on="1"]::after {
+  transform: scaleX(1);
+  opacity: 1;
+}
+[data-dl-press="tab"]:active {
+  transform: scale(0.96);
+}
 @media (prefers-reduced-motion: reduce) {
   [data-dl-press="solid"],
   [data-dl-press="ghost"],
-  [data-dl-press="solid"]::after {
+  [data-dl-press="tab"],
+  [data-dl-press="solid"]::after,
+  [data-dl-press="tab"]::after {
     transition: none !important;
   }
   [data-dl-press="solid"]::after { display: none; }
+  [data-dl-press="tab"]:not([data-dl-on="1"])::after { display: none; }
 }
 `;
 
