@@ -1,4 +1,4 @@
-const CACHE_NAME = 'droplinq-shell-v33';
+const CACHE_NAME = 'droplinq-shell-v34';
 const PUSH_CONTEXT_CACHE = 'droplinq-push-context-v1';
 const PUSH_CONTEXT_URL = '/__droplinq/push-context';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/droplinq-icon.png'];
