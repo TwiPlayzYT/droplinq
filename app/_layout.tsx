@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
 import { ButtonPressStyles } from '@/components/button-press';
+import { LaunchSplash } from '@/components/launch-splash';
 import { CookieConsentBanner } from '@/components/cookie-consent-banner';
 import { DevicePromptModal } from '@/components/device-prompt-modal';
 import { DropAlertModal } from '@/components/drop-alert-modal';
@@ -228,6 +229,7 @@ export default function RootLayout() {
               <WebAppShell>
                 <AppExperience />
               </WebAppShell>
+              <LaunchSplash />
             </DropDexProvider>
           </AuthProvider>
         </AppearanceProvider>
