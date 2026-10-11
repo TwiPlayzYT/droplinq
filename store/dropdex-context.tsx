@@ -27,7 +27,7 @@ import {
   isTutorialSessionActive,
 } from '@/services/tour-session';
 import { useAuth } from '@/store/auth-context';
-import { applyQuietHoursDelivery, isProductMuted } from '@/lib/alert-quiet';
+import { isMerchandiseTitle } from '@/lib/merchandise';
 import { PokemonCenterLiveScanner } from '@/components/pokemon-center-live-scanner';
 import { seededEtbs } from '@/data/historical-etbs';
 import {
@@ -686,7 +686,9 @@ export function DropDexProvider({ children }: PropsWithChildren) {
         });
       });
 
-      const products = [...byId.values()].map((product) => ({
+      const products = [...byId.values()]
+        .filter((product) => !isMerchandiseTitle(product.title))
+        .map((product) => ({
         ...product,
         imageUrl: sanitizeProductImageUrl(product.imageUrl),
       }));
@@ -802,7 +804,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
 
       if (!changed) return;
 
-      const next = [...byId.values()];
+      const next = [...byId.values()].filter((product) => !isMerchandiseTitle(product.title));
       liveProductsRef.current = next;
       setLiveProducts(next);
       await detectLiveChanges(products);
@@ -875,7 +877,9 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       });
 
       return (() => {
-        const next = [...byId.values()].map((product) => ({
+        const next = [...byId.values()]
+          .filter((product) => !isMerchandiseTitle(product.title))
+          .map((product) => ({
           ...product,
           imageUrl: sanitizeProductImageUrl(product.imageUrl),
         }));
@@ -884,7 +888,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
             const prior = previous.find((item) => item.id === product.id);
             return prior && prior.imageUrl !== product.imageUrl;
           });
-          if (!needsScrub) return previous;
+          if (!needsScrub) return previous.filter((product) => !isMerchandiseTitle(product.title));
         }
         return next;
       })();

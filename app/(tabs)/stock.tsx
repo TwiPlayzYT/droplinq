@@ -66,14 +66,19 @@ type StockProduct = Product & {
   lastCheckedAt?: string;
 };
 
+import { isMerchandiseTitle } from '@/lib/merchandise';
+
 const isQueueNotice = (product: { releaseType?: string; tags?: string[] }) =>
   product.releaseType === 'queue' || Boolean(product.tags?.includes('queue'));
 
 const isPreorderListing = (product: { releaseType?: string }) => product.releaseType === 'preorder';
 
 /** In stock means the product page was seen as buyable. A preorder listing is not that. */
-const isConfirmedInStock = (product: { availability?: string; releaseType?: string; tags?: string[] }) =>
-  product.availability === 'in-stock' && !isPreorderListing(product) && !isQueueNotice(product);
+const isConfirmedInStock = (product: { availability?: string; releaseType?: string; tags?: string[]; title?: string }) =>
+  product.availability === 'in-stock' &&
+  !isPreorderListing(product) &&
+  !isQueueNotice(product) &&
+  !isMerchandiseTitle(product.title);
 
 /** One product from every category first, then the rest. All TCG otherwise looks like only ETBs. */
 function spreadCatalogByCategory(products: StockProduct[]): StockProduct[] {
@@ -530,7 +535,12 @@ export default function StockScreen() {
   const coverageProducts = useMemo(
     () =>
       (liveProducts as StockProduct[])
-        .filter((product) => matchesCatalogCoverage(product, filters) && !isQueueNotice(product))
+        .filter(
+          (product) =>
+            matchesCatalogCoverage(product, filters) &&
+            !isQueueNotice(product) &&
+            !isMerchandiseTitle(product.title),
+        )
         .sort((a, b) => {
           const dateCmp = (b.releaseDate ?? '').localeCompare(a.releaseDate ?? '');
           if (dateCmp) return dateCmp;
@@ -560,6 +570,7 @@ export default function StockScreen() {
     const coverageById = new Map(coverageProducts.map((product) => [product.id, product]));
 
     const fromBackend = stockEvents
+      .filter((event) => !isMerchandiseTitle(event.productName))
       .filter((event) => eventAllowed(event.kind, filters))
       .filter((event) => {
         if (coverageById.has(event.productId)) return true;
@@ -660,7 +671,7 @@ export default function StockScreen() {
     } else if (viewFilter === 'preorder') {
       list = list.filter((product) => product.releaseType === 'preorder');
     }
-    return list.filter((product) => !isQueueNotice(product));
+    return list.filter((product) => !isQueueNotice(product) && !isMerchandiseTitle(product.title));
   }, [coverageProducts, filters, liveProducts, query, viewFilter]);
 
   const watchedCountLabel = customEmpty
