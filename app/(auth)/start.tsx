@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { AuthShell, authStyles } from '@/components/auth-shell';
+import { pressGhost, pressSolid } from '@/components/button-press';
 import { ConsentCheckbox } from '@/components/consent-checkbox';
 import { palette } from '@/constants/dropdex';
 import { authAdapter } from '@/services/auth';
@@ -122,6 +123,7 @@ export default function SignUpScreen() {
               setMessage(null);
               setEmailMode(true);
             }}
+            dataSet={pressSolid}
             style={({ pressed }) => [
               authStyles.emailCta,
               pressed && authStyles.pressed,
@@ -174,6 +176,7 @@ export default function SignUpScreen() {
             unstable_pressDelay={0}
             disabled={locked}
             onPress={() => void submit()}
+            dataSet={pressSolid}
             style={({ pressed }) => [
               authStyles.submitBtn,
               pressed && authStyles.pressed,
@@ -196,6 +199,7 @@ export default function SignUpScreen() {
         accessibilityRole="button"
         disabled={locked}
         onPress={() => void oauth('google')}
+        dataSet={pressGhost}
         style={({ pressed }) => [
           authStyles.oauthBtn,
           pressed && authStyles.pressed,
@@ -212,6 +216,7 @@ export default function SignUpScreen() {
         accessibilityRole="button"
         disabled={locked}
         onPress={() => void enterGuest()}
+        dataSet={pressGhost}
         style={({ pressed }) => [
           authStyles.oauthBtn,
           pressed && authStyles.pressed,

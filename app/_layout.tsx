@@ -8,7 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
-import { CookieConsentBanner } from '@/components/cookie-consent-banner';
+import { ButtonPressStyles } from '@/components/button-press';
 import { DevicePromptModal } from '@/components/device-prompt-modal';
 import { DropAlertModal } from '@/components/drop-alert-modal';
 import { OpenProductChooser } from '@/components/open-product-chooser';
@@ -223,6 +223,7 @@ export default function RootLayout() {
           <AuthProvider>
             <DropDexProvider>
               <UserAppearanceSync />
+              <ButtonPressStyles />
               <WebAppShell>
                 <AppExperience />
               </WebAppShell>

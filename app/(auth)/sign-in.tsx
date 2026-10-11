@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { AuthShell, authStyles } from '@/components/auth-shell';
+import { pressGhost, pressSolid } from '@/components/button-press';
 import { isMockData } from '@/config/app-config';
 import { palette } from '@/constants/dropdex';
 import { oauthRedirectHint } from '@/services/auth/oauth';
@@ -55,6 +56,7 @@ export default function SignInScreen() {
               setMessage(null);
               setEmailMode(true);
             }}
+            dataSet={pressSolid}
             style={({ pressed }) => [
               authStyles.emailCta,
               pressed && authStyles.pressed,
@@ -107,6 +109,7 @@ export default function SignInScreen() {
             unstable_pressDelay={0}
             disabled={locked}
             onPress={() => void submit()}
+            dataSet={pressSolid}
             style={({ pressed }) => [
               authStyles.submitBtn,
               pressed && authStyles.pressed,
@@ -150,6 +153,7 @@ export default function SignInScreen() {
         unstable_pressDelay={0}
         disabled={locked}
         onPress={() => void oauth('google')}
+        dataSet={pressGhost}
         style={({ pressed }) => [
           authStyles.oauthBtn,
           pressed && authStyles.pressed,

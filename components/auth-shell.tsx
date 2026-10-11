@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AuthLegalLinks } from '@/components/auth-legal-links';
+import { pressGhost, pressSolid } from '@/components/button-press';
 import { palette } from '@/constants/dropdex';
 import { useCookieConsent } from '@/hooks/use-cookie-consent';
 import { useWebLayout } from '@/hooks/use-web-layout';
@@ -90,7 +90,8 @@ function ModeSwitch({ mode }: { mode: AuthMode }) {
           onPress={() => {
             if (mode !== 'login') router.replace('/sign-in' as never);
           }}
-          style={[styles.switchBubble, mode === 'login' && styles.switchBubbleOn]}>
+          style={[styles.switchBubble, mode === 'login' && styles.switchBubbleOn]}
+          dataSet={mode === 'login' ? pressSolid : pressGhost}>
           <Text style={[styles.switchLabel, mode === 'login' && styles.switchLabelOn]}>Log in</Text>
         </Pressable>
         <Pressable
@@ -100,7 +101,8 @@ function ModeSwitch({ mode }: { mode: AuthMode }) {
           onPress={() => {
             if (mode !== 'signup') router.replace('/start' as never);
           }}
-          style={[styles.switchBubble, mode === 'signup' && styles.switchBubbleOn]}>
+          style={[styles.switchBubble, mode === 'signup' && styles.switchBubbleOn]}
+          dataSet={mode === 'signup' ? pressSolid : pressGhost}>
           <Text style={[styles.switchLabel, mode === 'signup' && styles.switchLabelOn]}>Sign up</Text>
         </Pressable>
       </View>
@@ -279,7 +281,7 @@ export const authStyles = StyleSheet.create({
     lineHeight: 17,
     marginTop: 4,
   },
-  pressed: { opacity: 0.88 },
+  pressed: Platform.OS === 'web' ? {} : { transform: [{ scale: 0.96 }] },
   disabled: { opacity: 0.55 },
   fieldLabel: {
     color: '#D8D5D0',

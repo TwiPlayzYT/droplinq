@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SiteFooter } from '@/components/site-footer';
+import { pressGhost } from '@/components/button-press';
 import { palette } from '@/constants/dropdex';
 import { useMobileWebChrome } from '@/hooks/use-mobile-web-chrome';
 import { useWebLayout } from '@/hooks/use-web-layout';
@@ -291,7 +292,12 @@ export function MetalButton({
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.metalButton, pressed && styles.pressed, disabled && { opacity: 0.5 }]}>
+      dataSet={pressGhost}
+      style={({ pressed }) => [
+        styles.metalButton,
+        Platform.OS !== 'web' && pressed && styles.pressed,
+        disabled && { opacity: 0.5 },
+      ]}>
       <View style={styles.metalButtonFace}>
         <Ionicons color={palette.controlInk} name={icon} size={18} />
         <Text style={styles.metalButtonText}>{label.toUpperCase()}</Text>
@@ -530,5 +536,5 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1.1,
   },
-  pressed: { opacity: 0.88 },
+  pressed: Platform.OS === 'web' ? {} : { transform: [{ scale: 0.96 }] },
 });

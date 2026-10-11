@@ -5,6 +5,7 @@ import { Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 
 
 import { MarketingPhoneStack } from '@/components/marketing/phone-mocks';
 import { MarketingChrome } from '@/components/marketing/site-chrome';
+import { pressGhost, pressSolid } from '@/components/button-press';
 import { AppBootScreen } from '@/components/ux-feedback';
 import { brand } from '@/config/app-config';
 import { palette } from '@/constants/dropdex';
@@ -81,12 +82,14 @@ export default function MarketingHome() {
 
           <View style={styles.socialRow}>
             <Pressable
+              dataSet={pressGhost}
               onPress={() => void Linking.openURL(brand.youtubeUrl)}
               style={styles.socialBtn}>
               <Ionicons color="#fff" name="logo-youtube" size={18} />
               <Text style={styles.socialBtnText}>YouTube {brand.youtubeHandle}</Text>
             </Pressable>
             <Pressable
+              dataSet={pressGhost}
               onPress={() => void Linking.openURL(`mailto:${brand.contactEmail}`)}
               style={styles.socialBtnGhost}>
               <Ionicons color={palette.white} name="mail-outline" size={18} />
@@ -94,7 +97,7 @@ export default function MarketingHome() {
             </Pressable>
           </View>
 
-          <Pressable onPress={goApp} style={styles.primaryCta}>
+          <Pressable onPress={goApp} dataSet={pressSolid} style={styles.primaryCta}>
             <Text style={styles.primaryCtaText}>
               {session ? 'Open App' : 'Start monitoring today'}
             </Text>
@@ -168,7 +171,7 @@ export default function MarketingHome() {
         <Text style={styles.closingSub}>
           Free monitoring while we build. Join collectors who want the ping, not the Discord chaos.
         </Text>
-        <Pressable onPress={goApp} style={styles.primaryCta}>
+        <Pressable onPress={goApp} dataSet={pressSolid} style={styles.primaryCta}>
           <Text style={styles.primaryCtaText}>Open App</Text>
         </Pressable>
       </View>
