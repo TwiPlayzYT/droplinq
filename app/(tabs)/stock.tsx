@@ -24,6 +24,7 @@ import {
   Screen,
 } from '@/components/dropdex-ui';
 import { FlippingSearch } from '@/components/flipping-search';
+import { ProductSkeleton } from '@/components/load-skeleton';
 import { TourAnchor } from '@/components/tour-anchor';
 import { emitTourAction, isTutorialSessionActive } from '@/services/tour-session';
 
@@ -395,19 +396,6 @@ function CompactEmpty({
   );
 }
 
-function SkeletonBlock() {
-  return (
-    <View style={styles.skeletonCard}>
-      <View style={styles.skeletonThumb} />
-      <View style={styles.skeletonLines}>
-        <View style={[styles.skeletonLine, { width: '42%' }]} />
-        <View style={[styles.skeletonLine, { width: '88%' }]} />
-        <View style={[styles.skeletonLine, { width: '64%' }]} />
-      </View>
-    </View>
-  );
-}
-
 function CollapsibleSection({
   count,
   expanded,
@@ -708,8 +696,8 @@ export default function StockScreen() {
 
   const openDetails = (product: Product) => router.push(`/product/${product.id}`);
   const waitingOnEmptyCatalog = catalogLoading && coverageProducts.length === 0 && !customEmpty;
-  // Only flash skeletons when a load actually takes 3+ seconds.
-  const showSkeletons = useDelayedFlag(waitingOnEmptyCatalog, 3000);
+  // Product-shaped placeholders only after the catalog has already taken over a second.
+  const showSkeletons = useDelayedFlag(waitingOnEmptyCatalog, 1000);
 
   return (
     <Screen wide onRefresh={onRefresh} refreshing={refreshing}>
@@ -843,8 +831,8 @@ export default function StockScreen() {
           </Panel>
         ) : showSkeletons ? (
           <>
-            <SkeletonBlock />
-            <SkeletonBlock />
+            <ProductSkeleton />
+            <ProductSkeleton />
           </>
         ) : liveNow.length === 0 ? (
           <Panel>
@@ -1331,27 +1319,5 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 10,
     marginTop: 2,
-  },
-  skeletonCard: {
-    backgroundColor: palette.blackRaised,
-    borderColor: palette.blackSoft,
-    borderRadius: 18,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-    padding: 12,
-  },
-  skeletonThumb: {
-    backgroundColor: palette.blackSoft,
-    borderRadius: 12,
-    height: 64,
-    width: 64,
-  },
-  skeletonLines: { flex: 1, gap: 8, justifyContent: 'center' },
-  skeletonLine: {
-    backgroundColor: palette.blackSoft,
-    borderRadius: 6,
-    height: 10,
   },
 });

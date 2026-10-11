@@ -1,9 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { useSegments } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Easing,
   Pressable,
@@ -14,48 +12,21 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ProductSkeleton, ShimmerBone } from '@/components/load-skeleton';
 import { palette } from '@/constants/dropdex';
+import { useDelayedFlag } from '@/hooks/use-delayed-flag';
 import { useDropDex } from '@/store/dropdex-context';
 
 /** Must match DropDexProvider showFeedback auto-dismiss duration. */
 const FEEDBACK_DURATION_MS = 4500;
-const brandIcon = require('../assets/images/icon.png');
 
 
 export function AppBootScreen() {
-  const pulse = useRef(new Animated.Value(0.35)).current;
-  // Avoid a flash on fast boots — only show the branded loader after 3s.
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const showTimer = setTimeout(() => setVisible(true), 3000);
-    return () => clearTimeout(showTimer);
-  }, []);
-
-  useEffect(() => {
-    if (!visible) return;
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, {
-          duration: 700,
-          easing: Easing.inOut(Easing.quad),
-          toValue: 1,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulse, {
-          duration: 700,
-          easing: Easing.inOut(Easing.quad),
-          toValue: 0.35,
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [pulse, visible]);
+  // A fast session restore stays a blank frame. The skeleton is only for a wait past a second.
+  const visible = useDelayedFlag(true, 1000);
 
   if (!visible) {
-    return <View style={[styles.bootRoot, { backgroundColor: palette.black }]} />;
+    return <View style={styles.bootRoot} />;
   }
 
   return (
@@ -63,11 +34,12 @@ export function AppBootScreen() {
       accessibilityLabel="Loading your DropLinq preferences"
       accessibilityRole="progressbar"
       style={styles.boot}>
-      <Animated.View style={[styles.bootIconWrap, { opacity: pulse }]}>
-        <Image accessibilityIgnoresInvertColors contentFit="cover" source={brandIcon} style={styles.bootIcon} />
-      </Animated.View>
-      <Text style={styles.bootBrand}>DROPLINQ</Text>
       <Text style={styles.bootTitle}>GETTING YOUR WATCHLIST READY</Text>
+      <View style={styles.bootList}>
+        <ProductSkeleton />
+        <ProductSkeleton />
+        <ProductSkeleton />
+      </View>
       <Text style={styles.bootCaption}>Loading region, filters, and saved products…</Text>
     </View>
   );
@@ -191,14 +163,11 @@ export function GlobalUXFeedback() {
   const insets = useSafeAreaInsets();
   const segments = useSegments();
   const { width } = useWindowDimensions();
-  const [showOperation, setShowOperation] = useState(false);
+  // Opening a store page is often instant. The card only appears once that wait passes a second.
+  const showOperation = useDelayedFlag(Boolean(operation), 1000);
 
   // Sign-up / sign-in should stay clean — no cloud-status toasts over the form.
   const onAuthScreen = segments[0] === '(auth)';
-
-  useEffect(() => {
-    setShowOperation(!!operation);
-  }, [operation]);
 
   useEffect(() => {
     if (onAuthScreen && feedback) {
@@ -214,12 +183,9 @@ export function GlobalUXFeedback() {
           accessibilityRole="progressbar"
           style={styles.operationScrim}>
           <View style={styles.operationCard}>
-            <ActivityIndicator color={palette.red} size="large" />
             <Text style={styles.operationTitle}>{operation.title}</Text>
             <Text style={styles.operationMessage}>{operation.message}</Text>
-            <View style={styles.operationPulse}>
-              <View style={styles.operationPulseFill} />
-            </View>
+            <ShimmerBone style={styles.operationBar} />
           </View>
         </View>
       ) : null}
@@ -242,39 +208,24 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   boot: {
-    alignItems: 'center',
     backgroundColor: palette.black,
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 28,
+    paddingHorizontal: 20,
   },
   bootRoot: {
     backgroundColor: palette.black,
     flex: 1,
   },
-  bootIconWrap: {
-    shadowColor: palette.red,
-    shadowOpacity: 0.8,
-    shadowRadius: 18,
-  },
-  bootIcon: {
-    borderRadius: 18,
-    height: 80,
-    width: 80,
-  },
-  bootBrand: {
-    color: palette.white,
-    fontSize: 34,
-    fontWeight: '900',
-    letterSpacing: 1.2,
-    marginTop: 24,
+  bootList: {
+    marginTop: 18,
+    width: '100%',
   },
   bootTitle: {
     color: palette.whiteDim,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.6,
-    marginTop: 16,
     textAlign: 'center',
   },
   bootCaption: {
@@ -310,8 +261,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '900',
     letterSpacing: 0.7,
-    marginTop: 16,
     textAlign: 'center',
+  },
+  operationBar: {
+    borderRadius: 4,
+    height: 6,
+    marginTop: 18,
+    width: '100%',
   },
   operationMessage: {
     color: palette.whiteShadow,
@@ -319,20 +275,6 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginTop: 8,
     textAlign: 'center',
-  },
-  operationPulse: {
-    backgroundColor: palette.black,
-    borderRadius: 4,
-    height: 6,
-    marginTop: 18,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  operationPulseFill: {
-    backgroundColor: palette.red,
-    borderRadius: 4,
-    height: '100%',
-    width: '72%',
   },
   toast: {
     backgroundColor: palette.blackRaised,

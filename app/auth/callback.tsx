@@ -1,5 +1,8 @@
 import { useEffect } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+
+import { ShimmerBone } from '@/components/load-skeleton';
+import { useDelayedFlag } from '@/hooks/use-delayed-flag';
 import { useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
@@ -13,6 +16,7 @@ import { getSupabase } from '@/services/supabase/client';
  */
 export default function AuthCallbackScreen() {
   const router = useRouter();
+  const showWait = useDelayedFlag(true, 1000);
 
   useEffect(() => {
     let active = true;
@@ -84,10 +88,14 @@ export default function AuthCallbackScreen() {
     };
   }, [router]);
 
+  if (!showWait) {
+    return <View style={styles.wrap} />;
+  }
+
   return (
     <View style={styles.wrap}>
-      <ActivityIndicator color={palette.red} />
       <Text style={styles.text}>Finishing sign-in…</Text>
+      <ShimmerBone style={styles.bar} />
     </View>
   );
 }
@@ -101,4 +109,5 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   text: { color: palette.whiteShadow, fontWeight: '700' },
+  bar: { borderRadius: 4, height: 6, marginTop: 16, width: 180 },
 });

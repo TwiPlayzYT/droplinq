@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 
 /**
  * Returns true only after `active` has stayed true for `delayMs`.
- * Use for skeletons so fast loads never flash a placeholder.
+ * Fast work stays invisible. A loader is for a wait that has already passed about a second.
  */
-export function useDelayedFlag(active: boolean, delayMs = 3000) {
+export function useDelayedFlag(active: boolean, delayMs = 1000) {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
