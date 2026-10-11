@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AuthLegalLinks } from '@/components/auth-legal-links';
 import { pressGhost, pressSolid } from '@/components/button-press';
 import { palette } from '@/constants/dropdex';
 import { useCookieConsent } from '@/hooks/use-cookie-consent';
