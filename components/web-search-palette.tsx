@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import { FlippingSearch } from '@/components/flipping-search';
 import { palette } from '@/constants/dropdex';
 import { matchesProductSearch } from '@/lib/product-search';
 import { categoryNamesForProduct } from '@/lib/filter-matcher';
@@ -169,28 +170,19 @@ export function WebSearchPalette({ visible, onClose }: Props) {
       visible={visible}>
       <Pressable onPress={onClose} style={styles.backdrop}>
         <Pressable style={styles.panel}>
-          <View style={styles.searchRow}>
-            <Ionicons color={palette.whiteShadow} name="search" size={18} />
-            <TextInput
-              ref={inputRef}
-              autoCapitalize="none"
-              autoCorrect={false}
-              onChangeText={setQuery}
-              placeholder="Search any sealed or unsealed product…"
-              placeholderTextColor={palette.whiteShadow}
-              style={styles.input as never}
-              value={query}
-            />
-            <Pressable
-              accessibilityLabel="Close search"
-              hitSlop={8}
-              onPress={() => {
+          <View style={styles.searchWrap}>
+            <FlippingSearch
+              inputRef={inputRef}
+              onChangeQuery={setQuery}
+              onClose={() => {
                 if (query) setQuery('');
                 else onClose();
               }}
-              style={styles.closeBtn}>
-              <Ionicons color={palette.whiteDim} name="close" size={18} />
-            </Pressable>
+              onOpen={() => undefined}
+              open={visible}
+              placeholder="Search any sealed or unsealed product…"
+              query={query}
+            />
           </View>
 
           <ScrollView
@@ -295,25 +287,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     width: '100%',
   },
-  searchRow: {
-    alignItems: 'center',
+  searchWrap: {
     borderBottomColor: '#2C2C2C',
     borderBottomWidth: 1,
-    flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  input: {
-    color: palette.white,
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    paddingVertical: 4,
-    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : null),
-  },
-  closeBtn: {
-    padding: 4,
+    paddingHorizontal: 14,
+    paddingTop: 14,
   },
   results: {
     maxHeight: 420,

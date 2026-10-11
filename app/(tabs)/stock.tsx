@@ -23,6 +23,7 @@ import {
   Panel,
   Screen,
 } from '@/components/dropdex-ui';
+import { FlippingSearch } from '@/components/flipping-search';
 import { TourAnchor } from '@/components/tour-anchor';
 import { emitTourAction, isTutorialSessionActive } from '@/services/tour-session';
 
@@ -492,7 +493,6 @@ export default function StockScreen() {
   // Desktop web opens key sections so the full-width site feels populated (native stays collapsed).
   useEffect(() => {
     if (!isDesktopWeb) return;
-    setSearchOpen(true);
     setLiveOpen(true);
     setActivityOpen(true);
     setCatalogOpen(true);
@@ -771,70 +771,43 @@ export default function StockScreen() {
         </View>
       ) : null}
 
-      {!searchOpen ? (
-        <Pressable
-          accessibilityHint="Opens product search"
-          accessibilityRole="button"
-          unstable_pressDelay={0}
-          onPress={() => {
-            animateLayout();
-            setSearchOpen(true);
-            requestAnimationFrame(() => searchInputRef.current?.focus());
-          }}
-          style={({ pressed }) => [styles.searchCollapsed, pressed && styles.pressed]}>
-          <Ionicons color={palette.cardMuted} name="search" size={18} />
-          <Text style={styles.searchCollapsedText}>Search products</Text>
-        </Pressable>
-      ) : (
-        <Reanimated.View entering={FadeInDown.duration(200)} style={styles.searchExpanded}>
-          <View style={styles.searchWell}>
-            <Ionicons color={palette.cardMuted} name="search" size={18} />
-            <TextInput
-              ref={searchInputRef}
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoFocus
-              clearButtonMode="while-editing"
-              onChangeText={setQuery}
-              placeholder="Search monitored products…"
-              placeholderTextColor={palette.cardMuted}
-              returnKeyType="search"
-              style={styles.searchInput}
-              value={query}
+      <FlippingSearch
+        inputRef={searchInputRef}
+        onChangeQuery={setQuery}
+        onClose={() => {
+          animateLayout();
+          setQuery('');
+          setViewFilter('all');
+          setSearchOpen(false);
+        }}
+        onOpen={() => {
+          animateLayout();
+          setSearchOpen(true);
+        }}
+        open={searchOpen}
+        placeholder="Search monitored products…"
+        query={query}
+      />
+      {searchOpen ? (
+        <View style={styles.chips}>
+          {(
+            [
+              ['all', 'All'],
+              ['in-stock', 'In stock'],
+              ['sold-out', 'Sold out'],
+              ['new', 'New'],
+              ['preorder', 'Preorder'],
+            ] as const
+          ).map(([id, label]) => (
+            <ChoiceChip
+              key={id}
+              label={label}
+              onPress={() => setViewFilter(id)}
+              selected={viewFilter === id}
             />
-            <Pressable
-              accessibilityLabel="Close search"
-              hitSlop={10}
-              unstable_pressDelay={0}
-              onPress={() => {
-                animateLayout();
-                setQuery('');
-                setViewFilter('all');
-                setSearchOpen(false);
-              }}>
-              <Ionicons color={palette.cardMuted} name="close-circle" size={20} />
-            </Pressable>
-          </View>
-          <View style={styles.chips}>
-            {(
-              [
-                ['all', 'All'],
-                ['in-stock', 'In stock'],
-                ['sold-out', 'Sold out'],
-                ['new', 'New'],
-                ['preorder', 'Preorder'],
-              ] as const
-            ).map(([id, label]) => (
-              <ChoiceChip
-                key={id}
-                label={label}
-                onPress={() => setViewFilter(id)}
-                selected={viewFilter === id}
-              />
-            ))}
-          </View>
-        </Reanimated.View>
-      )}
+          ))}
+        </View>
+      ) : null}
 
       {activeQueues.map((queue) => (
         <Pressable
@@ -1352,54 +1325,12 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginTop: 6,
   },
-  searchCollapsed: {
-    alignItems: 'center',
-    backgroundColor: palette.card,
-    borderColor: palette.cardBorder,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 10,
-    minHeight: 46,
-    paddingHorizontal: 14,
-  },
-  searchCollapsedText: {
-    color: palette.cardMuted,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  searchExpanded: {
-    backgroundColor: palette.blackRaised,
-    borderColor: palette.blackSoft,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 10,
-    padding: 12,
-  },
-  searchWell: {
-    alignItems: 'center',
-    backgroundColor: palette.card,
-    borderColor: palette.cardBorder,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 8,
-    minHeight: 46,
-    paddingHorizontal: 12,
-  },
-  searchInput: {
-    color: palette.cardInk,
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '700',
-    paddingVertical: 10,
-  },
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: 12,
+    marginBottom: 10,
+    marginTop: 2,
   },
   skeletonCard: {
     backgroundColor: palette.blackRaised,
