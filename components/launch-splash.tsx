@@ -52,10 +52,10 @@ export function LaunchSplash() {
 
   useEffect(() => {
     if (!mounted) return;
-    markSeen();
     if (reducedMotion()) {
       drop.setValue(1);
       brand.setValue(1);
+      markSeen();
       const timer = setTimeout(() => setMounted(false), 450);
       return () => clearTimeout(timer);
     }
@@ -91,7 +91,9 @@ export function LaunchSplash() {
       }),
     ]);
     animation.start(({ finished }) => {
-      if (finished) setMounted(false);
+      if (!finished) return;
+      markSeen();
+      setMounted(false);
     });
     return () => animation.stop();
   }, [brand, drop, mounted, ring, veil]);
@@ -104,7 +106,7 @@ export function LaunchSplash() {
     <Animated.View
       accessibilityLabel="DropLinq is opening"
       accessibilityRole="progressbar"
-      pointerEvents="none"
+      pointerEvents="auto"
       style={[styles.veil, { opacity: veil }]}>
       <View style={styles.stage}>
         <Animated.View
