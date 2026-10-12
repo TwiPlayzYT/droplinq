@@ -61,9 +61,10 @@ export function FlippingSearch({
   }, [inputRef, open, progress]);
 
   const travel = Math.max(trackWidth - SIZE, 0);
+  // Park the field fully past the right edge. Stopping a button-width short left "Sea" showing.
   const fieldShift = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [travel, 0],
+    outputRange: [trackWidth > 0 ? trackWidth + 12 : SIZE, 0],
   });
   const buttonShift = progress.interpolate({
     inputRange: [0, 1],
