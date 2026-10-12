@@ -152,6 +152,7 @@ export default function SettingsScreen() {
         displayName={displayName}
         error={editError}
         handle={handle}
+        savedHandle={profile?.username}
         onClose={() => {
           if (editBusy) return;
           setEditOpen(false);

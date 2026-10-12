@@ -2,7 +2,7 @@ import type { AuthProfile } from '@/services/auth/types';
 
 export const DISPLAY_NAME_MAX = 24;
 export const HANDLE_MAX = 24;
-export const HANDLE_MIN = 3;
+export const HANDLE_MIN = 4;
 
 export function displayNameFrom(profile: AuthProfile | null | undefined) {
   const named = profile?.displayName?.trim();
@@ -45,12 +45,18 @@ export function sanitizeHandle(value: string) {
     .slice(0, HANDLE_MAX);
 }
 
-export function validateProfileIdentity(input: { displayName: string; handle: string }) {
+export function validateProfileIdentity(
+  input: { displayName: string; handle: string },
+  savedHandle?: string | null,
+) {
   const displayName = sanitizeDisplayName(input.displayName);
   const handle = sanitizeHandle(input.handle);
+  const saved = sanitizeHandle(savedHandle ?? '');
   if (displayName.length < 1) return { ok: false as const, message: 'Enter a display name.' };
-  if (handle.length < HANDLE_MIN) {
+  const unchanged = Boolean(saved) && handle === saved;
+  if (!unchanged && handle.length < HANDLE_MIN) {
     return { ok: false as const, message: `Handle needs at least ${HANDLE_MIN} characters.` };
   }
+  if (!handle) return { ok: false as const, message: `Handle needs at least ${HANDLE_MIN} characters.` };
   return { ok: true as const, displayName, handle };
 }

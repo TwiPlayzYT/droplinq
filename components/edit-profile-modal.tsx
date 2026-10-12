@@ -14,15 +14,19 @@ import {
 import {
   DISPLAY_NAME_MAX,
   HANDLE_MAX,
+  HANDLE_MIN,
   sanitizeHandle,
   validateProfileIdentity,
 } from '@/lib/profile-identity';
+import { checkHandle } from '@/services/handles';
 import { useAppearance } from '@/store/appearance-context';
+import { useAuth } from '@/store/auth-context';
 
 type Props = {
   visible: boolean;
   displayName: string;
   handle: string;
+  savedHandle?: string | null;
   busy?: boolean;
   error?: string | null;
   onClose: () => void;
@@ -33,6 +37,7 @@ export function EditProfileModal({
   visible,
   displayName,
   handle,
+  savedHandle,
   busy,
   error,
   onClose,
@@ -41,7 +46,9 @@ export function EditProfileModal({
   const { tokens } = useAppearance();
   const [name, setName] = useState(displayName);
   const [tag, setTag] = useState(handle);
+  const { session } = useAuth();
   const [localError, setLocalError] = useState<string | null>(null);
+  const [taken, setTaken] = useState(false);
   const [nameFocused, setNameFocused] = useState(true);
   const [handleFocused, setHandleFocused] = useState(false);
 
@@ -50,22 +57,47 @@ export function EditProfileModal({
     setName(displayName);
     setTag(handle.replace(/^@/, ''));
     setLocalError(null);
+    setTaken(false);
     setNameFocused(true);
     setHandleFocused(false);
   }, [displayName, handle, visible]);
 
+  useEffect(() => {
+    if (!visible) return;
+    const next = sanitizeHandle(tag);
+    const saved = sanitizeHandle(savedHandle ?? '');
+    if ((saved && next === saved) || next.length < HANDLE_MIN) {
+      setTaken(false);
+      return;
+    }
+    let cancel = false;
+    const timer = setTimeout(() => {
+      void checkHandle(next, session?.access_token).then((result) => {
+        if (!cancel) setTaken(!result.ok && result.message === 'Already taken.');
+      });
+    }, 400);
+    return () => {
+      cancel = true;
+      clearTimeout(timer);
+    };
+  }, [savedHandle, session?.access_token, tag, visible]);
+
   const submit = () => {
     if (busy) return;
-    const result = validateProfileIdentity({ displayName: name, handle: tag });
+    const result = validateProfileIdentity({ displayName: name, handle: tag }, savedHandle);
     if (!result.ok) {
       setLocalError(result.message);
+      return;
+    }
+    if (taken) {
+      setLocalError('Already taken.');
       return;
     }
     setLocalError(null);
     onSave({ displayName: result.displayName, handle: result.handle });
   };
 
-  const message = localError ?? error;
+  const message = localError ?? (taken ? 'Already taken.' : null) ?? error;
 
   return (
     <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}>

@@ -14,8 +14,11 @@ import { LEGAL_VERSION } from '@/constants/legal';
 import { dropDayKey } from '@/constants/billing';
 import { clearTutorialStorage } from '@/constants/tutorial';
 import { authAdapter } from '@/services/auth';
+import { isGuestUserId } from '@/services/auth/guest-auth';
 import { AuthProfile, AuthResult, OAuthProvider } from '@/services/auth/types';
 import { openStripePortal, startStripeCheckout } from '@/services/billing/stripe-checkout';
+import { claimHandle, checkHandle } from '@/services/handles';
+import { sanitizeHandle, validateProfileIdentity } from '@/lib/profile-identity';
 
 export function hasAcceptedCurrentLegal(profile: AuthProfile | null | undefined) {
   return Boolean(
@@ -166,11 +169,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
         return result;
       },
       updateIdentity: async (input) => {
-        const userId = sessionRef.current?.user.id;
+        const current = sessionRef.current;
+        const userId = current?.user.id;
         if (!userId) return { ok: false, message: 'Not signed in.' };
+        const saved = profileRef.current?.username ?? '';
+        const checked = validateProfileIdentity(input, saved);
+        if (!checked.ok) return checked;
+        const changingHandle = checked.handle !== (saved ? sanitizeHandle(saved) : '');
+        if (changingHandle) {
+          if (isGuestUserId(userId)) {
+            const available = await checkHandle(checked.handle);
+            if (!available.ok) return available;
+          } else if (current.access_token && current.access_token !== 'guest.local') {
+            const claimed = await claimHandle(checked.handle, current.access_token);
+            if (!claimed.ok) return claimed;
+          }
+        }
         const result = await authAdapter.saveProfile(userId, {
-          displayName: input.displayName,
-          username: input.handle,
+          displayName: checked.displayName,
+          username: checked.handle,
         });
         if (result.ok) await loadProfile(userId);
         return result;

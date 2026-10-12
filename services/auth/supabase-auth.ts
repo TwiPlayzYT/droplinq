@@ -5,6 +5,12 @@ import { signInAsGuest as createGuestSession } from '@/services/auth/guest-auth'
 import { signInWithProvider as oauthSignIn, webRedirectUri } from '@/services/auth/oauth';
 import { getSupabase } from '@/services/supabase/client';
 
+function profileWriteMessage(message: string) {
+  if (/already taken|duplicate key|profiles_username_lower_idx/i.test(message)) return 'Already taken.';
+  if (/at least 4 characters/i.test(message)) return 'Handle needs at least 4 characters.';
+  return 'Could not save your profile. Try again.';
+}
+
 export const supabaseAuth: AuthAdapter = {
   async getSession() {
     const supabase = getSupabase();
@@ -143,18 +149,18 @@ export const supabaseAuth: AuthAdapter = {
       ]),
     ];
 
-    let lastError = 'Could not save your profile. Try Accept and continue again.';
+    let lastError = 'Could not save your profile. Try again.';
     for (const payload of variants) {
       const updated = await supabase.from('profiles').update(payload).eq('id', userId).select('id').maybeSingle();
       if (!updated.error && updated.data) return { ok: true };
-      if (updated.error) lastError = updated.error.message;
+      if (updated.error) lastError = profileWriteMessage(updated.error.message);
       else break;
     }
 
     for (const payload of variants) {
       const inserted = await supabase.from('profiles').insert({ id: userId, ...payload }).select('id').maybeSingle();
       if (!inserted.error && inserted.data) return { ok: true };
-      if (inserted.error) lastError = inserted.error.message;
+      if (inserted.error) lastError = profileWriteMessage(inserted.error.message);
     }
     return { ok: false, message: lastError };
   },

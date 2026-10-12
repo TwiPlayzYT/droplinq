@@ -29,19 +29,63 @@ import {
   requireSignedInUser,
 } from './billing.mjs';
 import { applyStripeEvent, verifyStripeSignature } from './billing-webhook.mjs';
+import { claimHandle, checkHandleAvailable } from './handle-claims.mjs';
+import { allowRequest, clientAddress } from './rate-limit.mjs';
 
 const allowedRegions = new Set(['us', 'ca', 'uk', 'de', 'au', 'nz', 'jp']);
 const allowedFormats = ALLOWED_FORMATS;
 
-const sendJson = (response, status, value) => {
-  response.writeHead(status, {
+const allowedOrigins = new Set([
+  'https://getdroplinq.com',
+  'https://www.getdroplinq.com',
+  'https://droplinq-web.onrender.com',
+  'http://localhost:8081',
+  'http://localhost:19006',
+]);
+
+const sendJson = (request, response, status, value) => {
+  const origin = request?.headers?.origin;
+  const headers = {
     'Access-Control-Allow-Headers':
       'content-type, authorization, x-droplinq-ingest-token, x-pagecrawl-signature, x-pagecrawl-timestamp',
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Max-Age': '86400',
+    'Cache-Control': 'no-store',
     'Content-Type': 'application/json',
+    'Referrer-Policy': 'no-referrer',
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    Vary: 'Origin',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+  };
+  if (typeof origin === 'string' && allowedOrigins.has(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+  response.writeHead(status, headers);
+  response.end(status === 204 ? undefined : JSON.stringify(value));
+};
+
+const limited = (request, response, bucket, limit) => {
+  if (allowRequest(`${bucket}:${clientAddress(request)}`, limit, 60_000)) return false;
+  sendJson(request, response, 429, {
+    ok: false,
+    error: 'Too many requests. Wait a moment and try again.',
   });
-  response.end(JSON.stringify(value));
+  return true;
+};
+
+const officialStoreUrl = (url) => {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return (
+      host === 'pokemoncenter.com' ||
+      host.endsWith('.pokemoncenter.com') ||
+      host === 'pokemoncenter-online.com' ||
+      host.endsWith('.pokemoncenter-online.com')
+    );
+  } catch {
+    return false;
+  }
 };
 
 const readBody = async (request) => {
@@ -193,13 +237,13 @@ const engine = new MonitorEngine({
 
 const server = createServer(async (request, response) => {
   if (request.method === 'OPTIONS') {
-    sendJson(response, 204, {});
+    sendJson(request, response, 204, {});
     return;
   }
 
   if (request.method === 'GET' && request.url === '/health') {
     const state = store.getState();
-    sendJson(response, 200, {
+    sendJson(request, response, 200, {
       ok: true,
       alwaysOn: true,
       baselineReady: state.baselineReady,
@@ -228,7 +272,7 @@ const server = createServer(async (request, response) => {
 
   if (request.method === 'GET' && request.url === '/v1/status') {
     const state = store.getState();
-    sendJson(response, 200, {
+    sendJson(request, response, 200, {
       alwaysOn: true,
       baselineReady: state.baselineReady,
       observedProducts: Object.values(state.snapshot).filter((product) => product.inStock).length,
@@ -244,7 +288,7 @@ const server = createServer(async (request, response) => {
 
   if (request.method === 'GET' && request.url === '/v1/catalog') {
     const state = store.getState();
-    sendJson(response, 200, {
+    sendJson(request, response, 200, {
       baselineReady: state.baselineReady,
       lastObservationAt: state.lastObservationAt ?? null,
       products: Object.values(state.snapshot),
@@ -253,27 +297,29 @@ const server = createServer(async (request, response) => {
   }
 
   if (request.method === 'GET' && request.url === '/v1/web-push/config') {
-    sendJson(response, 200, getWebPushPublicConfig());
+    sendJson(request, response, 200, getWebPushPublicConfig());
     return;
   }
 
   if (request.method === 'POST' && request.url === '/v1/web-push/test') {
+    if (limited(request, response, 'push-test', 6)) return;
     try {
       const body = JSON.parse(await readBody(request));
       if (!isValidWebPushSubscription(body.webPushSubscription)) {
-        sendJson(response, 422, { ok: false, error: 'webPushSubscription is required' });
+        sendJson(request, response, 422, { ok: false, error: 'webPushSubscription is required' });
         return;
       }
       await sendTestWebPush(body.webPushSubscription, body.product);
-      sendJson(response, 200, { ok: true });
+      sendJson(request, response, 200, { ok: true });
     } catch (error) {
       const status = /VAPID|not configured/i.test(error.message) ? 503 : 422;
-      sendJson(response, status, { ok: false, error: error.message });
+      sendJson(request, response, status, { ok: false, error: error.message });
     }
     return;
   }
 
   if (request.method === 'POST' && request.url === '/v1/web-push/schedule') {
+    if (limited(request, response, 'push-schedule', 6)) return;
     try {
       const body = JSON.parse(await readBody(request));
       const scheduled = await scheduledPushes.schedule({
@@ -282,15 +328,16 @@ const server = createServer(async (request, response) => {
         delayMs: body.delayMs,
         installationId: body.installationId,
       });
-      sendJson(response, 200, { ok: true, ...scheduled });
+      sendJson(request, response, 200, { ok: true, ...scheduled });
     } catch (error) {
       const status = /VAPID|not configured/i.test(error.message) ? 503 : 422;
-      sendJson(response, status, { ok: false, error: error.message });
+      sendJson(request, response, status, { ok: false, error: error.message });
     }
     return;
   }
 
   if (request.method === 'POST' && request.url === '/v1/registrations') {
+    if (limited(request, response, 'register', 30)) return;
     try {
       const registration = validateRegistration(JSON.parse(await readBody(request)));
       const previous = store.getState().registrations?.[registration.installationId];
@@ -322,17 +369,18 @@ const server = createServer(async (request, response) => {
               return 0;
             })
           : 0;
-      sendJson(response, 200, { ok: true, monitoring: registration.enabled, replayed });
+      sendJson(request, response, 200, { ok: true, monitoring: registration.enabled, replayed });
     } catch (error) {
-      sendJson(response, 422, { ok: false, error: error.message });
+      sendJson(request, response, 422, { ok: false, error: error.message });
     }
     return;
   }
 
   if (request.method === 'POST' && request.url === '/v1/billing/checkout') {
+    if (limited(request, response, 'checkout', 8)) return;
     try {
       if (!billingReady()) {
-        sendJson(response, 503, { ok: false, error: 'Stripe checkout is not configured yet.' });
+        sendJson(request, response, 503, { ok: false, error: 'Stripe checkout is not configured yet.' });
         return;
       }
       const user = await requireSignedInUser(request);
@@ -341,17 +389,18 @@ const server = createServer(async (request, response) => {
       const interval = body.interval === 'annual' ? 'annual' : 'monthly';
       const customerId = await loadStripeCustomerId(user.id, accessToken);
       const session = await createCheckoutSession({ user, interval, customerId });
-      sendJson(response, 200, { ok: true, url: session.url });
+      sendJson(request, response, 200, { ok: true, url: session.url });
     } catch (error) {
-      sendJson(response, 422, { ok: false, error: error.message });
+      sendJson(request, response, 422, { ok: false, error: error.message });
     }
     return;
   }
 
   if (request.method === 'POST' && request.url === '/v1/billing/portal') {
+    if (limited(request, response, 'portal', 8)) return;
     try {
       if (!billingReady()) {
-        sendJson(response, 503, { ok: false, error: 'Stripe billing portal is not configured yet.' });
+        sendJson(request, response, 503, { ok: false, error: 'Stripe billing portal is not configured yet.' });
         return;
       }
       const user = await requireSignedInUser(request);
@@ -368,9 +417,9 @@ const server = createServer(async (request, response) => {
       const rows = await profileResponse.json();
       const customerId = Array.isArray(rows) ? rows[0]?.stripe_customer_id : rows?.stripe_customer_id;
       const portal = await createPortalSession({ customerId });
-      sendJson(response, 200, { ok: true, url: portal.url });
+      sendJson(request, response, 200, { ok: true, url: portal.url });
     } catch (error) {
-      sendJson(response, 422, { ok: false, error: error.message });
+      sendJson(request, response, 422, { ok: false, error: error.message });
     }
     return;
   }
@@ -384,28 +433,69 @@ const server = createServer(async (request, response) => {
         billingConfig.webhookSecret,
       );
       if (!valid) {
-        sendJson(response, 401, { ok: false, error: 'Invalid Stripe signature' });
+        sendJson(request, response, 401, { ok: false, error: 'Invalid Stripe signature' });
         return;
       }
       const event = JSON.parse(rawBody);
       const result = await applyStripeEvent(event);
-      sendJson(response, 200, { ok: true, ...result });
+      sendJson(request, response, 200, { ok: true, ...result });
     } catch (error) {
-      sendJson(response, 400, { ok: false, error: error.message });
+      sendJson(request, response, 400, { ok: false, error: error.message });
+    }
+    return;
+  }
+
+  if (request.method === 'POST' && request.url === '/v1/handles/check') {
+    if (limited(request, response, 'handle-check', 30)) return;
+    try {
+      const body = JSON.parse(await readBody(request));
+      let userId = null;
+      const token = String(request.headers.authorization ?? '');
+      if (token && !token.endsWith('guest.local')) {
+        try {
+          userId = (await requireSignedInUser(request)).id;
+        } catch {
+          userId = null;
+        }
+      }
+      const result = await checkHandleAvailable(body.handle, userId);
+      sendJson(request, response, result.ok ? 200 : 409, result);
+    } catch {
+      sendJson(request, response, 422, { ok: false, message: 'Could not check that handle. Try again.' });
+    }
+    return;
+  }
+
+  if (request.method === 'POST' && request.url === '/v1/handles/claim') {
+    if (limited(request, response, 'handle-claim', 10)) return;
+    try {
+      const user = await requireSignedInUser(request);
+      const body = JSON.parse(await readBody(request));
+      const result = await claimHandle(body.handle, user.id);
+      sendJson(request, response, result.ok ? 200 : 409, result);
+    } catch (error) {
+      const message = /sign in|session|account|email/i.test(error.message)
+        ? error.message
+        : 'Could not save that handle. Try again.';
+      sendJson(request, response, 401, { ok: false, message });
     }
     return;
   }
 
   if (request.method === 'POST' && request.url === '/v1/observations') {
+    if (limited(request, response, 'observations', 20)) return;
     try {
       const payload = JSON.parse(await readBody(request));
-      const products = Array.isArray(payload.products) ? payload.products : [];
+      const products = Array.isArray(payload.products) ? payload.products.slice(0, 40) : [];
       const allowed = products.filter(
         (product) =>
           product &&
           typeof product.id === 'string' &&
+          product.id.length <= 120 &&
           typeof product.title === 'string' &&
+          product.title.length <= 180 &&
           typeof product.url === 'string' &&
+          officialStoreUrl(product.url) &&
           allowedFormats.has(product.format),
       );
 
@@ -415,9 +505,9 @@ const server = createServer(async (request, response) => {
         complete: false,
         emitEvents: payload.emitEvents !== false,
       });
-      sendJson(response, 200, { ok: true, ...result });
+      sendJson(request, response, 200, { ok: true, ...result });
     } catch (error) {
-      sendJson(response, 422, { ok: false, error: error.message });
+      sendJson(request, response, 422, { ok: false, error: error.message });
     }
     return;
   }
@@ -437,7 +527,7 @@ const server = createServer(async (request, response) => {
         secret: process.env.MONITOR_INGEST_TOKEN || process.env.PAGECRAWL_SIGNING_SECRET,
       });
       if (!hmacOk && !tokenOk) {
-        sendJson(response, 401, { ok: false, error: 'Invalid webhook signature' });
+        sendJson(request, response, 401, { ok: false, error: 'Invalid webhook signature' });
         return;
       }
 
@@ -445,9 +535,9 @@ const server = createServer(async (request, response) => {
       const products = productsFromPageCrawl(payload);
       const eventId = `pagecrawl-${payload.id ?? 'change'}-${payload.changed_at ?? request.headers['x-pagecrawl-timestamp'] ?? Date.now()}`;
       await engine.ingestWebhookProducts(products, eventId);
-      sendJson(response, 200, { ok: true, matchedProducts: products.length });
+      sendJson(request, response, 200, { ok: true, matchedProducts: products.length });
     } catch (error) {
-      sendJson(response, 422, { ok: false, error: error.message });
+      sendJson(request, response, 422, { ok: false, error: error.message });
     }
     return;
   }
@@ -460,7 +550,7 @@ const server = createServer(async (request, response) => {
         secret: process.env.MONITOR_INGEST_TOKEN || process.env.PAGECRAWL_SIGNING_SECRET,
       });
       if (!tokenOk) {
-        sendJson(response, 401, { ok: false, error: 'Invalid ingest token' });
+        sendJson(request, response, 401, { ok: false, error: 'Invalid ingest token' });
         return;
       }
       const body = JSON.parse(await readBody(request));
@@ -474,7 +564,7 @@ const server = createServer(async (request, response) => {
           allowedFormats.has(product.format),
       );
       if (allowed.length === 0) {
-        sendJson(response, 422, { ok: false, error: 'No valid products' });
+        sendJson(request, response, 422, { ok: false, error: 'No valid products' });
         return;
       }
       const eventId = `ingest-${body.eventId ?? Date.now()}`;
@@ -487,16 +577,16 @@ const server = createServer(async (request, response) => {
         })),
         eventId,
       );
-      sendJson(response, 200, { ok: true, matchedProducts: matched });
+      sendJson(request, response, 200, { ok: true, matchedProducts: matched });
     } catch (error) {
-      sendJson(response, 422, { ok: false, error: error.message });
+      sendJson(request, response, 422, { ok: false, error: error.message });
     }
     return;
   }
 
   if (await serveWebApp(request, response)) return;
 
-  sendJson(response, 404, { error: 'Not found' });
+  sendJson(request, response, 404, { error: 'Not found' });
 });
 
 server.listen(config.port, '0.0.0.0', () => {

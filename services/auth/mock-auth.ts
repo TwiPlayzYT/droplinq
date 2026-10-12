@@ -148,6 +148,12 @@ export const mockAuth: AuthAdapter = {
     const profiles = await readJson<Record<string, AuthProfile>>(PROFILES_KEY, {});
     const existing = profiles[userId];
     if (!existing) return { ok: false, message: 'Profile not found.' };
+    if (patch.username) {
+      const taken = Object.entries(profiles).some(
+        ([id, profile]) => id !== userId && profile.username?.toLowerCase() === patch.username?.toLowerCase(),
+      );
+      if (taken) return { ok: false, message: 'Already taken.' };
+    }
     profiles[userId] = {
       ...existing,
       ...patch,
