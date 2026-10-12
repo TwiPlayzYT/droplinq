@@ -13,9 +13,11 @@ import {
   View,
 } from 'react-native';
 
+import { ChoiceChip } from '@/components/dropdex-ui';
 import { FlippingSearch } from '@/components/flipping-search';
 import { palette } from '@/constants/dropdex';
 import { matchesProductSearch } from '@/lib/product-search';
+import { isMerchandiseTitle } from '@/lib/merchandise';
 import { categoryNamesForProduct } from '@/lib/filter-matcher';
 import { useDropDex } from '@/store/dropdex-context';
 import { Product } from '@/types/dropdex';
@@ -42,6 +44,30 @@ function productSubtitle(product: Product) {
   return product.category;
 }
 
+type CatalogFilter = 'all' | 'in-stock' | 'sold-out' | 'new' | 'preorder';
+
+const CATALOG_FILTERS: { id: CatalogFilter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'in-stock', label: 'In stock' },
+  { id: 'sold-out', label: 'Sold out' },
+  { id: 'new', label: 'New' },
+  { id: 'preorder', label: 'Preorder' },
+];
+
+function matchesCatalogFilter(product: Product, filter: CatalogFilter) {
+  if (isMerchandiseTitle(product.title)) return false;
+  const queue = product.releaseType === 'queue' || product.tags?.includes('queue');
+  const preorder = product.releaseType === 'preorder';
+  const inStock = product.availability === 'in-stock' && !preorder && !queue;
+  if (queue && filter !== 'all') return false;
+  if (filter === 'all') return !queue;
+  if (filter === 'in-stock') return inStock;
+  if (filter === 'sold-out') return !inStock && !preorder;
+  if (filter === 'new') return product.releaseType === 'new';
+  if (filter === 'preorder') return preorder;
+  return true;
+}
+
 type Props = {
   visible: boolean;
   onClose: () => void;
@@ -56,6 +82,7 @@ export function WebSearchPalette({ visible, onClose }: Props) {
   const { liveProducts } = useDropDex();
   const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
+  const [catalogFilter, setCatalogFilter] = useState<CatalogFilter>('all');
   const [activeIndex, setActiveIndex] = useState(0);
 
   const trimmed = query.trim();
@@ -64,16 +91,17 @@ export function WebSearchPalette({ visible, onClose }: Props) {
   const products = useMemo(() => {
     if (!trimmed) return [] as Product[];
     return [...liveProducts]
-      .filter((product) => matchesProductSearch(product, trimmed))
+      .filter((product) => matchesProductSearch(product, trimmed) && matchesCatalogFilter(product, catalogFilter))
       .sort((a, b) => a.title.localeCompare(b.title))
       .slice(0, 24);
-  }, [liveProducts, trimmed]);
+  }, [catalogFilter, liveProducts, trimmed]);
 
   const resultCount = showingNav ? NAV_ITEMS.length : products.length;
 
   useEffect(() => {
     if (!visible) {
       setQuery('');
+      setCatalogFilter('all');
       setActiveIndex(0);
       return;
     }
@@ -183,6 +211,19 @@ export function WebSearchPalette({ visible, onClose }: Props) {
               placeholder="Search any sealed or unsealed product…"
               query={query}
             />
+            <View style={styles.filters}>
+              {CATALOG_FILTERS.map((item) => (
+                <ChoiceChip
+                  key={item.id}
+                  label={item.label}
+                  onPress={() => {
+                    setCatalogFilter(item.id);
+                    setActiveIndex(0);
+                  }}
+                  selected={catalogFilter === item.id}
+                />
+              ))}
+            </View>
           </View>
 
           <ScrollView
@@ -292,6 +333,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     paddingHorizontal: 14,
     paddingTop: 14,
+  },
+  filters: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingBottom: 12,
   },
   results: {
     maxHeight: 420,

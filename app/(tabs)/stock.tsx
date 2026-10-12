@@ -453,7 +453,7 @@ export default function StockScreen() {
     stockEvents,
   } = useDropDex();
   const router = useRouter();
-  const { isDesktopWeb, contentColumns } = useWebLayout();
+  const { isDesktopWeb, isWeb, contentColumns } = useWebLayout();
   const [query, setQuery] = useState('');
   const [viewFilter, setViewFilter] = useState<CatalogViewFilter>('all');
   const [refreshing, setRefreshing] = useState(false);
@@ -759,43 +759,47 @@ export default function StockScreen() {
         </View>
       ) : null}
 
-      <FlippingSearch
-        inputRef={searchInputRef}
-        onChangeQuery={setQuery}
-        onClose={() => {
-          animateLayout();
-          setQuery('');
-          setViewFilter('all');
-          setSearchOpen(false);
-        }}
-        onOpen={() => {
-          animateLayout();
-          setSearchOpen(true);
-        }}
-        open={searchOpen}
-        placeholder="Search monitored products…"
-        query={query}
-      />
-      {searchOpen ? (
-        <View style={styles.chips}>
-          {(
-            [
-              ['all', 'All'],
-              ['in-stock', 'In stock'],
-              ['sold-out', 'Sold out'],
-              ['new', 'New'],
-              ['preorder', 'Preorder'],
-            ] as const
-          ).map(([id, label]) => (
-            <ChoiceChip
-              key={id}
-              label={label}
-              onPress={() => setViewFilter(id)}
-              selected={viewFilter === id}
-            />
-          ))}
-        </View>
-      ) : null}
+      {isWeb ? null : (
+        <>
+          <FlippingSearch
+            inputRef={searchInputRef}
+            onChangeQuery={setQuery}
+            onClose={() => {
+              animateLayout();
+              setQuery('');
+              setViewFilter('all');
+              setSearchOpen(false);
+            }}
+            onOpen={() => {
+              animateLayout();
+              setSearchOpen(true);
+            }}
+            open={searchOpen}
+            placeholder="Search monitored products…"
+            query={query}
+          />
+          {searchOpen ? (
+            <View style={styles.chips}>
+              {(
+                [
+                  ['all', 'All'],
+                  ['in-stock', 'In stock'],
+                  ['sold-out', 'Sold out'],
+                  ['new', 'New'],
+                  ['preorder', 'Preorder'],
+                ] as const
+              ).map(([id, label]) => (
+                <ChoiceChip
+                  key={id}
+                  label={label}
+                  onPress={() => setViewFilter(id)}
+                  selected={viewFilter === id}
+                />
+              ))}
+            </View>
+          ) : null}
+        </>
+      )}
 
       {activeQueues.map((queue) => (
         <Pressable
