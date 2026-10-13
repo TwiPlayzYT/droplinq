@@ -3,8 +3,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useWebLayout } from '@/hooks/use-web-layout';
 
-/** Padding above the pill plus the pill itself. Safe-area inset is added separately. */
-export const MOBILE_TAB_BAR_CONTENT_HEIGHT = 6 + 64;
+/** Air above the pill, then the pill. Keep in step with the floating tab bar. */
+export const TAB_PILL_LIFT = 8;
+export const TAB_PILL_HEIGHT = 64;
+export const MOBILE_TAB_BAR_CONTENT_HEIGHT = TAB_PILL_LIFT + TAB_PILL_HEIGHT;
 
 /**
  * Keep labels clear of the iOS home indicator.
@@ -38,7 +40,11 @@ export function useMobileWebChrome() {
     ? mobileWebBottomInset(insets.bottom)
     : 0;
   const tabBarHeight = mobileTabBarHeight(bottomInset);
-  const scrollBottomPad = mobileWebScrollBottomPad(bottomInset);
+  // Web floats the bar over the page, so the scroll content has to clear it.
+  // Native keeps the bar in the layout, so the page only needs a little air.
+  const scrollBottomPad = Platform.OS === 'web' && isMobileWeb
+    ? mobileWebScrollBottomPad(bottomInset)
+    : 20;
 
   return {
     bottomInset,

@@ -5,36 +5,16 @@ import { Platform, View } from 'react-native';
 import { FloatingTabBar } from '@/components/floating-tab-bar';
 import { WebTopNav } from '@/components/web-top-nav';
 import { palette } from '@/constants/dropdex';
-import { useMobileWebChrome } from '@/hooks/use-mobile-web-chrome';
 import { useWebLayout } from '@/hooks/use-web-layout';
 
 export default function TabLayout() {
   const { isDesktopWeb } = useWebLayout();
-  const { tabBarHeight } = useMobileWebChrome();
 
-  const tabBarStyle = isDesktopWeb
-    ? {
-        display: 'none' as const,
-        height: 0,
-        overflow: 'hidden' as const,
-      }
-    : {
-        backgroundColor: 'transparent',
-        borderTopWidth: 0,
-        elevation: 0,
-        height: tabBarHeight,
-        left: 0,
-        position: 'absolute' as const,
-        right: 0,
-        bottom: 0,
-        overflow: 'visible' as const,
-        zIndex: 50,
-        ...(Platform.OS === 'web'
-          ? ({
-              position: 'fixed' as unknown as 'absolute',
-            } as object)
-          : null),
-      };
+  const tabBarStyle = {
+    display: 'none' as const,
+    height: 0,
+    overflow: 'hidden' as const,
+  };
 
   return (
     <View
@@ -47,19 +27,15 @@ export default function TabLayout() {
       }}>
       <WebTopNav />
       <Tabs
-        safeAreaInsets={
-          isDesktopWeb
-            ? { top: 0, right: 0, bottom: 0, left: 0 }
-            : // Padding already applied via tabBarStyle.paddingBottom from real insets.
-              { top: 0, right: 0, bottom: 0, left: 0 }
-        }
+        safeAreaInsets={{ top: 0, right: 0, bottom: 0, left: 0 }}
+        tabBar={(props) => (isDesktopWeb ? null : <FloatingTabBar {...props} />)}
         screenOptions={{
           animation: 'none',
           freezeOnBlur: Platform.OS === 'web',
           lazy: Platform.OS === 'web',
+          tabBarShowLabel: false,
           tabBarActiveTintColor: palette.red,
           tabBarInactiveTintColor: palette.whiteShadow,
-          tabBar: (props) => (isDesktopWeb ? null : <FloatingTabBar {...props} />),
           tabBarStyle,
           headerShown: false,
         } as object}>

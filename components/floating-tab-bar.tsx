@@ -5,23 +5,27 @@ import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { mountTabBar } from '@/components/tab-bar-portal';
 import { TourAnchor } from '@/components/tour-anchor';
-import { mobileWebBottomInset } from '@/hooks/use-mobile-web-chrome';
+import { mobileWebBottomInset, TAB_PILL_HEIGHT, TAB_PILL_LIFT } from '@/hooks/use-mobile-web-chrome';
 
 const RED = '#D20D1E';
-const PILL_HEIGHT = 64;
-const BLOB = 46;
+const BLOB = 50;
+const INACTIVE = 40;
 
-const ICONS: Record<string, { on: keyof typeof Ionicons.glyphMap; off: keyof typeof Ionicons.glyphMap; label: string; tour: string }> = {
-  home: { on: 'power', off: 'power-outline', label: 'Home', tour: 'home' },
-  stock: { on: 'cube', off: 'cube-outline', label: 'Stock', tour: 'stock' },
-  filter: { on: 'options', off: 'options-outline', label: 'Filter', tour: 'filter' },
-  region: { on: 'globe', off: 'globe-outline', label: 'Region', tour: 'region' },
-  settings: { on: 'settings', off: 'settings-outline', label: 'Settings', tour: 'settings-tab' },
+const ICONS: Record<
+  string,
+  { icon: keyof typeof Ionicons.glyphMap; label: string; tour: string }
+> = {
+  home: { icon: 'home', label: 'Home', tour: 'home' },
+  stock: { icon: 'cube', label: 'Stock', tour: 'stock' },
+  filter: { icon: 'options', label: 'Filter', tour: 'filter' },
+  region: { icon: 'globe', label: 'Region', tour: 'region' },
+  settings: { icon: 'settings', label: 'Settings', tour: 'settings-tab' },
 };
 
 /**
- * Floating tab pill. The red circle rests on the open tab and slides when you switch.
+ * Floating tab pill. A red circle rests on the open tab and slides when you switch.
  */
 export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
@@ -33,7 +37,6 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
 
   useEffect(() => {
     if (!trackWidth) return;
-    let reduce = false;
     const run = (reduced: boolean) => {
       if (!placed.current || reduced) {
         shift.setValue(state.index);
@@ -48,7 +51,9 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
       }).start();
     };
     if (Platform.OS === 'web') {
-      const motion = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      const motion =
+        typeof window !== 'undefined' &&
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
       run(Boolean(motion));
       return;
     }
@@ -62,22 +67,11 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
 
   const bottomGap = mobileWebBottomInset(insets.bottom);
 
-  return (
+  const bar = (
     <View
       pointerEvents="box-none"
-      style={[
-        styles.dock,
-        { paddingBottom: bottomGap },
-        Platform.OS === 'web'
-          ? ({
-              position: 'fixed',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 40,
-            } as object)
-          : null,
-      ]}>
+      style={[styles.dock, { paddingBottom: bottomGap }]}
+      {...(Platform.OS === 'web' ? { dataSet: { dlTabdock: '1' } } : null)}>
       <View
         onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
         style={styles.pill}>
@@ -96,8 +90,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
         ) : null}
         {state.routes.map((route, index) => {
           const meta = ICONS[route.name] ?? {
-            on: 'ellipse' as const,
-            off: 'ellipse-outline' as const,
+            icon: 'ellipse' as const,
             label: route.name,
             tour: route.name,
           };
@@ -122,11 +115,10 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
                   }
                 }}
                 style={styles.hit}>
-                <Ionicons
-                  color={selected ? '#FFFFFF' : '#A9A6A2'}
-                  name={selected ? meta.on : meta.off}
-                  size={22}
-                />
+                <View pointerEvents="none" style={styles.iconWrap}>
+                  {selected ? null : <View style={styles.inactive} />}
+                  <Ionicons color={selected ? '#FFFFFF' : '#C8C4BF'} name={meta.icon} size={22} />
+                </View>
               </Pressable>
             </TourAnchor>
           );
@@ -134,21 +126,41 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
       </View>
     </View>
   );
+
+  return mountTabBar(bar);
 }
 
 const styles = StyleSheet.create({
   dock: {
-    paddingHorizontal: 16,
-    paddingTop: 6,
+    paddingHorizontal: 18,
+    paddingTop: TAB_PILL_LIFT,
+    ...(Platform.OS === 'web'
+      ? ({
+          position: 'fixed',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 80,
+        } as object)
+      : null),
   },
   pill: {
-    backgroundColor: '#141414',
-    borderColor: '#2C2C2C',
+    backgroundColor: '#161616',
+    borderColor: 'rgba(255,255,255,0.16)',
     borderRadius: 999,
     borderWidth: 1,
     flexDirection: 'row',
-    height: PILL_HEIGHT,
+    height: TAB_PILL_HEIGHT,
     position: 'relative',
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: '0 12px 32px rgba(0,0,0,0.55)' } as object)
+      : {
+          elevation: 12,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.45,
+          shadowRadius: 16,
+        }),
   },
   blob: {
     backgroundColor: RED,
@@ -156,7 +168,7 @@ const styles = StyleSheet.create({
     height: BLOB,
     left: 0,
     position: 'absolute',
-    top: (PILL_HEIGHT - BLOB) / 2,
+    top: (TAB_PILL_HEIGHT - BLOB) / 2,
   },
   slot: {
     flex: 1,
@@ -165,5 +177,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     justifyContent: 'center',
+  },
+  iconWrap: {
+    alignItems: 'center',
+    height: BLOB,
+    justifyContent: 'center',
+    width: BLOB,
+  },
+  inactive: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: INACTIVE / 2,
+    height: INACTIVE,
+    left: (BLOB - INACTIVE) / 2,
+    position: 'absolute',
+    top: (BLOB - INACTIVE) / 2,
+    width: INACTIVE,
   },
 });

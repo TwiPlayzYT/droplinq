@@ -78,6 +78,17 @@ html, body, #root {
 .dl-skip-link:focus {
   top: 12px;
 }
+[data-dl-tabdock="1"] {
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: var(--dl-vv-bottom, 0px) !important;
+  z-index: 80 !important;
+  pointer-events: none;
+}
+[data-dl-tabdock="1"] > * {
+  pointer-events: auto;
+}
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
@@ -110,8 +121,10 @@ export function WebAppShell({ children }: PropsWithChildren) {
       const viewport = window.visualViewport;
       const height = viewport?.height ?? window.innerHeight;
       const top = viewport?.offsetTop ?? 0;
+      const bottom = Math.max(0, window.innerHeight - top - height);
       document.documentElement.style.setProperty('--dl-vvh', `${Math.round(height)}px`);
       document.documentElement.style.setProperty('--dl-vv-top', `${Math.round(top)}px`);
+      document.documentElement.style.setProperty('--dl-vv-bottom', `${Math.round(bottom)}px`);
     };
     syncViewport();
     window.visualViewport?.addEventListener('resize', syncViewport);
