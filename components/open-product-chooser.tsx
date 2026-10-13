@@ -27,7 +27,7 @@ export function OpenProductChooser() {
             accessibilityRole="button"
             onPress={() => confirmOpenProduct('tab')}
             style={({ pressed }) => [styles.option, pressed && styles.pressed]}>
-            <Ionicons color={palette.white} name="open-outline" size={20} />
+            <Ionicons color="#FFFFFF" name="open-outline" size={20} />
             <View style={styles.optionCopy}>
               <Text style={styles.optionTitle}>New tab</Text>
               <Text style={styles.optionSub}>Open in a normal browser tab</Text>
@@ -39,7 +39,7 @@ export function OpenProductChooser() {
             accessibilityRole="button"
             onPress={() => confirmOpenProduct('popup')}
             style={({ pressed }) => [styles.option, pressed && styles.pressed]}>
-            <Ionicons color={palette.white} name="browsers-outline" size={20} />
+            <Ionicons color="#FFFFFF" name="browsers-outline" size={20} />
             <View style={styles.optionCopy}>
               <Text style={styles.optionTitle}>Popup</Text>
               <Text style={styles.optionSub}>Open in a smaller floating window</Text>
@@ -97,20 +97,19 @@ const styles = StyleSheet.create({
   },
   option: {
     alignItems: 'center',
-    backgroundColor: palette.black,
-    borderColor: '#2C2C2C',
-    borderRadius: 14,
-    borderWidth: 1,
+    backgroundColor: '#D20D1E',
+    borderRadius: 10,
     flexDirection: 'row',
     gap: 12,
     marginBottom: 10,
+    minHeight: 48,
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
   optionCopy: { flex: 1, minWidth: 0 },
-  optionTitle: { color: palette.white, fontSize: 15, fontWeight: '800' },
+  optionTitle: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
   optionSub: {
-    color: palette.whiteShadow,
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
     marginTop: 2,

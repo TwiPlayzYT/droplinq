@@ -106,7 +106,7 @@ export default function ProductDetailScreen() {
         <BrandHeader eyebrow="Product" />
         <Panel>
           <Text style={styles.copy}>{error ?? 'Loading product…'}</Text>
-          <MetalButton icon="arrow-back" label="Back" onPress={() => router.back()} />
+          <MetalButton icon="arrow-back" label="Back" onPress={() => router.back()} tone="quiet" />
         </Panel>
       </Screen>
     );
@@ -174,7 +174,7 @@ export default function ProductDetailScreen() {
           ))
         )}
       </Panel>
-      <MetalButton icon="arrow-back" label="Back" onPress={() => router.back()} />
+      <MetalButton icon="arrow-back" label="Back" onPress={() => router.back()} tone="quiet" />
     </Screen>
   );
 }

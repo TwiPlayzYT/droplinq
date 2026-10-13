@@ -18,7 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SiteFooter } from '@/components/site-footer';
-import { pressGhost, pressTab } from '@/components/button-press';
+import { pressGhost, pressSolid, pressTab } from '@/components/button-press';
 import { palette } from '@/constants/dropdex';
 import { useMobileWebChrome } from '@/hooks/use-mobile-web-chrome';
 import { useWebLayout } from '@/hooks/use-web-layout';
@@ -282,28 +282,39 @@ export function MetalButton({
   onPress,
   icon = 'flash',
   disabled = false,
+  tone = 'primary',
 }: {
   label: string;
   onPress: () => void;
   icon?: keyof typeof Ionicons.glyphMap;
   disabled?: boolean;
+  /** Primary matches the red email button. Quiet is for back and dismiss. */
+  tone?: 'primary' | 'quiet';
 }) {
+  const primary = tone === 'primary';
   return (
     <InstantPressable
       accessibilityLabel={label}
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
-      dataSet={pressGhost}
+      dataSet={primary ? pressSolid : pressGhost}
       style={({ pressed }) => [
-        styles.metalButton,
+        primary ? styles.actionButton : styles.metalButton,
         Platform.OS !== 'web' && pressed && styles.pressed,
         disabled && { opacity: 0.5 },
       ]}>
-      <View style={styles.metalButtonFace}>
-        <Ionicons color={palette.controlInk} name={icon} size={18} />
-        <Text style={styles.metalButtonText}>{label.toUpperCase()}</Text>
-      </View>
+      {primary ? (
+        <>
+          <Ionicons color="#FFFFFF" name={icon} size={18} />
+          <Text style={styles.actionButtonText}>{label}</Text>
+        </>
+      ) : (
+        <View style={styles.metalButtonFace}>
+          <Ionicons color={palette.controlInk} name={icon} size={18} />
+          <Text style={styles.metalButtonText}>{label.toUpperCase()}</Text>
+        </View>
+      )}
     </InstantPressable>
   );
 }
@@ -521,6 +532,22 @@ const styles = StyleSheet.create({
   },
   choiceText: { color: palette.cardMuted, fontSize: 12, fontWeight: '800' },
   choiceTextSelected: { color: palette.cardInk },
+  actionButton: {
+    alignItems: 'center',
+    backgroundColor: '#D20D1E',
+    borderRadius: 10,
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'center',
+    marginTop: 12,
+    minHeight: 48,
+    paddingHorizontal: 16,
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+  },
   metalButton: {
     backgroundColor: palette.blackSoft,
     borderRadius: 16,

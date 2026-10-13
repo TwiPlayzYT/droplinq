@@ -14,6 +14,7 @@ import Reanimated, {
   useAnimatedStyle,
 } from 'react-native-reanimated';
 
+import { pressSolid } from '@/components/button-press';
 import { BrandHeader, MetalButton, Panel, Screen } from '@/components/dropdex-ui';
 import { TourAnchor } from '@/components/tour-anchor';
 import { isTutorialSessionActive } from '@/services/tour-session';
@@ -263,7 +264,8 @@ export default function HomeScreen() {
                 key={option.label}
                 accessibilityLabel={`Schedule test alert ${option.label}`}
                 onPress={() => pickTestDelay(option.ms)}
-                style={({ pressed }) => [styles.scheduleChip, pressed && styles.subNavPressed]}>
+                style={({ pressed }) => [styles.scheduleChip, pressed && styles.subNavPressed]}
+                dataSet={pressSolid}>
                 <Text style={styles.scheduleChipText}>{option.label}</Text>
               </Pressable>
             ))}
@@ -436,8 +438,9 @@ export default function HomeScreen() {
                       }
                       setTestPickerOpen((open) => !open);
                     }}
-                    style={({ pressed }) => [styles.testChip, pressed && styles.subNavPressed]}>
-                    <Ionicons color={palette.cardInk} name="flash" size={14} />
+                    style={({ pressed }) => [styles.testChip, pressed && styles.subNavPressed]}
+                    dataSet={pressSolid}>
+                    <Ionicons color="#FFFFFF" name="flash" size={14} />
                     <Text style={styles.testChipText}>TEST</Text>
                   </Pressable>
                   </TourAnchor>
@@ -812,7 +815,7 @@ const styles = StyleSheet.create({
   },
   testChip: {
     alignItems: 'center',
-    backgroundColor: palette.card,
+    backgroundColor: '#D20D1E',
     borderRadius: 999,
     flexDirection: 'row',
     gap: 6,
@@ -820,7 +823,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   testChipText: {
-    color: palette.cardInk,
+    color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 0.8,
@@ -876,13 +879,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   scheduleChip: {
-    backgroundColor: palette.card,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: '#D20D1E',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   scheduleChipText: {
-    color: palette.cardInk,
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '800',
   },

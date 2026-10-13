@@ -53,7 +53,7 @@ export function CookieConsentBanner() {
             accessibilityRole="button"
             onPress={() => void acceptEssential()}
             style={({ pressed }) => [styles.primary, pressed && styles.pressed]}>
-            <Ionicons color={palette.controlInk} name="checkmark" size={16} />
+            <Ionicons color="#FFFFFF" name="checkmark" size={16} />
             <Text style={styles.primaryText}>Accept essential cookies</Text>
           </Pressable>
         </View>
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   },
   primary: {
     alignItems: 'center',
-    backgroundColor: palette.control,
+    backgroundColor: '#D20D1E',
     borderRadius: 10,
     flexDirection: 'row',
     gap: 6,
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   primaryText: {
-    color: palette.controlInk,
+    color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '800',
   },

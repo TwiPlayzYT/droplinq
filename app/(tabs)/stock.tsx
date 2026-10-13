@@ -831,6 +831,7 @@ export default function StockScreen() {
               icon="options-outline"
               label="Open Filter"
               onPress={() => router.push('/(tabs)/filter')}
+              tone="quiet"
             />
           </Panel>
         ) : showSkeletons ? (

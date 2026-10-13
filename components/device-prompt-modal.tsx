@@ -165,7 +165,7 @@ export function DevicePromptModal() {
                 }}
               />
               <View style={styles.spacer} />
-              <MetalButton icon="arrow-forward" label="Not now" onPress={() => void finish()} />
+              <MetalButton icon="arrow-forward" label="Not now" onPress={() => void finish()} tone="quiet" />
               <Text style={styles.footer}>
                 You can open Notifications setup anytime from Settings.
               </Text>

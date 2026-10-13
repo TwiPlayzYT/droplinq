@@ -161,7 +161,7 @@ export default function NotificationSetupScreen() {
         </Text>
       </Panel>
 
-      <MetalButton icon="arrow-back" label="Back to Settings" onPress={() => router.back()} />
+      <MetalButton icon="arrow-back" label="Back to Settings" onPress={() => router.back()} tone="quiet" />
     </Screen>
   );
 }
