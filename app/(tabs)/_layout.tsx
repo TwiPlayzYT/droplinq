@@ -3,6 +3,7 @@ import React from 'react';
 import { Platform, View } from 'react-native';
 
 import { FloatingTabBar } from '@/components/floating-tab-bar';
+import { ProductSearchHost } from '@/components/product-search-host';
 import { WebTopNav } from '@/components/web-top-nav';
 import { palette } from '@/constants/dropdex';
 import { useWebLayout } from '@/hooks/use-web-layout';
@@ -26,6 +27,7 @@ export default function TabLayout() {
           : null),
       }}>
       <WebTopNav />
+      <ProductSearchHost />
       <Tabs
         safeAreaInsets={{ top: 0, right: 0, bottom: 0, left: 0 }}
         tabBar={(props) => (isDesktopWeb ? null : <FloatingTabBar {...props} />)}

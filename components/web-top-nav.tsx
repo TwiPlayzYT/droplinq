@@ -5,8 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ProfileMenu } from '@/components/profile-menu';
-import { tourDomProps } from '@/components/tour-anchor';
-import { WebSearchPalette } from '@/components/web-search-palette';
+import { setProductSearchOpen } from '@/components/product-search-host';
+import { TourAnchor, tourDomProps } from '@/components/tour-anchor';
 import { palette } from '@/constants/dropdex';
 import { useWebLayout } from '@/hooks/use-web-layout';
 
@@ -102,20 +102,20 @@ function isTypingTarget(target: EventTarget | null) {
 }
 
 /**
- * Web top navigation — full bar on desktop; on mobile web brand + search + profile.
- * Settings lives in the profile menu (Collectr-style), not the primary link row.
+ * Web top navigation — full bar on desktop; on mobile web brand + settings + profile.
+ * Search on phones lives in the center of the bottom pill. Profile still opens Settings.
  */
 export function WebTopNav() {
   const { isDesktopWeb, isMobileWeb, isWeb } = useWebLayout();
   const pathname = usePathname();
   const router = useRouter();
-  const [searchOpen, setSearchOpen] = useState(false);
+  const onSettings =
+    pathname === '/settings' || pathname.endsWith('/settings');
 
   useEffect(() => {
     if (!isWeb || Platform.OS !== 'web') return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (searchOpen) return;
       if (isTypingTarget(event.target)) return;
 
       const metaK = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k';
@@ -123,12 +123,12 @@ export function WebTopNav() {
       if (!metaK && !slash) return;
 
       event.preventDefault();
-      setSearchOpen(true);
+      setProductSearchOpen(true);
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isWeb, searchOpen]);
+  }, [isWeb]);
 
   if (!isWeb) return null;
 
@@ -144,18 +144,18 @@ export function WebTopNav() {
             <Text style={styles.mobileBrandText}>DROPLINQ</Text>
           </Pressable>
           <View style={styles.mobileActions}>
-            <Pressable
-              accessibilityLabel="Open product search"
-              accessibilityHint="Search products by name"
-              accessibilityRole="button"
-              onPress={() => setSearchOpen(true)}
-              style={styles.mobileSearch}>
-              <Ionicons color={palette.white} name="search" size={18} />
-            </Pressable>
+            <TourAnchor id="settings-tab">
+              <Pressable
+                accessibilityLabel="Settings"
+                accessibilityRole="button"
+                onPress={() => router.navigate('/settings' as never)}
+                style={[styles.mobileSettings, onSettings && styles.settingsOn]}>
+                <Ionicons color={onSettings ? '#FFFFFF' : '#C8C4BF'} name="settings" size={18} />
+              </Pressable>
+            </TourAnchor>
             <ProfileMenu compact />
           </View>
         </View>
-        <WebSearchPalette visible={searchOpen} onClose={() => setSearchOpen(false)} />
       </>
     );
   }
@@ -184,7 +184,7 @@ export function WebTopNav() {
               accessibilityLabel="Open product search"
               accessibilityHint="Type a product name or press slash"
               accessibilityRole="button"
-              onPress={() => setSearchOpen(true)}
+              onPress={() => setProductSearchOpen(true)}
               style={styles.searchChip}>
               <Ionicons color={palette.whiteShadow} name="search" size={16} />
               <Text style={styles.searchChipText}>Search</Text>
@@ -192,12 +192,19 @@ export function WebTopNav() {
                 <Text style={styles.kbdText}>/</Text>
               </View>
             </Pressable>
+            <TourAnchor id="settings-desktop">
+              <Pressable
+                accessibilityLabel="Settings"
+                accessibilityRole="button"
+                onPress={() => router.navigate('/settings' as never)}
+                style={[styles.settingsButton, onSettings && styles.settingsOn]}>
+                <Ionicons color={onSettings ? '#FFFFFF' : '#C8C4BF'} name="settings" size={20} />
+              </Pressable>
+            </TourAnchor>
             <ProfileMenu />
           </View>
         </View>
       </View>
-
-      <WebSearchPalette visible={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 }
@@ -346,7 +353,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  mobileSearch: {
+  mobileSettings: {
     alignItems: 'center',
     backgroundColor: palette.blackRaised,
     borderColor: palette.blackSoft,
@@ -355,5 +362,19 @@ const styles = StyleSheet.create({
     height: 34,
     justifyContent: 'center',
     width: 34,
+  },
+  settingsButton: {
+    alignItems: 'center',
+    backgroundColor: palette.blackRaised,
+    borderColor: palette.blackSoft,
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  settingsOn: {
+    backgroundColor: '#D20D1E',
+    borderColor: '#D20D1E',
   },
 });
