@@ -1,21 +1,16 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform, View } from 'react-native';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { TourAnchor } from '@/components/tour-anchor';
+import { FloatingTabBar } from '@/components/floating-tab-bar';
 import { WebTopNav } from '@/components/web-top-nav';
 import { palette } from '@/constants/dropdex';
-import {
-  MOBILE_TAB_BAR_CONTENT_HEIGHT,
-  useMobileWebChrome,
-} from '@/hooks/use-mobile-web-chrome';
+import { useMobileWebChrome } from '@/hooks/use-mobile-web-chrome';
 import { useWebLayout } from '@/hooks/use-web-layout';
 
 export default function TabLayout() {
-  const { isDesktopWeb, isMobileWeb } = useWebLayout();
-  const { bottomInset, tabBarHeight } = useMobileWebChrome();
+  const { isDesktopWeb } = useWebLayout();
+  const { tabBarHeight } = useMobileWebChrome();
 
   const tabBarStyle = isDesktopWeb
     ? {
@@ -24,20 +19,19 @@ export default function TabLayout() {
         overflow: 'hidden' as const,
       }
     : {
-        backgroundColor: palette.blackRaised,
-        borderTopColor: palette.blackSoft,
-        borderTopWidth: 1,
+        backgroundColor: 'transparent',
+        borderTopWidth: 0,
+        elevation: 0,
         height: tabBarHeight,
-        paddingBottom: bottomInset,
-        paddingTop: 6,
+        left: 0,
+        position: 'absolute' as const,
+        right: 0,
+        bottom: 0,
+        overflow: 'visible' as const,
         zIndex: 50,
         ...(Platform.OS === 'web'
           ? ({
-              // Pin to the visual viewport on mobile Safari so labels clear the home indicator.
               position: 'fixed' as unknown as 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
             } as object)
           : null),
       };
@@ -48,7 +42,7 @@ export default function TabLayout() {
         backgroundColor: palette.black,
         flex: 1,
         ...(Platform.OS === 'web'
-          ? ({ height: '100%', maxHeight: '100%', overflow: 'hidden' } as object)
+          ? ({ height: '100%', maxHeight: '100%' } as object)
           : null),
       }}>
       <WebTopNav />
@@ -65,105 +59,15 @@ export default function TabLayout() {
           lazy: Platform.OS === 'web',
           tabBarActiveTintColor: palette.red,
           tabBarInactiveTintColor: palette.whiteShadow,
+          tabBar: (props) => (isDesktopWeb ? null : <FloatingTabBar {...props} />),
           tabBarStyle,
-          tabBarItemStyle: {
-            paddingVertical: 0,
-            height: MOBILE_TAB_BAR_CONTENT_HEIGHT,
-          },
-          tabBarLabelStyle: {
-            fontSize: 10,
-            fontWeight: '800',
-            letterSpacing: 0.4,
-            marginBottom: 2,
-            marginTop: 2,
-          },
           headerShown: false,
-          tabBarButton: HapticTab,
-          sceneStyle: isDesktopWeb
-            ? undefined
-            : {
-                // Keep tab scenes clear of the fixed/web or padded native tab bar.
-                paddingBottom: Platform.OS === 'web' ? tabBarHeight : 0,
-              },
         } as object}>
-        <Tabs.Screen
-          name="home"
-          options={{
-            title: 'Home',
-            tabBarButton: (props) => (
-              <TourAnchor id="home" style={{ flex: 1 }}>
-                <HapticTab {...props} />
-              </TourAnchor>
-            ),
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons color={color} name={focused ? 'power' : 'power-outline'} size={21} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="stock"
-          options={{
-            title: 'Stock',
-            tabBarButton: (props) => (
-              <TourAnchor id="stock" style={{ flex: 1 }}>
-                <HapticTab {...props} />
-              </TourAnchor>
-            ),
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons color={color} name={focused ? 'cube' : 'cube-outline'} size={21} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="filter"
-          options={{
-            title: 'Filter',
-            tabBarButton: (props) => (
-              <TourAnchor id="filter" style={{ flex: 1 }}>
-                <HapticTab {...props} />
-              </TourAnchor>
-            ),
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons
-                color={color}
-                name={focused ? 'options' : 'options-outline'}
-                size={21}
-              />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="region"
-          options={{
-            title: 'Region',
-            tabBarButton: (props) => (
-              <TourAnchor id="region" style={{ flex: 1 }}>
-                <HapticTab {...props} />
-              </TourAnchor>
-            ),
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons color={color} name={focused ? 'globe' : 'globe-outline'} size={21} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="settings"
-          options={{
-            title: 'Settings',
-            tabBarButton: (props) => (
-              <TourAnchor id="settings-tab" style={{ flex: 1 }}>
-                <HapticTab {...props} />
-              </TourAnchor>
-            ),
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons
-                color={color}
-                name={focused ? 'settings' : 'settings-outline'}
-                size={21}
-              />
-            ),
-          }}
-        />
+        <Tabs.Screen name="home" options={{ title: 'Home' }} />
+        <Tabs.Screen name="stock" options={{ title: 'Stock' }} />
+        <Tabs.Screen name="filter" options={{ title: 'Filter' }} />
+        <Tabs.Screen name="region" options={{ title: 'Region' }} />
+        <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
       </Tabs>
     </View>
   );

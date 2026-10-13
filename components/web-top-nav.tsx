@@ -1,13 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { usePathname, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ProfileMenu } from '@/components/profile-menu';
 import { tourDomProps } from '@/components/tour-anchor';
 import { WebSearchPalette } from '@/components/web-search-palette';
-import { pressTab } from '@/components/button-press';
 import { palette } from '@/constants/dropdex';
 import { useWebLayout } from '@/hooks/use-web-layout';
 
@@ -15,9 +14,9 @@ const brandIcon = require('../assets/images/icon.png');
 
 const LINKS = [
   { href: '/home', match: ['/home', '/(tabs)/home', '/(tabs)'], label: 'Home', key: 'home' },
-  { href: '/(tabs)/stock', match: ['/stock', '/(tabs)/stock'], label: 'Stock', key: 'stock' },
-  { href: '/(tabs)/filter', match: ['/filter', '/(tabs)/filter'], label: 'Filter', key: 'filter' },
-  { href: '/(tabs)/region', match: ['/region', '/(tabs)/region'], label: 'Region', key: 'region' },
+  { href: '/stock', match: ['/stock', '/(tabs)/stock'], label: 'Stock', key: 'stock' },
+  { href: '/filter', match: ['/filter', '/(tabs)/filter'], label: 'Filter', key: 'filter' },
+  { href: '/region', match: ['/region', '/(tabs)/region'], label: 'Region', key: 'region' },
 ] as const;
 
 function pathActive(pathname: string, match: readonly string[]) {
@@ -26,6 +25,69 @@ function pathActive(pathname: string, match: readonly string[]) {
     const m = item.replace(/\/$/, '') || '/';
     return normalized === m || normalized.endsWith(m);
   });
+}
+
+function DesktopTabLinks({
+  pathname,
+  onNavigate,
+}: {
+  pathname: string;
+  onNavigate: (href: string) => void;
+}) {
+  const activeKey = LINKS.find((link) => pathActive(pathname, link.match))?.key ?? 'home';
+  const [boxes, setBoxes] = useState<Record<string, { x: number; width: number }>>({});
+  const x = useRef(new Animated.Value(0)).current;
+  const width = useRef(new Animated.Value(0)).current;
+  const ready = useRef(false);
+
+  useEffect(() => {
+    const box = boxes[activeKey];
+    if (!box) return;
+    const reduce =
+      Platform.OS === 'web' &&
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (!ready.current || reduce) {
+      x.setValue(box.x);
+      width.setValue(box.width);
+      ready.current = true;
+      return;
+    }
+    Animated.parallel([
+      Animated.spring(x, { toValue: box.x, useNativeDriver: false, friction: 8, tension: 120 }),
+      Animated.spring(width, { toValue: box.width, useNativeDriver: false, friction: 8, tension: 120 }),
+    ]).start();
+  }, [activeKey, boxes, width, x]);
+
+  return (
+    <View style={styles.links}>
+      <Animated.View pointerEvents="none" style={[styles.activePill, { left: x, width }]} />
+      {LINKS.map((link) => {
+        const active = link.key === activeKey;
+        return (
+          <Pressable
+            key={link.key}
+            accessibilityRole="link"
+            onLayout={(event) => {
+              const next = {
+                x: event.nativeEvent.layout.x,
+                width: event.nativeEvent.layout.width,
+              };
+              setBoxes((prev) => {
+                const current = prev[link.key];
+                if (current && current.x === next.x && current.width === next.width) return prev;
+                return { ...prev, [link.key]: next };
+              });
+            }}
+            onPress={() => onNavigate(link.href)}
+            style={styles.link}
+            {...tourDomProps(link.key)}>
+            <Text style={[styles.linkText, active && styles.linkTextActive]}>{link.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
 }
 
 function isTypingTarget(target: EventTarget | null) {
@@ -115,22 +177,7 @@ export function WebTopNav() {
             </View>
           </Pressable>
 
-          <View style={styles.links}>
-            {LINKS.map((link) => {
-              const active = pathActive(pathname, link.match);
-              return (
-                <Pressable
-                  key={link.key}
-                  accessibilityRole="link"
-                  onPress={() => router.push(link.href as never)}
-                  style={[styles.link, active && styles.linkActive]}
-                  {...tourDomProps(link.key)}
-                  dataSet={{ tour: link.key, ...pressTab(active) }}>
-                  <Text style={[styles.linkText, active && styles.linkTextActive]}>{link.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <DesktopTabLinks pathname={pathname} onNavigate={(href) => router.navigate(href as never)} />
 
           <View style={styles.actions}>
             <Pressable
@@ -203,14 +250,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
+    position: 'relative',
+  },
+  activePill: {
+    backgroundColor: '#D20D1E',
+    borderRadius: 999,
+    bottom: 0,
+    position: 'absolute',
+    top: 0,
   },
   link: {
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 8,
-  },
-  linkActive: {
-    backgroundColor: 'rgba(210,13,30,0.16)',
   },
   linkText: {
     color: palette.whiteDim,
@@ -218,7 +270,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   linkTextActive: {
-    color: palette.red,
+    color: '#FFFFFF',
   },
   actions: {
     alignItems: 'center',

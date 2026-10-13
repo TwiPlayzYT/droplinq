@@ -52,7 +52,7 @@ export function Screen({
   const contentStyle = [
     styles.screenContent,
     isDesktopWeb && (wide ? styles.screenContentDesktopWide : styles.screenContentDesktop),
-    isMobileWeb && [styles.screenContentMobileWeb, { paddingBottom: scrollBottomPad }],
+    !isDesktopWeb && [styles.screenContentMobileWeb, { paddingBottom: scrollBottomPad }],
     style,
   ];
 

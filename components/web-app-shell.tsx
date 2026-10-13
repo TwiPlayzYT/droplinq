@@ -31,21 +31,20 @@ html, body {
   overscroll-behavior: none;
   overflow: hidden;
 }
-/* Pin the app to the visual viewport so iOS Safari never crops the bottom tab bar. */
 html, body, #root {
   width: 100%;
   max-width: 100%;
 }
+/* Follow the visible screen, including after the keyboard or Safari toolbar moves. */
 #root {
   position: fixed;
-  inset: 0;
+  top: var(--dl-vv-top, 0px);
+  left: 0;
+  right: 0;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  height: 100dvh;
-  height: 100svh;
-  max-height: 100dvh;
-  max-height: 100svh;
+  height: var(--dl-vvh, 100dvh);
+  max-height: var(--dl-vvh, 100dvh);
   overflow: hidden;
   background: var(--dl-bg, #090909);
 }
@@ -100,12 +99,24 @@ export function WebAppShell({ children }: PropsWithChildren) {
     const existing = document.getElementById('droplinq-smooth-css');
     if (existing) {
       existing.textContent = WEB_SMOOTH_CSS;
-      return;
+    } else {
+      const style = document.createElement('style');
+      style.id = 'droplinq-smooth-css';
+      style.textContent = WEB_SMOOTH_CSS;
+      document.head.appendChild(style);
     }
-    const style = document.createElement('style');
-    style.id = 'droplinq-smooth-css';
-    style.textContent = WEB_SMOOTH_CSS;
-    document.head.appendChild(style);
+
+    const syncViewport = () => {
+      const viewport = window.visualViewport;
+      const height = viewport?.height ?? window.innerHeight;
+      const top = viewport?.offsetTop ?? 0;
+      document.documentElement.style.setProperty('--dl-vvh', `${Math.round(height)}px`);
+      document.documentElement.style.setProperty('--dl-vv-top', `${Math.round(top)}px`);
+    };
+    syncViewport();
+    window.visualViewport?.addEventListener('resize', syncViewport);
+    window.visualViewport?.addEventListener('scroll', syncViewport);
+    window.addEventListener('orientationchange', syncViewport);
 
     if (!document.getElementById('droplinq-skip-link')) {
       const skip = document.createElement('a');
@@ -115,6 +126,12 @@ export function WebAppShell({ children }: PropsWithChildren) {
       skip.textContent = 'Skip to main content';
       document.body.prepend(skip);
     }
+
+    return () => {
+      window.visualViewport?.removeEventListener('resize', syncViewport);
+      window.visualViewport?.removeEventListener('scroll', syncViewport);
+      window.removeEventListener('orientationchange', syncViewport);
+    };
   }, []);
 
   if (Platform.OS !== 'web') {

@@ -3,8 +3,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useWebLayout } from '@/hooks/use-web-layout';
 
-/** Icon row + label inside the bottom tab bar (excluding home-indicator inset). */
-export const MOBILE_TAB_BAR_CONTENT_HEIGHT = 58;
+/** Padding above the pill plus the pill itself. Safe-area inset is added separately. */
+export const MOBILE_TAB_BAR_CONTENT_HEIGHT = 6 + 64;
 
 /**
  * Keep labels clear of the iOS home indicator.
@@ -13,7 +13,12 @@ export const MOBILE_TAB_BAR_CONTENT_HEIGHT = 58;
 export function mobileWebBottomInset(insetFromHook: number) {
   const inset = Math.max(insetFromHook, 0);
   if (Platform.OS === 'ios') return Math.max(inset, 20);
-  if (Platform.OS === 'web') return Math.max(inset, 0);
+  if (Platform.OS === 'android') return Math.max(inset, 10);
+  if (Platform.OS === 'web') {
+    const iphone =
+      typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent);
+    return Math.max(inset, iphone ? 28 : 12);
+  }
   return inset;
 }
 

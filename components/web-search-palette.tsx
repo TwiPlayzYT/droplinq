@@ -31,10 +31,10 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { key: 'home', label: 'Go to Home', href: '/home', icon: 'home-outline' },
-  { key: 'stock', label: 'Go to Stock', href: '/(tabs)/stock', icon: 'cube-outline' },
-  { key: 'filter', label: 'Go to Filter', href: '/(tabs)/filter', icon: 'options-outline' },
-  { key: 'region', label: 'Go to Region', href: '/(tabs)/region', icon: 'globe-outline' },
-  { key: 'settings', label: 'Go to Settings', href: '/(tabs)/settings', icon: 'settings-outline' },
+  { key: 'stock', label: 'Go to Stock', href: '/stock', icon: 'cube-outline' },
+  { key: 'filter', label: 'Go to Filter', href: '/filter', icon: 'options-outline' },
+  { key: 'region', label: 'Go to Region', href: '/region', icon: 'globe-outline' },
+  { key: 'settings', label: 'Go to Settings', href: '/settings', icon: 'settings-outline' },
 ];
 
 function productSubtitle(product: Product) {
@@ -130,7 +130,7 @@ export function WebSearchPalette({ visible, onClose }: Props) {
         window.open(path ? `/${path}` : '/home', '_blank');
         return;
       }
-      router.push(item.href as never);
+      router.navigate(item.href as never);
     },
     [onClose, router],
   );
