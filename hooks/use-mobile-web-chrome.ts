@@ -17,7 +17,7 @@ export function mobileWebBottomInset(insetFromHook: number) {
   if (Platform.OS === 'web') {
     const iphone =
       typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent);
-    return Math.max(inset, iphone ? 28 : 12);
+    return Math.max(inset, iphone ? 34 : 12);
   }
   return inset;
 }

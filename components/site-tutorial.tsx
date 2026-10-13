@@ -273,7 +273,7 @@ export function SiteTutorial() {
   useEffect(() => {
     if (status !== 'active' || !step) return;
     if (pathMatches(pathname, step.route)) return;
-    router.push(step.route as never);
+    router.navigate((step.route.replace('/(tabs)', '') || '/home') as never);
   }, [pathname, router, status, step]);
 
   useEffect(() => {

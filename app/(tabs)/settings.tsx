@@ -323,13 +323,13 @@ export default function SettingsScreen() {
       <SettingsGroup title="Coverage">
         <SettingsNavRow
           caption={coverage.description}
-          onPress={() => router.push('/(tabs)/filter')}
+          onPress={() => router.navigate('/filter' as never)}
           title={`${coverage.emoji} ${coverage.title}`}
         />
         <SettingsNavRow
           caption="New on the site, back in stock, or a preorder opening."
           last
-          onPress={() => router.push('/(tabs)/filter')}
+          onPress={() => router.navigate('/filter' as never)}
           title="When to ping you"
         />
       </SettingsGroup>

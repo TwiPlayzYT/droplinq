@@ -128,7 +128,7 @@ export function ProfileMenu({ compact = false }: Props) {
 
   const goSettings = () => {
     closeMenu();
-    router.push('/(tabs)/settings');
+    router.navigate('/settings' as never);
   };
 
   const onSignOut = () => {

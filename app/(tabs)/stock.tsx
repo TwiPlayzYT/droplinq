@@ -712,7 +712,7 @@ export default function StockScreen() {
             emitTourAction('tap');
             return;
           }
-          router.push('/(tabs)/filter');
+          router.navigate('/filter' as never);
         }}
         style={({ pressed }) => [styles.coverageShadow, pressed && styles.pressed]}>
         <View style={styles.coverageCard}>
@@ -830,7 +830,7 @@ export default function StockScreen() {
             <MetalButton
               icon="options-outline"
               label="Open Filter"
-              onPress={() => router.push('/(tabs)/filter')}
+              onPress={() => router.navigate('/filter' as never)}
               tone="quiet"
             />
           </Panel>

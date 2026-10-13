@@ -312,13 +312,13 @@ export default function HomeScreen() {
               </View>
               <Pressable
                 unstable_pressDelay={0}
-                onPress={() => router.push('/(tabs)/stock')}
+                onPress={() => router.navigate('/stock' as never)}
                 style={({ pressed }) => [styles.subNavPill, pressed && styles.subNavPressed]}>
                 <Text style={styles.subNavText}>Stock</Text>
               </Pressable>
               <Pressable
                 unstable_pressDelay={0}
-                onPress={() => router.push('/(tabs)/filter')}
+                onPress={() => router.navigate('/filter' as never)}
                 style={({ pressed }) => [styles.subNavPill, pressed && styles.subNavPressed]}>
                 <Text style={styles.subNavText}>Coverage</Text>
               </Pressable>

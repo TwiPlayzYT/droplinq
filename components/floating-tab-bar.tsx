@@ -63,7 +63,21 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const bottomGap = mobileWebBottomInset(insets.bottom);
 
   return (
-    <View pointerEvents="box-none" style={[styles.dock, { paddingBottom: bottomGap }]}>
+    <View
+      pointerEvents="box-none"
+      style={[
+        styles.dock,
+        { paddingBottom: bottomGap },
+        Platform.OS === 'web'
+          ? ({
+              position: 'fixed',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 40,
+            } as object)
+          : null,
+      ]}>
       <View
         onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
         style={styles.pill}>
