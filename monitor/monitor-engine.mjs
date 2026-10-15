@@ -388,7 +388,7 @@ export class MonitorEngine {
         // cannot silence customers when a device later confirms stock.
         if (emitEvents) {
           const alreadyAlerted = (state.notifiedDropIds ?? []).includes(product.id);
-          if (previous && !previous.inStock && observedInStock) {
+          if (previous && !previous.inStock && observedInStock && product.releaseType !== 'queue') {
             releaseType = 'restock';
           } else if (state.baselineReady && !previous && !alreadyAlerted) {
             releaseType = product.releaseType ?? 'new';

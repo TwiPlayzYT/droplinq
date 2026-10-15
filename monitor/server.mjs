@@ -486,7 +486,11 @@ const server = createServer(async (request, response) => {
     if (limited(request, response, 'observations', 20)) return;
     try {
       const payload = JSON.parse(await readBody(request));
-      const products = Array.isArray(payload.products) ? payload.products.slice(0, 40) : [];
+      const incoming = Array.isArray(payload.products) ? payload.products : [];
+      const products = [
+        ...incoming.filter((product) => isQueueObservation(product)),
+        ...incoming.filter((product) => !isQueueObservation(product)),
+      ].slice(0, 40);
       const allowed = products.filter(
         (product) =>
           isQueueObservation(product) ||

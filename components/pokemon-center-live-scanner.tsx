@@ -35,7 +35,7 @@ const withJitter = (ms: number) => Math.round(ms * (0.8 + Math.random() * 0.4));
 const EXTRACT_CATALOG_SCRIPT = `
 (function () {
   var attempts = 0;
-  var maxAttempts = 5;
+  var maxAttempts = 12;
 
   function blocked(html, title, bodyText) {
     var value = (html + ' ' + title + ' ' + bodyText).toLowerCase();
@@ -52,10 +52,21 @@ const EXTRACT_CATALOG_SCRIPT = `
     );
   }
 
-  function virtualQueue(title, bodyText) {
-    var value = (title + ' ' + bodyText).toLowerCase();
-    return value.indexOf("you're in the virtual queue") !== -1
-      || value.indexOf('you are in the virtual queue') !== -1;
+  function readableText() {
+    var root = document.querySelector('main') || document.body;
+    var text = String(document.title || '') + ' ' + String((root && (root.innerText || root.textContent)) || '');
+    var frames = document.querySelectorAll('iframe');
+    for (var i = 0; i < frames.length; i++) {
+      try {
+        var doc = frames[i].contentDocument;
+        if (doc && doc.body) text += ' ' + String(doc.body.innerText || doc.body.textContent || '');
+      } catch (e) {}
+    }
+    return text.replace(/[\\u2018\\u2019\\u201B\\u2032]/g, "'").toLowerCase();
+  }
+
+  function virtualQueue(text) {
+    return text.indexOf('in the virtual queue') !== -1;
   }
 
   function absUrl(url) {
@@ -131,10 +142,20 @@ const EXTRACT_CATALOG_SCRIPT = `
       var html = document.documentElement ? document.documentElement.outerHTML : '';
       var title = String(document.title || '');
       var bodyText = String((root && (root.innerText || root.textContent)) || '');
+      var text = readableText();
+
+      if (virtualQueue(text)) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'queue',
+          href: String(location.href || ''),
+          title: title
+        }));
+        return;
+      }
 
       if (blocked(html, title, bodyText)) {
         attempts += 1;
-        if (attempts < maxAttempts) {
+        if (attempts < 5) {
           setTimeout(collect, 450);
           return;
         }
@@ -143,15 +164,6 @@ const EXTRACT_CATALOG_SCRIPT = `
           href: String(location.href || ''),
           title: title,
           html: html.slice(0, 60000)
-        }));
-        return;
-      }
-
-      if (virtualQueue(title, bodyText)) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          type: 'queue',
-          href: String(location.href || ''),
-          title: title
         }));
         return;
       }
@@ -205,6 +217,12 @@ const EXTRACT_CATALOG_SCRIPT = `
           availability: availability
         });
       });
+
+      if (products.length === 0 && attempts < maxAttempts) {
+        attempts += 1;
+        setTimeout(collect, 450);
+        return;
+      }
 
       window.ReactNativeWebView.postMessage(JSON.stringify({
         type: 'catalog',
@@ -486,6 +504,7 @@ export function PokemonCenterLiveScanner({
     if (reliablePass) {
       productsRef.current.forEach((product, id) => {
         if (seenThisCycleRef.current.has(id)) return;
+        if (product.releaseType === 'queue' || product.tags?.includes('queue')) return;
         if (product.availability === 'in-stock') {
           productsRef.current.set(id, {
             ...product,
@@ -498,7 +517,9 @@ export function PokemonCenterLiveScanner({
       });
     }
 
-    const products = [...productsRef.current.values()];
+    const products = [...productsRef.current.values()].sort((left, right) =>
+      left.releaseType === 'queue' ? (right.releaseType === 'queue' ? 0 : -1) : right.releaseType === 'queue' ? 1 : 0,
+    );
     const inStock = products.filter((product) => product.availability === 'in-stock').length;
     const soldOut = products.filter((product) => product.availability === 'sold-out').length;
 
