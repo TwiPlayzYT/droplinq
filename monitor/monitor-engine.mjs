@@ -263,9 +263,19 @@ export class MonitorEngine {
       const notified = new Set(state.notifiedDropIds ?? []);
       for (const product of prepared) {
         if (!product?.id) continue;
-        rememberDrop(state, product, product.detectedAt ?? now);
         const key = snapshotEntryKey(state, product);
         const alreadyListed = Boolean(state.snapshot[key]);
+        const publishedAt = Date.parse(product.detectedAt ?? '');
+        const stale =
+          Number.isFinite(publishedAt) && Date.parse(now) - publishedAt > STALE_SIGNAL_MS;
+        if (stale) {
+          notified.add(product.id);
+          state.recentDrops = (state.recentDrops ?? []).filter(
+            (drop) => drop?.product?.id !== product.id,
+          );
+          continue;
+        }
+        rememberDrop(state, product, product.detectedAt ?? now);
         if (!alreadyListed) {
           state.snapshot[key] = {
             ...listedProduct(product, now),
@@ -283,10 +293,7 @@ export class MonitorEngine {
               : {}),
           };
         }
-        const publishedAt = Date.parse(product.detectedAt ?? '');
-        const stale =
-          Number.isFinite(publishedAt) && Date.parse(now) - publishedAt > STALE_SIGNAL_MS;
-        if (notified.has(product.id) || alreadyListed || stale) {
+        if (notified.has(product.id) || alreadyListed) {
           notified.add(product.id);
           continue;
         }
