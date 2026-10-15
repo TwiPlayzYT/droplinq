@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { extname, resolve } from 'node:path';
 
 import { config } from './config.mjs';
-import { ALLOWED_FORMATS, normalizeCoverageFilters } from './coverage-match.mjs';
+import { ALLOWED_FORMATS, isQueueObservation, normalizeCoverageFilters } from './coverage-match.mjs';
 import { mergeRecentDropsIntoSnapshot, MonitorEngine } from './monitor-engine.mjs';
 import {
   productsFromPageCrawl,
@@ -489,14 +489,15 @@ const server = createServer(async (request, response) => {
       const products = Array.isArray(payload.products) ? payload.products.slice(0, 40) : [];
       const allowed = products.filter(
         (product) =>
-          product &&
-          typeof product.id === 'string' &&
-          product.id.length <= 120 &&
-          typeof product.title === 'string' &&
-          product.title.length <= 180 &&
-          typeof product.url === 'string' &&
-          officialStoreUrl(product.url) &&
-          allowedFormats.has(product.format),
+          isQueueObservation(product) ||
+          (product &&
+            typeof product.id === 'string' &&
+            product.id.length <= 120 &&
+            typeof product.title === 'string' &&
+            product.title.length <= 180 &&
+            typeof product.url === 'string' &&
+            officialStoreUrl(product.url) &&
+            allowedFormats.has(product.format)),
       );
 
       // Device catalogs are partial — never mark unseen SKUs sold out from one phone.

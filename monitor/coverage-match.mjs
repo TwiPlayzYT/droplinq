@@ -49,6 +49,17 @@ export function normalizeCoverageFilters(input) {
   };
 }
 
+/** A phone that is actually looking at the virtual queue, not a made-up product. */
+export function isQueueObservation(product) {
+  if (!product || product.releaseType !== 'queue') return false;
+  if (typeof product.id !== 'string' || !/^queue-pokemon-center-\d{4}-\d{2}-\d{2}$/.test(product.id)) {
+    return false;
+  }
+  if (product.title !== 'Pokémon Center queue is live') return false;
+  const url = typeof product.url === 'string' ? product.url.replace(/\/$/, '') : '';
+  return url === 'https://www.pokemoncenter.com';
+}
+
 export function productMatchesCoverage(product, filters) {
   if (!filters) return false;
   if (product.releaseType === 'queue') return true;

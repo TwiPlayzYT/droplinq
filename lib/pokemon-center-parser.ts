@@ -110,7 +110,10 @@ const looksBlocked = (html: string) => {
     value.includes('checking your browser before accessing') ||
     value.includes('_incapsula_resource') ||
     value.includes("something's gone wrong") ||
-    value.includes('get you back on track, trainer')
+    value.includes('get you back on track, trainer') ||
+    value.includes('additional security check') ||
+    value.includes('i am human') ||
+    value.includes('hcaptcha')
   );
 };
 

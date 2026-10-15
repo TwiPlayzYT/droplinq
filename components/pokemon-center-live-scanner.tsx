@@ -45,8 +45,17 @@ const EXTRACT_CATALOG_SCRIPT = `
       value.indexOf('request unsuccessful') !== -1 ||
       value.indexOf('checking your browser before accessing') !== -1 ||
       value.indexOf("something's gone wrong") !== -1 ||
-      value.indexOf('get you back on track, trainer') !== -1
+      value.indexOf('get you back on track, trainer') !== -1 ||
+      value.indexOf('additional security check') !== -1 ||
+      value.indexOf('i am human') !== -1 ||
+      value.indexOf('hcaptcha') !== -1
     );
+  }
+
+  function virtualQueue(title, bodyText) {
+    var value = (title + ' ' + bodyText).toLowerCase();
+    return value.indexOf("you're in the virtual queue") !== -1
+      || value.indexOf('you are in the virtual queue') !== -1;
   }
 
   function absUrl(url) {
@@ -134,6 +143,15 @@ const EXTRACT_CATALOG_SCRIPT = `
           href: String(location.href || ''),
           title: title,
           html: html.slice(0, 60000)
+        }));
+        return;
+      }
+
+      if (virtualQueue(title, bodyText)) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'queue',
+          href: String(location.href || ''),
+          title: title
         }));
         return;
       }
@@ -226,7 +244,7 @@ type CatalogProductPayload = {
 };
 
 type PagePayload = {
-  type: 'catalog' | 'blocked' | 'error';
+  type: 'catalog' | 'blocked' | 'error' | 'queue';
   href?: string;
   title?: string;
   html?: string;
@@ -312,6 +330,7 @@ export function PokemonCenterLiveScanner({
   const seenThisCycleRef = useRef(new Set<string>());
   const catalogHitsRef = useRef(0);
   const challengeRef = useRef(false);
+  const queueSeenRef = useRef(false);
   const pageErrorRef = useRef(false);
   const handledRef = useRef(false);
   const cycleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -402,6 +421,7 @@ export function PokemonCenterLiveScanner({
     seenThisCycleRef.current = new Set();
     catalogHitsRef.current = 0;
     challengeRef.current = false;
+    queueSeenRef.current = false;
     pageErrorRef.current = false;
     handledRef.current = false;
     setCatalogIndex(0);
@@ -459,6 +479,7 @@ export function PokemonCenterLiveScanner({
     clearPageTimeout();
     const now = new Date().toISOString();
     const reliablePass = catalogHitsRef.current > 0 && !challengeRef.current && !pageErrorRef.current;
+    const calmCycle = reliablePass || queueSeenRef.current;
 
     // Only flip missing items to sold out after a confirmed good catalog pass.
     // Every seeded product is watched — older drops can return to stock.
@@ -484,10 +505,10 @@ export function PokemonCenterLiveScanner({
     await onProducts(products);
     await reportObservations(products).catch(() => undefined);
 
-    consecutiveFailuresRef.current = reliablePass
+    consecutiveFailuresRef.current = calmCycle
       ? 0
       : consecutiveFailuresRef.current + 1;
-    const nextDelay = reliablePass
+    const nextDelay = calmCycle
       ? withJitter(BASE_CYCLE_MS)
       : withJitter(
           Math.min(
@@ -497,7 +518,15 @@ export function PokemonCenterLiveScanner({
         );
     const coolDownLabel = `Cooling down ~${Math.max(1, Math.round(nextDelay / 60_000))} min so the store unblocks`;
 
-    if (reliablePass) {
+    if (queueSeenRef.current) {
+      onStatus({
+        state: 'ok',
+        observedCount: products.length,
+        lastCheckedAt: now,
+        message: 'Pokémon Center queue is live',
+        progress: 100,
+      });
+    } else if (reliablePass) {
       onStatus({
         state: 'ok',
         observedCount: products.length,
@@ -596,6 +625,26 @@ export function PokemonCenterLiveScanner({
         // Stop the cycle immediately — hitting more catalog pages while
         // Imperva is already blocking just digs a deeper hole for the IP.
         challengeRef.current = true;
+        await finishCycle();
+        return;
+      }
+
+      if (payload.type === 'queue') {
+        const now = new Date().toISOString();
+        const queueNotice: Product = {
+          id: `queue-pokemon-center-${now.slice(0, 10)}`,
+          title: 'Pokémon Center queue is live',
+          category: 'Trading Card Game',
+          format: 'etb',
+          releaseType: 'queue',
+          availability: 'in-stock',
+          url: 'https://www.pokemoncenter.com',
+          detectedAt: now,
+          lastSeenAt: now,
+          tags: ['tcg', 'queue'],
+        };
+        productsRef.current.set(queueNotice.id, queueNotice);
+        queueSeenRef.current = true;
         await finishCycle();
         return;
       }
