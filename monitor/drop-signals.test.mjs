@@ -93,6 +93,29 @@ test('keeps other sealed products and skips plush', () => {
   assert.equal(products.find((product) => product.id === '10-9').format, 'other');
 });
 
+test('a Pokémon Center TCG drop headline alerts even without the words in stock', () => {
+  const now = Date.parse('2026-10-15T17:50:00.000Z');
+  const products = productsFromFeedXml(
+    `
+    <item>
+      <title>Pokémon Center Trolls Fans With Worst 30th Anniversary TCG Drop Yet</title>
+      <link>https://www.polygon.com/pokemon-center-drop-today-what-is-30th-anniversary-tcg-tins-error/</link>
+      <pubDate>Thu, 15 Oct 2026 17:42:46 GMT</pubDate>
+    </item>
+  `,
+    now,
+  );
+  assert.equal(products.length, 1);
+  assert.equal(products[0].releaseType, 'new');
+  assert.match(products[0].title, /TCG Drop/);
+  assert.equal(headlineProduct('Pokémon Center worst drop yet'), null);
+  assert.equal(
+    headlineProduct('30th Celebration Mini Tins available on Pokemon Center', { assumeStore: true })
+      ?.releaseType,
+    'new',
+  );
+});
+
 test('a drop headline still alerts when the post has no product link', () => {
   const now = Date.parse('2026-09-30T18:00:00.000Z');
   const xml = `

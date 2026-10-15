@@ -24,7 +24,8 @@ const SOURCES = [
   },
   {
     kind: 'feed',
-    url: 'https://www.polygon.com/rss/index.xml',
+    // /rss/index.xml is an HTML refresh page and parses as zero items.
+    url: 'https://www.polygon.com/feed/',
   },
 ];
 
@@ -33,7 +34,7 @@ const BROWSER_UA =
 
 const DROP_HEADLINE = /pok[eé]mon\s+center|pokemoncenter/i;
 const DROP_ACTION =
-  /pre-?orders?|now live|goes live|in stock|restock|back in stock|available now|queue\b.{0,24}(?:live|up)|listings?\b.{0,16}live/i;
+  /pre-?orders?|\blive\b|in stock|restock|back in stock|\bavailable\b|\bdropped\b|\bdrops?\b|queue\b.{0,24}(?:live|up)|listings?\b.{0,16}live/i;
 
 const LOCALE_TO_REGION = {
   'en-ca': 'ca',
