@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session, User } from '@supabase/supabase-js';
 
+import { passwordRequirementMessage } from '@/lib/password-rules';
 import { AuthAdapter, AuthProfile, AuthResult } from '@/services/auth/types';
 import { signInAsGuest as createGuestSession } from '@/services/auth/guest-auth';
 
@@ -56,9 +57,8 @@ export const mockAuth: AuthAdapter = {
   },
 
   async signUp(email, password) {
-    if (password.length < 8) {
-      return { ok: false, message: 'Use at least 8 characters.' };
-    }
+    const passwordProblem = passwordRequirementMessage(password);
+    if (passwordProblem) return { ok: false, message: passwordProblem };
     const users = await readJson<StoredUser[]>(USERS_KEY, []);
     if (users.some((item) => item.email.toLowerCase() === email.trim().toLowerCase())) {
       return { ok: false, message: 'An account with that email already exists.' };

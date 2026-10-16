@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 
+import { passwordRequirementMessage } from '@/lib/password-rules';
 import { AuthAdapter, AuthProfile, AuthResult } from '@/services/auth/types';
 import { signInAsGuest as createGuestSession } from '@/services/auth/guest-auth';
 import { signInWithProvider as oauthSignIn, webRedirectUri } from '@/services/auth/oauth';
@@ -43,7 +44,8 @@ export const supabaseAuth: AuthAdapter = {
     const supabase = getSupabase();
     if (!supabase) return { ok: false, message: 'Supabase is not configured.' };
     if (!email.trim()) return { ok: false, message: 'Enter your email.' };
-    if (password.length < 8) return { ok: false, message: 'Use at least 8 characters.' };
+    const passwordProblem = passwordRequirementMessage(password);
+    if (passwordProblem) return { ok: false, message: passwordProblem };
     const { data, error } = await supabase.auth.signUp({
       email,
       password,

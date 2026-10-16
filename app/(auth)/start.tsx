@@ -6,7 +6,9 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { AuthShell, authStyles } from '@/components/auth-shell';
 import { pressGhost, pressSolid } from '@/components/button-press';
 import { ConsentCheckbox } from '@/components/consent-checkbox';
+import { PasswordRequirements } from '@/components/password-requirements';
 import { palette } from '@/constants/dropdex';
+import { passwordRequirementMessage } from '@/lib/password-rules';
 import { authAdapter } from '@/services/auth';
 import { oauthRedirectHint } from '@/services/auth/oauth';
 import { OAuthProvider } from '@/services/auth/types';
@@ -45,6 +47,11 @@ export default function SignUpScreen() {
 
   const submit = async () => {
     if (!requireConsent()) return;
+    if (!email.trim()) {
+      setMessage('Enter your email.');
+      return;
+    }
+    if (passwordRequirementMessage(password)) return;
     setBusy(true);
     setMessage(null);
     const result = await signUp(email.trim(), password);
@@ -157,11 +164,11 @@ export default function SignUpScreen() {
           />
           <Text style={authStyles.fieldLabel}>Password</Text>
           <TextInput
-            accessibilityLabel="Password, 8 or more characters"
+            accessibilityLabel="Password"
             autoComplete="new-password"
             onChangeText={setPassword}
             onSubmitEditing={() => void submit()}
-            placeholder="8 or more characters"
+            placeholder="Create a password"
             placeholderTextColor={palette.whiteShadow}
             returnKeyType="done"
             secureTextEntry
@@ -169,6 +176,7 @@ export default function SignUpScreen() {
             textContentType="newPassword"
             value={password}
           />
+          <PasswordRequirements password={password} />
           {message ? <Text style={authStyles.error}>{message}</Text> : null}
           <Pressable
             accessibilityLabel="Create account"
