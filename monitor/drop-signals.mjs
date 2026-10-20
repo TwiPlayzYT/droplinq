@@ -36,6 +36,14 @@ const DROP_HEADLINE = /pok[eé]mon\s+center|pokemoncenter/i;
 const DROP_ACTION =
   /pre-?orders?|\blive\b|in stock|restock|back in stock|\bavailable\b|\bdropped\b|\bdrops?\b|queue\b.{0,24}(?:live|up)|listings?\b.{0,16}live/i;
 
+/** Opinion / news pieces — never treat these as stock alerts. */
+const OPINION_HEADLINE =
+  /\b(trolls?|worst|disaster|fails?|failed|scam|ripoffs?|rip-?offs?|controversy|outrage|backlash|error cards?|mistakes?|disappoint(?:ing|ment)?|trash|garbage|fans with|clickbait|rant)\b/i;
+
+export function isOpinionHeadline(title) {
+  return OPINION_HEADLINE.test(decodeText(String(title ?? '')));
+}
+
 const LOCALE_TO_REGION = {
   'en-ca': 'ca',
   'en-gb': 'uk',
@@ -147,7 +155,7 @@ const headlineId = (title) =>
 
 export function headlineProduct(title, { detectedAt, url, assumeStore = false } = {}) {
   const heading = decodeText(String(title ?? ''));
-  if (!heading || isMerchandiseTitle(heading)) return null;
+  if (!heading || isMerchandiseTitle(heading) || isOpinionHeadline(heading)) return null;
 
   const queued = queueProduct(heading, { detectedAt, assumeStore });
   if (queued) return queued;

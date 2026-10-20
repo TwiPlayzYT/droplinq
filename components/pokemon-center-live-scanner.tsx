@@ -456,6 +456,7 @@ export function PokemonCenterLiveScanner({
       seededRef.current = true;
       void publishNow('Catalog ready', 'ok', 100);
     }
+  };
 
   // Region switch: drop everything from the old storefront and rescan fresh.
   const regionRef = useRef(region.id);

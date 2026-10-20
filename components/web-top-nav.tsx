@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ProfileMenu } from '@/components/profile-menu';
+import { useNewsOptional } from '@/components/news-host';
 import { setProductSearchOpen } from '@/components/product-search-host';
 import { TourAnchor, tourDomProps } from '@/components/tour-anchor';
 import { palette } from '@/constants/dropdex';
@@ -105,6 +106,22 @@ function isTypingTarget(target: EventTarget | null) {
  * Web top navigation — full bar on desktop; on mobile web brand + settings + profile.
  * Search on phones lives in the center of the bottom pill. Profile still opens Settings.
  */
+function NewsNavButton({ compact = false }: { compact?: boolean }) {
+  const news = useNewsOptional();
+  if (!news) return null;
+  const unread = news.unreadCount > 0;
+  return (
+    <Pressable
+      accessibilityLabel={unread ? `News, ${news.unreadCount} unread` : 'News'}
+      accessibilityRole="button"
+      onPress={() => news.openNews()}
+      style={[compact ? styles.mobileSettings : styles.settingsButton, unread && styles.newsUnread]}>
+      <Ionicons color={unread ? '#FFFFFF' : '#C8C4BF'} name={unread ? 'newspaper' : 'newspaper-outline'} size={compact ? 18 : 20} />
+      {unread ? <View style={styles.newsBadge} /> : null}
+    </Pressable>
+  );
+}
+
 export function WebTopNav() {
   const { isDesktopWeb, isMobileWeb, isWeb } = useWebLayout();
   const pathname = usePathname();
@@ -144,6 +161,7 @@ export function WebTopNav() {
             <Text style={styles.mobileBrandText}>DROPLINQ</Text>
           </Pressable>
           <View style={styles.mobileActions}>
+            <NewsNavButton compact />
             <TourAnchor id="settings-tab">
               <Pressable
                 accessibilityLabel="Settings"
@@ -192,6 +210,7 @@ export function WebTopNav() {
                 <Text style={styles.kbdText}>/</Text>
               </View>
             </Pressable>
+            <NewsNavButton />
             <TourAnchor id="settings-desktop">
               <Pressable
                 accessibilityLabel="Settings"
@@ -361,6 +380,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     height: 34,
     justifyContent: 'center',
+    position: 'relative',
     width: 34,
   },
   settingsButton: {
@@ -371,10 +391,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     height: 40,
     justifyContent: 'center',
+    position: 'relative',
     width: 40,
   },
   settingsOn: {
     backgroundColor: '#D20D1E',
     borderColor: '#D20D1E',
+  },
+  newsUnread: {
+    borderColor: 'rgba(210,13,30,0.55)',
+  },
+  newsBadge: {
+    backgroundColor: palette.red,
+    borderColor: palette.blackRaised,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    height: 8,
+    position: 'absolute',
+    right: 7,
+    top: 7,
+    width: 8,
   },
 });

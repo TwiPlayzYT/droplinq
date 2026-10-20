@@ -13,6 +13,7 @@ import { LaunchSplash } from '@/components/launch-splash';
 import { CookieConsentBanner } from '@/components/cookie-consent-banner';
 import { DevicePromptModal } from '@/components/device-prompt-modal';
 import { DropAlertModal } from '@/components/drop-alert-modal';
+import { NewsHost } from '@/components/news-host';
 import { OpenProductChooser } from '@/components/open-product-chooser';
 import { SiteTutorial } from '@/components/site-tutorial';
 import { UserAppearanceSync } from '@/components/user-appearance-sync';
@@ -148,45 +149,47 @@ function AppExperience() {
   return (
     <NavigationThemeProvider value={navigationTheme}>
       <AuthGate>
-        <Stack
-          screenOptions={{
-            animation: stackAnimation,
-            animationDuration: Platform.OS === 'web' ? 0 : 160,
-            contentStyle: { backgroundColor: palette.black },
-            headerShown: false,
-          }}>
-          <Stack.Screen name="(site)" />
-          <Stack.Screen name="app/index" options={{ animation: 'none' }} />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(legal)" />
-          <Stack.Screen name="legal/terms" />
-          <Stack.Screen name="legal/privacy" />
-          <Stack.Screen name="legal/cookies" />
-          <Stack.Screen name="legal/refund" />
-          <Stack.Screen name="(onboarding)" />
-          <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
-          <Stack.Screen name="auth/callback" options={{ animation: 'none' }} />
-          <Stack.Screen name="notifications/index" options={{ animation: 'none' }} />
-          <Stack.Screen name="setup/notifications" options={{ animation: 'none' }} />
-          <Stack.Screen name="alerts/history" options={{ animation: 'none' }} />
-          <Stack.Screen
-            name="product/[id]"
-            options={{
+        <NewsHost>
+          <Stack
+            screenOptions={{
               animation: stackAnimation,
-              animationDuration: Platform.OS === 'web' ? 0 : 140,
-              gestureEnabled: Platform.OS !== 'web',
+              animationDuration: Platform.OS === 'web' ? 0 : 160,
+              contentStyle: { backgroundColor: palette.black },
               headerShown: false,
-              presentation: 'card',
-            }}
-          />
-        </Stack>
-        <DevicePromptModal />
-        <SiteTutorial />
-        <DropAlertModal />
-        <OpenProductChooser />
-        <CookieConsentBanner />
-        <GlobalUXFeedback />
-        <StatusBar style={appearanceId === 'light' ? 'dark' : 'light'} />
+            }}>
+            <Stack.Screen name="(site)" />
+            <Stack.Screen name="app/index" options={{ animation: 'none' }} />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(legal)" />
+            <Stack.Screen name="legal/terms" />
+            <Stack.Screen name="legal/privacy" />
+            <Stack.Screen name="legal/cookies" />
+            <Stack.Screen name="legal/refund" />
+            <Stack.Screen name="(onboarding)" />
+            <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+            <Stack.Screen name="auth/callback" options={{ animation: 'none' }} />
+            <Stack.Screen name="notifications/index" options={{ animation: 'none' }} />
+            <Stack.Screen name="setup/notifications" options={{ animation: 'none' }} />
+            <Stack.Screen name="alerts/history" options={{ animation: 'none' }} />
+            <Stack.Screen
+              name="product/[id]"
+              options={{
+                animation: stackAnimation,
+                animationDuration: Platform.OS === 'web' ? 0 : 140,
+                gestureEnabled: Platform.OS !== 'web',
+                headerShown: false,
+                presentation: 'card',
+              }}
+            />
+          </Stack>
+          <DevicePromptModal />
+          <SiteTutorial />
+          <DropAlertModal />
+          <OpenProductChooser />
+          <CookieConsentBanner />
+          <GlobalUXFeedback />
+          <StatusBar style={appearanceId === 'light' ? 'dark' : 'light'} />
+        </NewsHost>
       </AuthGate>
     </NavigationThemeProvider>
   );

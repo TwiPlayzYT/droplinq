@@ -37,6 +37,7 @@ import {
   regions,
 } from '@/data/regions';
 import { matchesFilters } from '@/lib/filter-matcher';
+import { isOpinionHeadline } from '@/lib/opinion-headline';
 import { preferProductImageUrl, sanitizeProductImageUrl } from '@/lib/product-image';
 import { openPokemonCenterProduct, type OpenProductMode } from '@/lib/open-product';
 import {
@@ -384,6 +385,9 @@ export function DropDexProvider({ children }: PropsWithChildren) {
     alreadyNotified = false,
     forceOverlay = false,
   ) => {
+    // Opinion / press headlines belong in News, never Stock alerts.
+    if (isOpinionHeadline(product.title) && !isSyntheticProductId(product.id)) return;
+
     const current = stateRef.current;
     if (!force && (!current.monitoring || !matchesFilters(product, current.filters))) return;
 
@@ -687,7 +691,10 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       });
 
       const products = [...byId.values()]
-        .filter((product) => !isMerchandiseTitle(product.title))
+        .filter(
+          (product) =>
+            !isMerchandiseTitle(product.title) && !isOpinionHeadline(product.title),
+        )
         .map((product) => ({
         ...product,
         imageUrl: sanitizeProductImageUrl(product.imageUrl),
@@ -804,7 +811,9 @@ export function DropDexProvider({ children }: PropsWithChildren) {
 
       if (!changed) return;
 
-      const next = [...byId.values()].filter((product) => !isMerchandiseTitle(product.title));
+      const next = [...byId.values()].filter(
+        (product) => !isMerchandiseTitle(product.title) && !isOpinionHeadline(product.title),
+      );
       liveProductsRef.current = next;
       setLiveProducts(next);
       await detectLiveChanges(products);
@@ -877,9 +886,9 @@ export function DropDexProvider({ children }: PropsWithChildren) {
       });
 
       return (() => {
-        const next = [...byId.values()]
-          .filter((product) => !isMerchandiseTitle(product.title))
-          .map((product) => ({
+        const keep = (product: Product) =>
+          !isMerchandiseTitle(product.title) && !isOpinionHeadline(product.title);
+        const next = [...byId.values()].filter(keep).map((product) => ({
           ...product,
           imageUrl: sanitizeProductImageUrl(product.imageUrl),
         }));
@@ -888,7 +897,7 @@ export function DropDexProvider({ children }: PropsWithChildren) {
             const prior = previous.find((item) => item.id === product.id);
             return prior && prior.imageUrl !== product.imageUrl;
           });
-          if (!needsScrub) return previous.filter((product) => !isMerchandiseTitle(product.title));
+          if (!needsScrub) return previous.filter(keep);
         }
         return next;
       })();

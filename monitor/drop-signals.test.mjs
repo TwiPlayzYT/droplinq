@@ -93,7 +93,7 @@ test('keeps other sealed products and skips plush', () => {
   assert.equal(products.find((product) => product.id === '10-9').format, 'other');
 });
 
-test('a Pokémon Center TCG drop headline alerts even without the words in stock', () => {
+test('opinion headlines are not stock products (they belong in News)', () => {
   const now = Date.parse('2026-10-15T17:50:00.000Z');
   const products = productsFromFeedXml(
     `
@@ -105,9 +105,11 @@ test('a Pokémon Center TCG drop headline alerts even without the words in stock
   `,
     now,
   );
-  assert.equal(products.length, 1);
-  assert.equal(products[0].releaseType, 'new');
-  assert.match(products[0].title, /TCG Drop/);
+  assert.equal(products.length, 0);
+  assert.equal(
+    headlineProduct('Pokémon Center Trolls Fans With Worst 30th Anniversary TCG Drop Yet'),
+    null,
+  );
   assert.equal(headlineProduct('Pokémon Center worst drop yet'), null);
   assert.equal(
     headlineProduct('30th Celebration Mini Tins available on Pokemon Center', { assumeStore: true })
